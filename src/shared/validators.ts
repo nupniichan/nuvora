@@ -1,0 +1,17 @@
+/**
+ * Password validation: at least 8 characters
+ */
+export function validatePassword(password: string): { isValid: boolean; errorKey?: string } {
+  if (!password || password.length < 8) {
+    return { isValid: false, errorKey: 'onboarding.passwordTooShort' };
+  }
+  return { isValid: true };
+}
+
+/**
+ * Checks if amount string is a valid positive number
+ */
+export function isValidAmount(amountStr: string): boolean {
+  const num = Number(amountStr.replace(/,/g, '.'));
+  return !isNaN(num) && num > 0;
+}
