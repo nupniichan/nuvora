@@ -8,19 +8,38 @@ import '@/global.css';
 import { Platform } from 'react-native';
 
 export const Colors = {
+  primary: '#CCCCFF',
+  primaryLight: '#E0E0FF',
+  primaryDark: '#9999FF',
+  accent: '#F89E62',
+  accentLight: '#FFC49B',
+  primaryFaded: '#F2F2FF',
+  primaryFadedDark: '#202040',
+
+  income: '#4CAF7D',
+  expense: '#E57373',
+  transfer: '#64B5F6',
+  warning: '#FFB74D',
+  success: '#66BB6A',
+  error: '#EF5350',
+
   light: {
-    text: '#000000',
-    background: '#ffffff',
-    backgroundElement: '#F0F0F3',
-    backgroundSelected: '#E0E1E6',
-    textSecondary: '#60646C',
+    text: '#1A1C2E',
+    textSecondary: '#6B6E82',
+    background: '#F8F8FC',
+    backgroundElement: '#EEEFF6',
+    backgroundSelected: '#E0E2F0',
+    surface: '#FFFFFF',
+    border: '#D8DAE8',
   },
   dark: {
-    text: '#ffffff',
-    background: '#000000',
-    backgroundElement: '#212225',
-    backgroundSelected: '#2E3135',
-    textSecondary: '#B0B4BA',
+    text: '#ECEDF5',
+    textSecondary: '#9A9DB5',
+    background: '#0F1019',
+    backgroundElement: '#1C1D2E',
+    backgroundSelected: '#2A2C40',
+    surface: '#16172A',
+    border: '#2E3048',
   },
 } as const;
 
