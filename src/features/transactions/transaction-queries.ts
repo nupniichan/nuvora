@@ -155,3 +155,114 @@ export async function deleteTransaction(id: string): Promise<void> {
     await db.runAsync('DELETE FROM transactions WHERE id = ?;', [id]);
   });
 }
+
+/**
+ * Updates an existing transaction and adjusts account balances accordingly
+ */
+export async function updateTransaction(
+  id: string,
+  data: {
+    type?: TransactionType;
+    amount?: number;
+    currency?: string;
+    accountId?: string;
+    toAccountId?: string | null;
+    categoryId?: string | null;
+    note?: string | null;
+    date?: string;
+  }
+): Promise<TransactionRow> {
+  const db = getDatabase();
+  const oldTx = await getTransactionById(id);
+  if (!oldTx) throw new Error('Giao dịch không tồn tại');
+
+  const now = new Date().toISOString();
+
+  await db.withTransactionAsync(async () => {
+    // 1. Revert previous transaction effects on accounts
+    if (oldTx.type === 'income') {
+      await db.runAsync('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?;', [
+        oldTx.amount,
+        now,
+        oldTx.account_id,
+      ]);
+    } else if (oldTx.type === 'expense') {
+      await db.runAsync('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?;', [
+        oldTx.amount,
+        now,
+        oldTx.account_id,
+      ]);
+    } else if (oldTx.type === 'transfer' && oldTx.to_account_id) {
+      await db.runAsync('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?;', [
+        oldTx.amount,
+        now,
+        oldTx.account_id,
+      ]);
+      await db.runAsync('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?;', [
+        oldTx.amount,
+        now,
+        oldTx.to_account_id,
+      ]);
+    }
+
+    // 2. Prepare new transaction values
+    const newType = data.type !== undefined ? data.type : oldTx.type;
+    const newAmount = data.amount !== undefined ? data.amount : oldTx.amount;
+    const newCurrency = data.currency !== undefined ? data.currency : oldTx.currency;
+    const newAccountId = data.accountId !== undefined ? data.accountId : oldTx.account_id;
+    const newToAccountId = data.toAccountId !== undefined ? data.toAccountId : oldTx.to_account_id;
+    const newCategoryId = data.categoryId !== undefined ? data.categoryId : oldTx.category_id;
+    const newNote = data.note !== undefined ? data.note : oldTx.note;
+    const newDate = data.date !== undefined ? data.date : oldTx.date;
+
+    // 3. Apply new transaction effects on accounts
+    if (newType === 'income') {
+      await db.runAsync('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?;', [
+        newAmount,
+        now,
+        newAccountId,
+      ]);
+    } else if (newType === 'expense') {
+      await db.runAsync('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?;', [
+        newAmount,
+        now,
+        newAccountId,
+      ]);
+    } else if (newType === 'transfer' && newToAccountId) {
+      await db.runAsync('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?;', [
+        newAmount,
+        now,
+        newAccountId,
+      ]);
+      await db.runAsync('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?;', [
+        newAmount,
+        now,
+        newToAccountId,
+      ]);
+    }
+
+    // 4. Update transaction record
+    await db.runAsync(
+      `UPDATE transactions
+       SET type = ?, amount = ?, currency = ?, account_id = ?, to_account_id = ?,
+           category_id = ?, note = ?, date = ?, updated_at = ?
+       WHERE id = ?;`,
+      [
+        newType,
+        newAmount,
+        newCurrency,
+        newAccountId,
+        newToAccountId || null,
+        newCategoryId || null,
+        newNote || null,
+        newDate,
+        now,
+        id,
+      ]
+    );
+  });
+
+  const updated = await getTransactionById(id);
+  if (!updated) throw new Error('Không thể tải giao dịch sau khi cập nhật');
+  return updated;
+}
