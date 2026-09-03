@@ -8,7 +8,8 @@ import {
   View,
 } from 'react-native';
 
-import { Colors } from '@/constants/theme';
+import { Colors, Radius } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 
 export interface ButtonProps extends TouchableOpacityProps {
   title: string;
@@ -27,15 +28,16 @@ export function Button({
   textStyle,
   ...props
 }: ButtonProps & { textStyle?: any }) {
+  const theme = useTheme();
   const getBackgroundColor = () => {
-    if (disabled) return Colors.light.backgroundSelected;
+    if (disabled) return theme.backgroundSelected;
     switch (variant) {
       case 'primary':
-        return Colors.primary;
+        return Colors.primaryStrong;
       case 'accent':
         return Colors.accent;
       case 'secondary':
-        return Colors.light.backgroundElement;
+        return theme.backgroundElement;
       case 'destructive':
         return Colors.expense;
       case 'outline':
@@ -46,20 +48,20 @@ export function Button({
   };
 
   const getTextColor = () => {
-    if (disabled) return Colors.light.textSecondary;
+    if (disabled) return theme.textSecondary;
     switch (variant) {
       case 'primary':
-        return '#1A1C2E';
-      case 'accent':
         return '#FFFFFF';
+      case 'accent':
+        return '#542515';
       case 'secondary':
-        return Colors.light.text;
+        return theme.text;
       case 'destructive':
         return '#FFFFFF';
       case 'outline':
-        return Colors.primaryDark;
+        return Colors.primaryStrong;
       default:
-        return '#1A1C2E';
+        return '#FFFFFF';
     }
   };
 
@@ -68,7 +70,7 @@ export function Button({
       style={[
         styles.button,
         { backgroundColor: getBackgroundColor() },
-        variant === 'outline' && styles.outlineBorder,
+        variant === 'outline' && [styles.outlineBorder, { borderColor: Colors.primaryDark }],
         style,
       ]}
       disabled={disabled || loading}
@@ -89,9 +91,10 @@ export function Button({
 
 const styles = StyleSheet.create({
   button: {
-    paddingVertical: 14,
+    minHeight: 52,
+    paddingVertical: 13,
     paddingHorizontal: 20,
-    borderRadius: 12,
+    borderRadius: Radius.medium,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -106,12 +109,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   outlineBorder: {
-    borderWidth: 1.5,
-    borderColor: Colors.primaryDark,
+    borderWidth: 1,
   },
   text: {
     fontSize: 16,
     fontWeight: '600',
   },
 });
-

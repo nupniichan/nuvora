@@ -1,7 +1,6 @@
 import { getDatabase } from '@/database/database';
 import {
   AutomationOccurrenceRow,
-  OccurrenceStatus,
   RecurringRuleRow,
 } from '@/database/types';
 import { createTransaction } from '@/features/transactions/transaction-queries';

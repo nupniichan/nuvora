@@ -5,8 +5,8 @@ import {
 
 // Mock crypto module using Node's standard crypto library for authentic AES-256-GCM tests
 jest.mock('@/services/security/crypto', () => {
-  const crypto = require('crypto');
-  const { Buffer } = require('buffer');
+  const crypto = jest.requireActual('crypto');
+  const { Buffer } = jest.requireActual('buffer');
   return {
     DEFAULT_KDF_PARAMS: {
       algorithm: 'argon2id',

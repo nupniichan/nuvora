@@ -111,8 +111,6 @@ class WebSQLiteDatabase {
       if (updateWithWhere) {
         const tableName = updateWithWhere[1].toLowerCase();
         const setClause = updateWithWhere[2];
-        const whereClause = updateWithWhere[3].replace(/;$/, '').trim();
-
         if (this.tables[tableName]) {
           let paramIdx = 0;
           const assignments = setClause.split(',').map((s) => s.trim());

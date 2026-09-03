@@ -9,12 +9,14 @@ import { Platform } from 'react-native';
 
 export const Colors = {
   primary: '#CCCCFF',
-  primaryLight: '#E0E0FF',
-  primaryDark: '#9999FF',
-  accent: '#F89E62',
-  accentLight: '#FFC49B',
-  primaryFaded: '#F2F2FF',
-  primaryFadedDark: '#202040',
+  primaryLight: '#E8E8FF',
+  primaryDark: '#6263A8',
+  primaryStrong: '#4F508F',
+  accent: '#F4A284',
+  accentLight: '#FFE2D7',
+  accentDark: '#A94F35',
+  primaryFaded: '#F0EFFF',
+  primaryFadedDark: '#282744',
 
   income: '#4CAF7D',
   expense: '#E57373',
@@ -24,13 +26,15 @@ export const Colors = {
   error: '#EF5350',
 
   light: {
-    text: '#1A1C2E',
-    textSecondary: '#6B6E82',
-    background: '#F8F8FC',
-    backgroundElement: '#EEEFF6',
-    backgroundSelected: '#E0E2F0',
+    text: '#202033',
+    textSecondary: '#69697C',
+    background: '#F8F7FC',
+    backgroundElement: '#F0EFF6',
+    backgroundSelected: '#E5E3EF',
     surface: '#FFFFFF',
-    border: '#D8DAE8',
+    border: '#E3E1EA',
+    elevatedBorder: '#ECEAF1',
+    overlay: 'rgba(32, 32, 51, 0.44)',
   },
   dark: {
     text: '#ECEDF5',
@@ -40,6 +44,8 @@ export const Colors = {
     backgroundSelected: '#2A2C40',
     surface: '#16172A',
     border: '#2E3048',
+    elevatedBorder: '#34364F',
+    overlay: 'rgba(0, 0, 0, 0.62)',
   },
 } as const;
 
@@ -78,6 +84,22 @@ export const Spacing = {
   four: 24,
   five: 32,
   six: 64,
+} as const;
+
+export const Radius = {
+  small: 10,
+  medium: 14,
+  large: 20,
+  xlarge: 28,
+  pill: 999,
+} as const;
+
+export const Typography = {
+  display: { fontSize: 30, lineHeight: 36, fontWeight: '800' as const },
+  title: { fontSize: 22, lineHeight: 28, fontWeight: '800' as const },
+  section: { fontSize: 16, lineHeight: 22, fontWeight: '700' as const },
+  body: { fontSize: 15, lineHeight: 22, fontWeight: '400' as const },
+  caption: { fontSize: 12, lineHeight: 16, fontWeight: '500' as const },
 } as const;
 
 export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;

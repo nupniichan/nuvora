@@ -1,6 +1,5 @@
-import { initDatabase } from '@/database/database';
 import { createAccount, getAllAccounts } from '@/features/accounts/account-queries';
-import { createTransaction, deleteTransaction, getTransactions } from '../transaction-queries';
+import { createTransaction } from '../transaction-queries';
 
 // Mock sqlite for in-memory testing or test runner
 jest.mock('@/database/database', () => {

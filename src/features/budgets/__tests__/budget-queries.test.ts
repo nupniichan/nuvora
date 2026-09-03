@@ -156,7 +156,7 @@ jest.mock('@/database/database', () => {
 
 describe('Budget Queries & Spending Limits', () => {
   beforeEach(() => {
-    const dbModule = require('@/database/database');
+    const dbModule = jest.requireMock('@/database/database');
     dbModule.getDatabase().__clear();
     jest.clearAllMocks();
   });
@@ -212,7 +212,7 @@ describe('Budget Queries & Spending Limits', () => {
   });
 
   it('checks spending limit and detects overspending correctly', async () => {
-    const dbModule = require('@/database/database');
+    const dbModule = jest.requireMock('@/database/database');
     const mockDb = dbModule.getDatabase();
 
     const budget = await createBudget({
