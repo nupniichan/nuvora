@@ -36,7 +36,7 @@ export async function createAccount(data: {
       data.type,
       data.currency,
       data.initialBalance,
-      data.icon || 'wallet-outline',
+      data.icon || 'account-balance-wallet',
       data.color || '#F89E62',
       now,
       now,
@@ -87,4 +87,33 @@ export async function updateAccount(
 
   values.push(id);
   await db.runAsync(`UPDATE accounts SET ${updates.join(', ')} WHERE id = ?;`, values);
+}
+
+/**
+ * Gets transaction count for an account to determine if safe to delete
+ */
+export async function getAccountTransactionCount(id: string): Promise<number> {
+  const db = getDatabase();
+  const res = await db.getFirstAsync<{ count: number }>(
+    `SELECT COUNT(*) as count FROM transactions WHERE account_id = ? OR to_account_id = ?;`,
+    [id, id]
+  );
+  return res ? Number(res.count) : 0;
+}
+
+/**
+ * Deletes or archives an account safely
+ */
+export async function deleteAccount(id: string): Promise<boolean> {
+  const db = getDatabase();
+  const count = await getAccountTransactionCount(id);
+  if (count > 0) {
+    // If account has transactions, soft-delete (archive) to preserve history
+    await updateAccount(id, { is_archived: 1 });
+    return false;
+  }
+
+  // Hard delete if completely clean
+  await db.runAsync('DELETE FROM accounts WHERE id = ?;', [id]);
+  return true;
 }

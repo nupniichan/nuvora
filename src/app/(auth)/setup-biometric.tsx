@@ -1,3 +1,4 @@
+import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -7,14 +8,21 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Colors } from '@/constants/theme';
+import { completeOnboarding } from '@/features/onboarding/onboarding-service';
 import { isBiometricsAvailable } from '@/services/security/auth-service';
 
 export default function SetupBiometricScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const params = useLocalSearchParams<{ lang?: string; password?: string }>();
+  const params = useLocalSearchParams<{
+    lang: string;
+    currency: string;
+    password: string;
+    template: 'personal' | 'empty';
+  }>();
 
   const [available, setAvailable] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(false);
 
   useEffect(() => {
     async function checkBio() {
@@ -24,15 +32,22 @@ export default function SetupBiometricScreen() {
     checkBio();
   }, []);
 
-  const handleChoice = (enable: boolean) => {
-    router.push({
-      pathname: '/(auth)/setup-currency',
-      params: {
-        lang: params.lang || 'vi',
-        password: params.password,
-        enableBiometrics: enable ? 'true' : 'false',
-      },
-    });
+  const handleChoice = async (enable: boolean) => {
+    setLoading(true);
+    try {
+      await completeOnboarding({
+        masterPassword: params.password,
+        enableBiometrics: enable,
+        currency: params.currency || 'VND',
+        language: (params.lang as 'vi' | 'en') || 'vi',
+        templateOption: params.template || 'personal',
+      });
+
+      router.replace('/(main)');
+    } catch (e) {
+      console.error('Failed onboarding completion', e);
+      setLoading(false);
+    }
   };
 
   return (
@@ -45,7 +60,7 @@ export default function SetupBiometricScreen() {
 
         <Card style={styles.card}>
           <View style={styles.iconCircle}>
-            <Text style={styles.icon}>👆</Text>
+            <MaterialIcons name="fingerprint" size={36} color={Colors.primaryDark} />
           </View>
           <Text style={styles.infoText}>
             {available

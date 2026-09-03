@@ -1,3 +1,4 @@
+import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -62,7 +63,7 @@ export default function SetupCurrencyScreen() {
                     <Text style={styles.name}>{curr.name}</Text>
                   </View>
                   {isSelected ? (
-                    <Text style={styles.checkmark}>✓</Text>
+                    <MaterialIcons name="check" size={20} color={Colors.accent} />
                   ) : null}
                 </Card>
               </TouchableOpacity>

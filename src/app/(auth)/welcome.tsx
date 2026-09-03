@@ -1,3 +1,4 @@
+import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -50,7 +51,11 @@ export default function WelcomeScreen() {
               onPress={() => handleSelectLanguage('vi')}
               activeOpacity={0.8}
             >
-              <Text style={styles.flag}>🇻🇳</Text>
+              <MaterialIcons
+                name="language"
+                size={20}
+                color={selectedLang === 'vi' ? Colors.accent : Colors.light.textSecondary}
+              />
               <Text
                 style={[
                   styles.langText,
@@ -69,7 +74,11 @@ export default function WelcomeScreen() {
               onPress={() => handleSelectLanguage('en')}
               activeOpacity={0.8}
             >
-              <Text style={styles.flag}>🇬🇧</Text>
+              <MaterialIcons
+                name="language"
+                size={20}
+                color={selectedLang === 'en' ? Colors.accent : Colors.light.textSecondary}
+              />
               <Text
                 style={[
                   styles.langText,

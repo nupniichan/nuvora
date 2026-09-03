@@ -47,7 +47,7 @@ export async function completeOnboarding(config: OnboardingConfig): Promise<void
   const accountName = config.language === 'vi' ? 'Tiền mặt' : 'Cash';
   await db.runAsync(
     `INSERT INTO accounts (id, name, type, currency, balance, icon, color, sort_order, is_archived, created_at, updated_at)
-     VALUES (?, ?, 'cash', ?, 0, 'wallet-outline', '#F89E62', 1, 0, ?, ?);`,
+     VALUES (?, ?, 'cash', ?, 0, 'account-balance-wallet', '#F89E62', 1, 0, ?, ?);`,
     [generateUUID(), accountName, config.currency, now, now]
   );
 }

@@ -1,3 +1,4 @@
+import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -62,7 +63,7 @@ export default function SetupCategoriesScreen() {
               ]}
             >
               <View style={styles.iconCircle}>
-                <Text style={styles.icon}>📦</Text>
+                <MaterialIcons name="category" size={24} color={Colors.primaryDark} />
               </View>
               <View style={styles.info}>
                 <Text style={styles.cardTitle}>{t('onboarding.templatePersonal')}</Text>
@@ -73,7 +74,7 @@ export default function SetupCategoriesScreen() {
                 </Text>
               </View>
               {selectedTemplate === 'personal' ? (
-                <Text style={styles.checkmark}>✓</Text>
+                <MaterialIcons name="check" size={20} color={Colors.accent} />
               ) : null}
             </Card>
           </TouchableOpacity>
@@ -89,7 +90,7 @@ export default function SetupCategoriesScreen() {
               ]}
             >
               <View style={styles.iconCircle}>
-                <Text style={styles.icon}>📝</Text>
+                <MaterialIcons name="edit-note" size={24} color={Colors.primaryDark} />
               </View>
               <View style={styles.info}>
                 <Text style={styles.cardTitle}>{t('onboarding.templateEmpty')}</Text>
@@ -100,7 +101,7 @@ export default function SetupCategoriesScreen() {
                 </Text>
               </View>
               {selectedTemplate === 'empty' ? (
-                <Text style={styles.checkmark}>✓</Text>
+                <MaterialIcons name="check" size={20} color={Colors.accent} />
               ) : null}
             </Card>
           </TouchableOpacity>

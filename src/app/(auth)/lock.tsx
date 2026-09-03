@@ -1,3 +1,4 @@
+import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -59,7 +60,7 @@ export default function LockScreen() {
       <View style={styles.content}>
         <View style={styles.hero}>
           <View style={styles.iconBadge}>
-            <Text style={styles.badgeText}>🔒</Text>
+            <MaterialIcons name="lock-outline" size={32} color={Colors.primaryDark} />
           </View>
           <Text style={styles.title}>Nuvora</Text>
           <Text style={styles.subtitle}>Nhập mật khẩu để mở khóa dữ liệu</Text>
@@ -83,7 +84,8 @@ export default function LockScreen() {
 
         {canBiometric ? (
           <Button
-            title="Mở khóa bằng Sinh trắc học 👆"
+            title="Mở khóa bằng Sinh trắc học"
+            icon={<MaterialIcons name="fingerprint" size={20} color={Colors.primaryDark} />}
             onPress={handleBiometric}
             variant="outline"
           />

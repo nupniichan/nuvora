@@ -1,3 +1,4 @@
+import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -68,7 +69,7 @@ export default function SetupPasswordScreen() {
         </Card>
 
         <Card variant="flat" style={styles.noticeCard}>
-          <Text style={styles.noticeIcon}>💡</Text>
+          <MaterialIcons name="lightbulb-outline" size={24} color={Colors.primary} />
           <Text style={styles.noticeText}>
             {params.lang === 'en'
               ? 'Keep this password safe. It is required to restore your encrypted backup on a new device.'
