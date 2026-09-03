@@ -1,7 +1,8 @@
+import { MaterialIcons } from '@expo/vector-icons';
 import { Tabs, useRouter } from 'expo-router';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
 import { Colors } from '@/constants/theme';
 
@@ -24,28 +25,28 @@ export default function MainLayout() {
           name="index"
           options={{
             title: t('dashboard.title'),
-            tabBarIcon: ({ color }) => <Text style={[styles.icon, { color }]}>🏠</Text>,
+            tabBarIcon: ({ color }) => <MaterialIcons name="dashboard" size={24} color={color} />,
           }}
         />
         <Tabs.Screen
           name="transactions"
           options={{
             title: t('transactions.title'),
-            tabBarIcon: ({ color }) => <Text style={[styles.icon, { color }]}>💳</Text>,
+            tabBarIcon: ({ color }) => <MaterialIcons name="receipt-long" size={24} color={color} />,
           }}
         />
         <Tabs.Screen
           name="budgets"
           options={{
             title: t('budgets.title'),
-            tabBarIcon: ({ color }) => <Text style={[styles.icon, { color }]}>📊</Text>,
+            tabBarIcon: ({ color }) => <MaterialIcons name="pie-chart" size={24} color={color} />,
           }}
         />
         <Tabs.Screen
           name="more"
           options={{
             title: t('settings.title'),
-            tabBarIcon: ({ color }) => <Text style={[styles.icon, { color }]}>⚙️</Text>,
+            tabBarIcon: ({ color }) => <MaterialIcons name="settings" size={24} color={color} />,
           }}
         />
       </Tabs>
@@ -56,7 +57,7 @@ export default function MainLayout() {
         activeOpacity={0.85}
         onPress={() => router.push('/(modal)/add-transaction')}
       >
-        <Text style={styles.fabText}>➕</Text>
+        <MaterialIcons name="add" size={28} color="#1A1C2E" />
       </TouchableOpacity>
     </View>
   );

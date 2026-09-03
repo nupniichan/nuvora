@@ -5,6 +5,7 @@ import {
   Text,
   TouchableOpacity,
   TouchableOpacityProps,
+  View,
 } from 'react-native';
 
 import { Colors } from '@/constants/theme';
@@ -13,12 +14,14 @@ export interface ButtonProps extends TouchableOpacityProps {
   title: string;
   variant?: 'primary' | 'secondary' | 'accent' | 'destructive' | 'outline';
   loading?: boolean;
+  icon?: React.ReactNode;
 }
 
 export function Button({
   title,
   variant = 'primary',
   loading = false,
+  icon,
   disabled,
   style,
   textStyle,
@@ -75,7 +78,10 @@ export function Button({
       {loading ? (
         <ActivityIndicator color={getTextColor()} />
       ) : (
-        <Text style={[styles.text, { color: getTextColor() }, textStyle]}>{title}</Text>
+        <View style={styles.contentRow}>
+          {icon ? <View style={styles.iconWrapper}>{icon}</View> : null}
+          <Text style={[styles.text, { color: getTextColor() }, textStyle]}>{title}</Text>
+        </View>
       )}
     </TouchableOpacity>
   );
@@ -88,7 +94,16 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  contentRow: {
     flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  iconWrapper: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   outlineBorder: {
     borderWidth: 1.5,
@@ -99,3 +114,4 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
+

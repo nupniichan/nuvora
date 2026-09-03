@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Colors } from '@/constants/theme';
@@ -15,9 +15,20 @@ export interface MoneyInputProps {
 
 export function MoneyInput({ label, currency, valueMinor, onChangeMinor, error }: MoneyInputProps) {
   const meta = getCurrencyMetadata(currency);
+  const safeMinor = typeof valueMinor === 'number' && !isNaN(valueMinor) ? valueMinor : 0;
+
   const [displayValue, setDisplayValue] = useState<string>(
-    valueMinor === 0 ? '' : (valueMinor / Math.pow(10, meta.decimalPlaces)).toString()
+    safeMinor === 0 ? '' : (safeMinor / Math.pow(10, meta.decimalPlaces)).toString()
   );
+
+  useEffect(() => {
+    const currentNum = parseFloat(displayValue || '0');
+    const currentMinor = toMinorUnits(isNaN(currentNum) ? 0 : currentNum, currency);
+    // Only update displayValue if valueMinor differs from current parsed minor value
+    if (currentMinor !== safeMinor) {
+      setDisplayValue(safeMinor === 0 ? '' : (safeMinor / Math.pow(10, meta.decimalPlaces)).toString());
+    }
+  }, [safeMinor, currency]);
 
   const handleChangeText = (text: string) => {
     // Keep only numbers and decimal separator
