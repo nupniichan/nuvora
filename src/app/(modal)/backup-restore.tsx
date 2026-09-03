@@ -40,7 +40,7 @@ export default function BackupRestoreModal() {
 
   const handleCreateBackup = async () => {
     if (!backupPassword.trim()) {
-      setErrorMessage('Vui lòng nhập mật khẩu gốc để mã hóa bản sao lưu');
+      setErrorMessage(t('backup.passwordRequired'));
       return;
     }
 
@@ -50,9 +50,9 @@ export default function BackupRestoreModal() {
     try {
       const encryptedData = await createEncryptedBackup(backupPassword);
       setBackupOutput(encryptedData);
-      setStatusMessage('Đã tạo bản sao lưu mã hóa thành công!');
+      setStatusMessage(t('backup.created'));
     } catch (e: any) {
-      setErrorMessage(e.message || 'Lỗi khi tạo bản sao lưu');
+      setErrorMessage(e.message || t('backup.createError'));
     } finally {
       setLoading(false);
     }
@@ -70,27 +70,27 @@ export default function BackupRestoreModal() {
       a.click();
       URL.revokeObjectURL(url);
     } else {
-      Alert.alert('Sao lưu', 'Bạn có thể sao chép văn bản sao lưu bên dưới để lưu trữ an toàn.');
+      Alert.alert(t('backup.copyTitle'), t('backup.copyDescription'));
     }
   };
 
   const handlePerformRestore = async () => {
     if (!restoreInput.trim()) {
-      setErrorMessage('Vui lòng dán nội dung tệp sao lưu mã hóa');
+      setErrorMessage(t('backup.contentRequired'));
       return;
     }
     if (!restorePassword.trim()) {
-      setErrorMessage('Vui lòng nhập mật khẩu gốc để giải mã');
+      setErrorMessage(t('backup.restorePasswordRequired'));
       return;
     }
 
     Alert.alert(
-      'Xác nhận khôi phục',
-      'Thao tác này sẽ thay thế toàn bộ dữ liệu hiện tại bằng dữ liệu từ bản sao lưu. Bạn có chắc chắn muốn tiếp tục?',
+      t('backup.confirmTitle'),
+      t('backup.confirmDescription'),
       [
         { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Khôi phục ngay',
+          text: t('backup.restoreNow'),
           style: 'destructive',
           onPress: async () => {
             setLoading(true);
@@ -99,9 +99,9 @@ export default function BackupRestoreModal() {
             try {
               const res = await restoreFromEncryptedBackup(restoreInput.trim(), restorePassword);
               setRestoreStats(res);
-              setStatusMessage('Khôi phục dữ liệu thành công!');
+              setStatusMessage(t('backup.restored'));
             } catch (e: any) {
-              setErrorMessage(e.message || 'Lỗi khi khôi phục');
+              setErrorMessage(e.message || t('backup.restoreError'));
             } finally {
               setLoading(false);
             }
@@ -176,22 +176,19 @@ export default function BackupRestoreModal() {
           <>
             <Card variant="flat" style={styles.infoBox}>
               <MaterialIcons name="security" size={24} color={Colors.primaryDark} />
-              <Text style={styles.infoText}>
-                Bản sao lưu được bảo vệ bằng mật khẩu gốc và mã hóa AES-256-GCM. Bạn có thể khôi phục
-                trên bất kỳ thiết bị mới nào mà không cần thiết bị cũ.
-              </Text>
+              <Text style={styles.infoText}>{t('backup.backupInfo')}</Text>
             </Card>
 
             <Input
-              label="Mật khẩu gốc để mã hóa"
-              placeholder="Nhập mật khẩu gốc của bạn"
+              label={t('backup.backupPassword')}
+              placeholder={t('backup.passwordPlaceholder')}
               secureTextEntry
               value={backupPassword}
               onChangeText={setBackupPassword}
             />
 
             <Button
-              title="Tạo bản sao lưu mã hóa"
+              title={t('backup.createEncrypted')}
               onPress={handleCreateBackup}
               loading={loading}
               variant="primary"
@@ -200,9 +197,9 @@ export default function BackupRestoreModal() {
             {backupOutput ? (
               <View style={styles.outputSection}>
                 <View style={styles.outputHeader}>
-                  <Text style={styles.outputLabel}>Mã sao lưu mã hóa (JSON)</Text>
+                  <Text style={styles.outputLabel}>{t('backup.encryptedJson')}</Text>
                   <Button
-                    title="Tải tệp về máy"
+                    title={t('backup.download')}
                     variant="outline"
                     onPress={handleDownloadFile}
                     icon={<MaterialIcons name="download" size={16} color={Colors.primaryDark} />}
@@ -222,18 +219,15 @@ export default function BackupRestoreModal() {
           <>
             <Card variant="flat" style={styles.infoBox}>
               <MaterialIcons name="phonelink" size={24} color={Colors.primaryDark} />
-              <Text style={styles.infoText}>
-                Dán nội dung tệp sao lưu mã hóa và nhập mật khẩu gốc để khôi phục toàn bộ số dư,
-                danh mục và lịch sử giao dịch.
-              </Text>
+              <Text style={styles.infoText}>{t('backup.restoreInfo')}</Text>
             </Card>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.fieldLabel}>Nội dung tệp sao lưu mã hóa</Text>
+              <Text style={styles.fieldLabel}>{t('backup.encryptedContent')}</Text>
               <TextInput
                 style={[styles.codeBox, styles.inputCodeBox]}
                 multiline
-                placeholder="Dán nội dung JSON bản sao lưu vào đây..."
+                placeholder={t('backup.contentPlaceholder')}
                 placeholderTextColor={Colors.light.textSecondary}
                 value={restoreInput}
                 onChangeText={setRestoreInput}
@@ -241,15 +235,15 @@ export default function BackupRestoreModal() {
             </View>
 
             <Input
-              label="Mật khẩu gốc đã dùng khi sao lưu"
-              placeholder="Nhập mật khẩu gốc để giải mã"
+              label={t('backup.restorePassword')}
+              placeholder={t('backup.restorePasswordPlaceholder')}
               secureTextEntry
               value={restorePassword}
               onChangeText={setRestorePassword}
             />
 
             <Button
-              title="Khôi phục dữ liệu ngay"
+              title={t('backup.restoreData')}
               onPress={handlePerformRestore}
               loading={loading}
               variant="primary"
@@ -258,11 +252,19 @@ export default function BackupRestoreModal() {
 
             {restoreStats && (
               <Card style={styles.statsCard}>
-                <Text style={styles.statsTitle}>Kết quả khôi phục:</Text>
-                <Text style={styles.statLine}>• Tài khoản: {restoreStats.accountsRestored}</Text>
-                <Text style={styles.statLine}>• Giao dịch: {restoreStats.transactionsRestored}</Text>
-                <Text style={styles.statLine}>• Ngân sách: {restoreStats.budgetsRestored}</Text>
-                <Text style={styles.statLine}>• Định kỳ: {restoreStats.recurringRulesRestored}</Text>
+                <Text style={styles.statsTitle}>{t('backup.result')}</Text>
+                <Text style={styles.statLine}>
+                  • {t('backup.accounts', { count: restoreStats.accountsRestored })}
+                </Text>
+                <Text style={styles.statLine}>
+                  • {t('backup.transactions', { count: restoreStats.transactionsRestored })}
+                </Text>
+                <Text style={styles.statLine}>
+                  • {t('backup.budgets', { count: restoreStats.budgetsRestored })}
+                </Text>
+                <Text style={styles.statLine}>
+                  • {t('backup.recurring', { count: restoreStats.recurringRulesRestored })}
+                </Text>
               </Card>
             )}
           </>

@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  ActivityIndicator,
   Alert,
   Modal,
   ScrollView,
@@ -41,7 +42,7 @@ import {
 import { alertMessage, confirmAction } from '@/shared/dialog';
 
 export default function ManageCategoriesModal() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const router = useRouter();
 
   const [groups, setGroups] = useState<CategoryGroupRow[]>([]);
@@ -74,23 +75,19 @@ export default function ManageCategoriesModal() {
   }, []);
 
   useEffect(() => {
-    let isMounted = true;
-    (async () => {
-      try {
-        const grps = await getAllCategoryGroups();
-        const cats = await getAllCategories();
-        if (isMounted) {
-          setGroups(grps);
-          setCategories(cats);
-          setLoading(false);
-        }
-      } catch (e) {
-        console.warn('Lỗi tải danh mục', e);
-        if (isMounted) setLoading(false);
-      }
-    })();
+    let active = true;
+    Promise.all([getAllCategoryGroups(), getAllCategories()])
+      .then(([grps, cats]) => {
+        if (!active) return;
+        setGroups(grps);
+        setCategories(cats);
+      })
+      .catch((error) => console.warn('Could not load categories', error))
+      .finally(() => {
+        if (active) setLoading(false);
+      });
     return () => {
-      isMounted = false;
+      active = false;
     };
   }, []);
 
@@ -115,7 +112,7 @@ export default function ManageCategoriesModal() {
 
   const handleSaveCategory = async () => {
     if (!catName.trim()) {
-      Alert.alert('Thông báo', 'Vui lòng nhập tên danh mục');
+      Alert.alert(t('common.notice'), t('categories.nameRequired'));
       return;
     }
 
@@ -138,7 +135,7 @@ export default function ManageCategoriesModal() {
       setCategoryModalVisible(false);
       await loadData();
     } catch (e: any) {
-      alertMessage('Lỗi', e.message || 'Không thể lưu danh mục');
+      alertMessage(t('common.error'), e.message || t('categories.saveError'));
     }
   };
 
@@ -146,25 +143,25 @@ export default function ManageCategoriesModal() {
     const txCount = await getCategoryTransactionCount(cat.id);
     if (txCount > 0) {
       confirmAction(
-        'Lưu trữ danh mục',
-        `Danh mục "${cat.name}" đang có ${txCount} giao dịch. Danh mục sẽ được chuyển vào mục lưu trữ để đảm bảo lịch sử chi tiêu.`,
+        t('categories.archiveTitle'),
+        t('categories.archiveDescription', { name: cat.name, count: txCount }),
         async () => {
           await archiveCategory(cat.id);
           await loadData();
         },
-        'Đồng ý lưu trữ',
-        'Hủy'
+        t('categories.archiveConfirm'),
+        t('common.cancel')
       );
     } else {
       confirmAction(
-        'Xóa danh mục',
-        `Bạn có chắc chắn muốn xóa "${cat.name}" không?`,
+        t('categories.deleteTitle'),
+        t('categories.deleteDescription', { name: cat.name }),
         async () => {
           await deleteCategory(cat.id);
           await loadData();
         },
-        'Xóa',
-        'Hủy'
+        t('common.delete'),
+        t('common.cancel')
       );
     }
   };
@@ -197,20 +194,20 @@ export default function ManageCategoriesModal() {
 
   const handleDeleteGroup = (group: CategoryGroupRow) => {
     confirmAction(
-      'Xóa nhóm danh mục',
-      `Bạn có chắc chắn muốn xóa nhóm "${group.name}" và toàn bộ danh mục trong nhóm này không?`,
+      t('categories.deleteGroupTitle'),
+      t('categories.deleteGroupDescription', { name: group.name }),
       async () => {
         await archiveCategoryGroup(group.id);
         await loadData();
       },
-      'Xóa nhóm',
-      'Hủy'
+      t('categories.deleteGroup'),
+      t('common.cancel')
     );
   };
 
   const handleSaveGroup = async () => {
     if (!groupName.trim()) {
-      alertMessage('Thông báo', 'Vui lòng nhập tên nhóm danh mục');
+      alertMessage(t('common.notice'), t('categories.groupNameRequired'));
       return;
     }
 
@@ -233,7 +230,7 @@ export default function ManageCategoriesModal() {
       setGroupModalVisible(false);
       await loadData();
     } catch (e: any) {
-      alertMessage('Lỗi', e.message || 'Không thể lưu nhóm danh mục');
+      alertMessage(t('common.error'), e.message || t('categories.saveGroupError'));
     }
   };
 
@@ -241,11 +238,19 @@ export default function ManageCategoriesModal() {
     setAddingTemplate(true);
     try {
       const db = getDatabase();
-      await seedSingleGroupTemplate(db, template, 'vi');
+      const language = i18n.resolvedLanguage === 'en' ? 'en' : 'vi';
+      await seedSingleGroupTemplate(db, template, language);
       await loadData();
-      alertMessage('Thành công', `Đã tạo nhóm "${template.nameVi}" cùng ${template.categories.length} danh mục con!`);
+      const templateName = i18n.resolvedLanguage === 'en' ? template.nameEn : template.nameVi;
+      alertMessage(
+        t('common.success'),
+        t('categories.templateCreated', {
+          name: templateName,
+          count: template.categories.length,
+        })
+      );
     } catch (e: any) {
-      alertMessage('Lỗi', e.message || 'Không thể tạo nhóm mẫu');
+      alertMessage(t('common.error'), e.message || t('categories.templateCreateError'));
     } finally {
       setAddingTemplate(false);
     }
@@ -253,47 +258,48 @@ export default function ManageCategoriesModal() {
 
   const handleAddAllTemplates = () => {
     confirmAction(
-      'Tạo tất cả nhóm mẫu',
-      'Bạn có muốn thêm toàn bộ các nhóm và danh mục mẫu tiêu chuẩn vào danh sách không?',
+      t('categories.addAllTitle'),
+      t('categories.addAllConfirm'),
       async () => {
         setAddingTemplate(true);
         try {
           const db = getDatabase();
-          await seedStarterCategories(db, 'vi');
+          await seedStarterCategories(db, i18n.resolvedLanguage === 'en' ? 'en' : 'vi');
           await loadData();
           setTemplateModalVisible(false);
-          alertMessage('Thành công', 'Đã thêm toàn bộ nhóm và danh mục mẫu thành công!');
+          alertMessage(t('common.success'), t('categories.allCreated'));
         } catch (e: any) {
-          alertMessage('Lỗi', e.message || 'Không thể thêm danh mục mẫu');
+          alertMessage(t('common.error'), e.message || t('categories.allCreateError'));
         } finally {
           setAddingTemplate(false);
         }
       },
-      'Thêm tất cả',
-      'Hủy'
+      t('categories.addAll'),
+      t('common.cancel')
     );
   };
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Quản lý Danh mục</Text>
+        <Text style={styles.title}>{t('categories.title')}</Text>
         <TouchableOpacity onPress={() => router.back()} style={styles.closeBtn}>
           <MaterialIcons name="close" size={22} color={Colors.light.text} />
         </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
+        {loading ? <ActivityIndicator color={Colors.primaryStrong} /> : null}
         <View style={styles.topActions}>
           <Button
-            title="Thêm nhóm mới"
+            title={t('categories.addGroup')}
             variant="outline"
             icon={<MaterialIcons name="create-new-folder" size={18} color={Colors.primaryDark} />}
             onPress={openAddGroup}
             style={styles.actionBtnHalf}
           />
           <Button
-            title="Mẫu nhóm có sẵn"
+            title={t('categories.templates')}
             variant="primary"
             icon={<MaterialIcons name="auto-awesome" size={18} color="#1A1C2E" />}
             onPress={() => setTemplateModalVisible(true)}
@@ -324,7 +330,7 @@ export default function ManageCategoriesModal() {
                 <View style={styles.groupTitleInfo}>
                   <Text style={styles.groupName}>{group.name}</Text>
                   <Text style={styles.groupSubtitle}>
-                    {isIncome ? 'Dòng tiền vào' : 'Dòng tiền ra'} • {groupCats.length} danh mục
+                    {t(isIncome ? 'categories.incomeFlow' : 'categories.expenseFlow')} · {t('categories.categoryCount', { count: groupCats.length })}
                   </Text>
                 </View>
 
@@ -348,14 +354,14 @@ export default function ManageCategoriesModal() {
                     onPress={() => openAddCategory(group.id)}
                   >
                     <MaterialIcons name="add" size={16} color={Colors.primaryDark} />
-                    <Text style={styles.addCategoryText}>Thêm</Text>
+                    <Text style={styles.addCategoryText}>{t('categories.add')}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
 
               <View style={styles.categoryList}>
                 {groupCats.length === 0 ? (
-                  <Text style={styles.emptyGroupText}>Chưa có danh mục nào trong nhóm này</Text>
+                  <Text style={styles.emptyGroupText}>{t('categories.emptyGroup')}</Text>
                 ) : (
                   groupCats.map((cat) => (
                     <View key={cat.id} style={styles.categoryItem}>
@@ -410,7 +416,7 @@ export default function ManageCategoriesModal() {
         <View style={styles.modalRoot}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>
-              {editingCategory ? 'Sửa Danh mục' : 'Thêm Danh mục Mới'}
+              {t(editingCategory ? 'categories.editCategory' : 'categories.newCategory')}
             </Text>
             <TouchableOpacity onPress={() => setCategoryModalVisible(false)}>
               <MaterialIcons name="close" size={22} color={Colors.light.text} />
@@ -420,10 +426,10 @@ export default function ManageCategoriesModal() {
           <ScrollView contentContainerStyle={styles.modalContent}>
             {/* Name Input */}
             <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Tên danh mục</Text>
+              <Text style={styles.formLabel}>{t('categories.categoryName')}</Text>
               <TextInput
                 style={styles.textInput}
-                placeholder="Ví dụ: Tiền điện, Mua cổ phiếu, Lương..."
+                placeholder={t('categories.categoryPlaceholder')}
                 placeholderTextColor={Colors.light.textSecondary}
                 value={catName}
                 onChangeText={setCatName}
@@ -432,7 +438,7 @@ export default function ManageCategoriesModal() {
 
             {/* Select Group */}
             <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Thuộc nhóm</Text>
+              <Text style={styles.formLabel}>{t('categories.belongsTo')}</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
                 {groups.map((grp) => {
                   const isSelected = grp.id === selectedGroupId;
@@ -453,14 +459,14 @@ export default function ManageCategoriesModal() {
 
             {/* Color Picker */}
             <ColorPicker
-              label="Chọn màu đại diện"
+              label={t('categories.pickColor')}
               selectedColor={catColor}
               onSelectColor={setCatColor}
             />
 
             {/* Icon Picker */}
             <IconPicker
-              label="Chọn biểu tượng (icon)"
+              label={t('categories.pickIcon')}
               selectedIcon={catIcon}
               selectedColor={catColor}
               onSelectIcon={setCatIcon}
@@ -468,19 +474,19 @@ export default function ManageCategoriesModal() {
 
             {/* Preview Banner */}
             <View style={styles.previewCard}>
-              <Text style={styles.previewLabel}>Xem trước hiển thị</Text>
+              <Text style={styles.previewLabel}>{t('categories.preview')}</Text>
               <View style={styles.previewRow}>
                 <View style={[styles.previewBadge, { backgroundColor: catColor }]}>
                   <MaterialIcons name={(catIcon as any) || 'category'} size={20} color="#FFFFFF" />
                 </View>
-                <Text style={styles.previewName}>{catName || 'Tên danh mục'}</Text>
+                <Text style={styles.previewName}>{catName || t('categories.previewName')}</Text>
               </View>
             </View>
           </ScrollView>
 
           <View style={styles.modalFooter}>
             <Button
-              title="Lưu danh mục"
+              title={t('categories.saveCategory')}
               variant="primary"
               onPress={handleSaveCategory}
             />
@@ -497,7 +503,7 @@ export default function ManageCategoriesModal() {
       >
         <View style={styles.modalRoot}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Tạo Nhóm Danh mục Mới</Text>
+            <Text style={styles.modalTitle}>{t('categories.newGroup')}</Text>
             <TouchableOpacity onPress={() => setGroupModalVisible(false)}>
               <MaterialIcons name="close" size={22} color={Colors.light.text} />
             </TouchableOpacity>
@@ -505,10 +511,10 @@ export default function ManageCategoriesModal() {
 
           <ScrollView contentContainerStyle={styles.modalContent}>
             <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Tên nhóm</Text>
+              <Text style={styles.formLabel}>{t('categories.groupName')}</Text>
               <TextInput
                 style={styles.textInput}
-                placeholder="Ví dụ: Đầu tư, Khoản nợ, Quỹ dự phòng..."
+                placeholder={t('categories.groupPlaceholder')}
                 placeholderTextColor={Colors.light.textSecondary}
                 value={groupName}
                 onChangeText={setGroupName}
@@ -516,7 +522,7 @@ export default function ManageCategoriesModal() {
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Loại dòng tiền</Text>
+              <Text style={styles.formLabel}>{t('categories.cashflowType')}</Text>
               <View style={styles.flowTypeRow}>
                 <TouchableOpacity
                   style={[
@@ -531,7 +537,7 @@ export default function ManageCategoriesModal() {
                     color={groupType === 'expense' ? Colors.expense : Colors.light.textSecondary}
                   />
                   <Text style={[styles.flowTypeText, groupType === 'expense' && styles.activeFlowText]}>
-                    Chi tiêu / Tiền ra
+                    {t('categories.expenseFlowFull')}
                   </Text>
                 </TouchableOpacity>
 
@@ -548,20 +554,20 @@ export default function ManageCategoriesModal() {
                     color={groupType === 'income' ? Colors.income : Colors.light.textSecondary}
                   />
                   <Text style={[styles.flowTypeText, groupType === 'income' && styles.activeFlowText]}>
-                    Thu nhập / Tiền vào
+                    {t('categories.incomeFlowFull')}
                   </Text>
                 </TouchableOpacity>
               </View>
             </View>
 
             <ColorPicker
-              label="Chọn màu nhóm"
+              label={t('categories.pickGroupColor')}
               selectedColor={groupColor}
               onSelectColor={setGroupColor}
             />
 
             <IconPicker
-              label="Chọn icon nhóm"
+              label={t('categories.pickGroupIcon')}
               selectedIcon={groupIcon}
               selectedColor={groupColor}
               onSelectIcon={setGroupIcon}
@@ -570,7 +576,7 @@ export default function ManageCategoriesModal() {
 
           <View style={styles.modalFooter}>
             <Button
-              title="Tạo nhóm"
+              title={t('categories.createGroup')}
               variant="primary"
               onPress={handleSaveGroup}
             />
@@ -588,8 +594,8 @@ export default function ManageCategoriesModal() {
         <View style={styles.modalRoot}>
           <View style={styles.modalHeader}>
             <View>
-              <Text style={styles.modalTitle}>Mẫu nhóm danh mục</Text>
-              <Text style={styles.modalSubtitle}>Chọn nhóm mẫu để thêm nhanh vào hệ thống</Text>
+              <Text style={styles.modalTitle}>{t('categories.templateTitle')}</Text>
+              <Text style={styles.modalSubtitle}>{t('categories.templateSubtitle')}</Text>
             </View>
             <TouchableOpacity onPress={() => setTemplateModalVisible(false)}>
               <MaterialIcons name="close" size={22} color={Colors.light.text} />
@@ -607,14 +613,16 @@ export default function ManageCategoriesModal() {
                   <MaterialIcons name="auto-awesome" size={20} color="#1A1C2E" />
                 </View>
                 <View style={styles.addAllTextContainer}>
-                  <Text style={styles.addAllTitle}>Tạo tất cả {STARTER_TEMPLATES.length} nhóm mẫu</Text>
-                  <Text style={styles.addAllSub}>Khởi tạo nhanh toàn bộ danh mục tài chính tiêu chuẩn</Text>
+                  <Text style={styles.addAllTitle}>
+                    {t('categories.addAllCount', { count: STARTER_TEMPLATES.length })}
+                  </Text>
+                  <Text style={styles.addAllSub}>{t('categories.addAllDescription')}</Text>
                 </View>
               </View>
               <MaterialIcons name="chevron-right" size={22} color={Colors.light.textSecondary} />
             </TouchableOpacity>
 
-            <Text style={styles.templateSectionHeading}>Danh sách nhóm mẫu chuẩn</Text>
+            <Text style={styles.templateSectionHeading}>{t('categories.templateList')}</Text>
 
             {STARTER_TEMPLATES.map((tmpl, idx) => {
               const alreadyExists = groups.some(
@@ -634,7 +642,7 @@ export default function ManageCategoriesModal() {
                     </View>
 
                     <View style={styles.templateHeaderInfo}>
-                      <Text style={styles.templateName}>{tmpl.nameVi}</Text>
+                      <Text style={styles.templateName}>{i18n.resolvedLanguage === 'en' ? tmpl.nameEn : tmpl.nameVi}</Text>
                       <View style={styles.templateTypeBadgeRow}>
                         <View
                           style={[
@@ -648,11 +656,11 @@ export default function ManageCategoriesModal() {
                               tmpl.type === 'income' ? styles.incomeBadgeText : styles.expenseBadgeText,
                             ]}
                           >
-                            {tmpl.type === 'income' ? 'Thu nhập' : 'Chi tiêu'}
+                            {t(`transactions.${tmpl.type}`)}
                           </Text>
                         </View>
                         <Text style={styles.templateCatCount}>
-                          {tmpl.categories.length} danh mục con
+                          {t('categories.childCount', { count: tmpl.categories.length })}
                         </Text>
                       </View>
                     </View>
@@ -660,7 +668,7 @@ export default function ManageCategoriesModal() {
                     {alreadyExists ? (
                       <View style={styles.alreadyExistsBadge}>
                         <MaterialIcons name="check" size={14} color="#2E7D32" />
-                        <Text style={styles.alreadyExistsText}>Đã có</Text>
+                        <Text style={styles.alreadyExistsText}>{t('categories.alreadyAdded')}</Text>
                       </View>
                     ) : (
                       <TouchableOpacity
@@ -669,7 +677,7 @@ export default function ManageCategoriesModal() {
                         onPress={() => handleAddTemplate(tmpl)}
                       >
                         <MaterialIcons name="add" size={16} color="#1A1C2E" />
-                        <Text style={styles.addSingleTemplateBtnText}>Thêm</Text>
+                        <Text style={styles.addSingleTemplateBtnText}>{t('categories.add')}</Text>
                       </TouchableOpacity>
                     )}
                   </View>
@@ -679,7 +687,7 @@ export default function ManageCategoriesModal() {
                     {tmpl.categories.map((c, cIdx) => (
                       <View key={cIdx} style={styles.templateCatChip}>
                         <View style={[styles.templateCatDot, { backgroundColor: c.color }]} />
-                        <Text style={styles.templateCatText}>{c.nameVi}</Text>
+                        <Text style={styles.templateCatText}>{i18n.resolvedLanguage === 'en' ? c.nameEn : c.nameVi}</Text>
                       </View>
                     ))}
                   </View>

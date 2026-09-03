@@ -68,9 +68,7 @@ export default function SetupCategoriesScreen() {
               <View style={styles.info}>
                 <Text style={styles.cardTitle}>{t('onboarding.templatePersonal')}</Text>
                 <Text style={styles.cardDesc}>
-                  {params.lang === 'en'
-                    ? 'Includes common income & expense categories (Food, Housing, Utilities...)'
-                    : 'Bao gồm các danh mục chi tiêu & thu nhập phổ biến (Ăn uống, Tiền nhà, Hóa đơn...)'}
+                  {t('onboarding.templatePersonalDescription')}
                 </Text>
               </View>
               {selectedTemplate === 'personal' ? (
@@ -94,11 +92,7 @@ export default function SetupCategoriesScreen() {
               </View>
               <View style={styles.info}>
                 <Text style={styles.cardTitle}>{t('onboarding.templateEmpty')}</Text>
-                <Text style={styles.cardDesc}>
-                  {params.lang === 'en'
-                    ? 'Start with zero categories and build your own from scratch.'
-                    : 'Bắt đầu từ trang trắng và tự tạo các danh mục của riêng bạn.'}
-                </Text>
+                <Text style={styles.cardDesc}>{t('onboarding.templateEmptyDescription')}</Text>
               </View>
               {selectedTemplate === 'empty' ? (
                 <MaterialIcons name="check" size={20} color={Colors.accent} />

@@ -3,6 +3,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
@@ -29,7 +30,7 @@ import {
 import { formatMoney } from '@/shared/money';
 
 export default function BudgetsScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const router = useRouter();
 
   const now = new Date();
@@ -94,32 +95,19 @@ export default function BudgetsScreen() {
     color: cat.categoryColor,
     icon: cat.categoryIcon,
   }));
+  const monthLabel = new Intl.DateTimeFormat(i18n.resolvedLanguage === 'en' ? 'en-US' : 'vi-VN', {
+    month: 'long',
+    year: 'numeric',
+  }).format(new Date(currentYear, currentMonth - 1, 1));
 
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.titleRow}>
-          <Text style={styles.title}>Ngân sách & Mục tiêu</Text>
-          <View style={styles.headerActions}>
-            <TouchableOpacity
-              style={styles.actionBtn}
-              onPress={() => router.push('/(modal)/manage-categories' as any)}
-            >
-              <MaterialIcons name="category" size={20} color={Colors.primaryDark} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.actionBtn}
-              onPress={() => router.push('/(modal)/manage-goals' as any)}
-            >
-              <MaterialIcons name="flag" size={20} color={Colors.primaryDark} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.actionBtn}
-              onPress={() => router.push('/(modal)/manage-budget' as any)}
-            >
-              <MaterialIcons name="tune" size={20} color={Colors.primaryDark} />
-            </TouchableOpacity>
+          <View>
+            <Text style={styles.eyebrow}>NUVORA</Text>
+            <Text style={styles.title}>{t('budgets.pageTitle')}</Text>
           </View>
         </View>
 
@@ -128,9 +116,7 @@ export default function BudgetsScreen() {
           <TouchableOpacity onPress={handlePrevMonth} style={styles.navArrowBtn}>
             <MaterialIcons name="chevron-left" size={24} color={Colors.light.text} />
           </TouchableOpacity>
-          <Text style={styles.monthNavTitle}>
-            Tháng {currentMonth}/{currentYear}
-          </Text>
+          <Text style={styles.monthNavTitle}>{monthLabel}</Text>
           <TouchableOpacity onPress={handleNextMonth} style={styles.navArrowBtn}>
             <MaterialIcons name="chevron-right" size={24} color={Colors.light.text} />
           </TouchableOpacity>
@@ -138,15 +124,16 @@ export default function BudgetsScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
+        {loading ? <ActivityIndicator color={Colors.primaryStrong} /> : null}
         {/* Monthly Financial Overview Card */}
         <Card style={styles.overviewCard}>
           <View style={styles.overviewHeader}>
-            <Text style={styles.overviewTitle}>Tổng quan dòng tiền tháng</Text>
+            <Text style={styles.overviewTitle}>{t('budgets.overview')}</Text>
             {snapshot && snapshot.overLimitCount > 0 && (
               <View style={styles.overLimitBadge}>
                 <MaterialIcons name="warning" size={13} color="#C62828" />
                 <Text style={styles.overLimitBadgeText}>
-                  {snapshot.overLimitCount} danh mục vượt hạn mức
+                  {t('budgets.overLimitCount', { count: snapshot.overLimitCount })}
                 </Text>
               </View>
             )}
@@ -155,21 +142,21 @@ export default function BudgetsScreen() {
           {/* Key Metrics Row */}
           <View style={styles.metricsRow}>
             <View style={styles.metricItem}>
-              <Text style={styles.metricLabel}>Tổng thu nhập</Text>
+              <Text style={styles.metricLabel}>{t('budgets.totalIncome')}</Text>
               <Text style={[styles.metricValue, { color: Colors.income }]}>
                 +{formatMoney(totalIncome, currency)}
               </Text>
             </View>
             <View style={styles.metricDivider} />
             <View style={styles.metricItem}>
-              <Text style={styles.metricLabel}>Tổng chi tiêu</Text>
+              <Text style={styles.metricLabel}>{t('budgets.totalExpense')}</Text>
               <Text style={[styles.metricValue, { color: Colors.expense }]}>
                 -{formatMoney(totalExpense, currency)}
               </Text>
             </View>
             <View style={styles.metricDivider} />
             <View style={styles.metricItem}>
-              <Text style={styles.metricLabel}>Số dư tháng</Text>
+              <Text style={styles.metricLabel}>{t('budgets.netBalance')}</Text>
               <Text
                 style={[
                   styles.metricValue,
@@ -186,7 +173,7 @@ export default function BudgetsScreen() {
           {totalIncome > 0 && (
             <View style={styles.overviewProgressSection}>
               <View style={styles.progressHeaderRow}>
-                <Text style={styles.progressLabel}>Tỷ lệ chi tiêu / thu nhập</Text>
+                <Text style={styles.progressLabel}>{t('budgets.spendIncomeRatio')}</Text>
                 <Text style={styles.progressPercent}>{spendVsIncomePercent}%</Text>
               </View>
               <View style={styles.progressTrack}>
@@ -219,36 +206,36 @@ export default function BudgetsScreen() {
 
         {/* Category Expense Breakdown Chart */}
         <CategoryBreakdownChart
-          title="Phân bổ cơ cấu chi tiêu"
+          title={t('budgets.breakdownTitle')}
           totalAmount={totalExpense}
           currency={currency}
           items={expenseChartItems}
-          emptyMessage="Chưa có chi tiêu nào trong tháng này"
+          emptyMessage={t('budgets.noExpenseThisMonth')}
         />
 
         {/* Quick Actions Bar */}
         <View style={styles.quickBar}>
           <TouchableOpacity
-            style={styles.quickBtn}
-            onPress={() => router.push('/(modal)/add-transaction' as any)}
+            style={[styles.quickBtn, styles.primaryQuickBtn]}
+            onPress={() => router.push('/(modal)/add-transaction')}
           >
-            <MaterialIcons name="add-circle" size={18} color={Colors.primaryDark} />
-            <Text style={styles.quickBtnText}>Ghi chép mới</Text>
+            <MaterialIcons name="add" size={18} color="#FFFFFF" />
+            <Text style={[styles.quickBtnText, styles.primaryQuickBtnText]}>{t('budgets.newEntry')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.quickBtn}
-            onPress={() => router.push('/(modal)/manage-budget' as any)}
+            onPress={() => router.push('/(modal)/manage-budget')}
           >
             <MaterialIcons name="tune" size={18} color={Colors.primaryDark} />
-            <Text style={styles.quickBtnText}>Cài đặt hạn mức</Text>
+            <Text style={styles.quickBtnText}>{t('budgets.manageLimits')}</Text>
           </TouchableOpacity>
         </View>
 
         {/* Section 1: Income Breakdown */}
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>Khoản Thu nhập (+)</Text>
+            <Text style={styles.sectionTitle}>{t('budgets.incomeSection')}</Text>
             <Text style={[styles.sectionTotalText, { color: Colors.income }]}>
               {formatMoney(totalIncome, currency)}
             </Text>
@@ -257,7 +244,7 @@ export default function BudgetsScreen() {
           {snapshot && snapshot.incomeCategories.length === 0 ? (
             <Card variant="flat" style={styles.emptyCategoryCard}>
               <Text style={styles.emptyCategoryText}>
-                Chưa có khoản thu nhập nào trong tháng này
+                {t('budgets.noIncomeThisMonth')}
               </Text>
             </Card>
           ) : (
@@ -280,7 +267,7 @@ export default function BudgetsScreen() {
                   <View style={styles.catDetails}>
                     <Text style={styles.catName}>{cat.categoryName}</Text>
                     <Text style={styles.catSubtext}>
-                      {cat.groupName} • {cat.transactionCount} giao dịch
+                      {cat.groupName} · {t('budgets.transactionCount', { count: cat.transactionCount })}
                     </Text>
                   </View>
 
@@ -296,7 +283,7 @@ export default function BudgetsScreen() {
         {/* Section 2: Expense Breakdown & Spending Limits */}
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>Khoản Chi tiêu & Hạn mức (-)</Text>
+            <Text style={styles.sectionTitle}>{t('budgets.expenseSection')}</Text>
             <Text style={[styles.sectionTotalText, { color: Colors.expense }]}>
               {formatMoney(totalExpense, currency)}
             </Text>
@@ -305,7 +292,7 @@ export default function BudgetsScreen() {
           {snapshot && snapshot.expenseCategories.length === 0 ? (
             <Card variant="flat" style={styles.emptyCategoryCard}>
               <Text style={styles.emptyCategoryText}>
-                Chưa có khoản chi tiêu nào trong tháng này
+                {t('budgets.noExpenseThisMonth')}
               </Text>
             </Card>
           ) : (
@@ -340,9 +327,9 @@ export default function BudgetsScreen() {
                         >
                           {hasLimit
                             ? cat.isOverLimit
-                              ? `Vượt ${formatMoney(Math.abs(cat.remainingAmount ?? 0), currency)}`
-                              : `Còn ${formatMoney(cat.remainingAmount ?? 0, currency)}`
-                            : `${cat.transactionCount} giao dịch`}
+                              ? t('budgets.overBy', { amount: formatMoney(Math.abs(cat.remainingAmount ?? 0), currency) })
+                              : t('budgets.remainingAmount', { amount: formatMoney(cat.remainingAmount ?? 0, currency) })
+                            : t('budgets.transactionCount', { count: cat.transactionCount })}
                         </Text>
                       </View>
 
@@ -367,14 +354,14 @@ export default function BudgetsScreen() {
 
                       <View style={styles.catAmountsRow}>
                         <Text style={styles.catAmountSpent}>
-                          Đã chi: {formatMoney(cat.totalAmount, currency)}
+                          {t('budgets.spentAmount', { amount: formatMoney(cat.totalAmount, currency) })}
                         </Text>
                         {hasLimit ? (
                           <Text style={styles.catLimitAmount}>
-                            Hạn mức: {formatMoney(cat.spendingLimit ?? 0, currency)} ({percent}%)
+                            {t('budgets.limitAmount', { amount: formatMoney(cat.spendingLimit ?? 0, currency), percent })}
                           </Text>
                         ) : (
-                          <Text style={styles.catNoLimit}>Không giới hạn</Text>
+                          <Text style={styles.catNoLimit}>{t('budgets.unlimited')}</Text>
                         )}
                       </View>
                     </View>
@@ -388,21 +375,21 @@ export default function BudgetsScreen() {
         {/* Section 3: Financial Goals Progress */}
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>Mục tiêu Tài chính</Text>
-            <TouchableOpacity onPress={() => router.push('/(modal)/manage-goals' as any)}>
-              <Text style={styles.seeAllLink}>Xem tất cả ({goals.length}) →</Text>
+            <Text style={styles.sectionTitle}>{t('budgets.goalsSection')}</Text>
+            <TouchableOpacity onPress={() => router.push('/(modal)/manage-goals')}>
+              <Text style={styles.seeAllLink}>{t('budgets.seeAllCount', { count: goals.length })} →</Text>
             </TouchableOpacity>
           </View>
 
           {goals.length === 0 ? (
             <Card variant="flat" style={styles.emptyCategoryCard}>
               <Text style={styles.emptyCategoryText}>
-                Chưa tạo mục tiêu nào (Tiết kiệm mua nhà, trả nợ, quỹ khẩn cấp...)
+                {t('budgets.noGoals')}
               </Text>
               <Button
-                title="Tạo mục tiêu ngay"
+                title={t('budgets.createGoalNow')}
                 variant="outline"
-                onPress={() => router.push('/(modal)/manage-goals' as any)}
+                onPress={() => router.push('/(modal)/manage-goals')}
                 style={styles.addGoalInlineBtn}
               />
             </Card>
@@ -411,7 +398,7 @@ export default function BudgetsScreen() {
               <TouchableOpacity
                 key={goal.id}
                 activeOpacity={0.8}
-                onPress={() => router.push('/(modal)/manage-goals' as any)}
+                onPress={() => router.push('/(modal)/manage-goals')}
               >
                 <Card style={styles.goalMiniCard}>
                   <View style={styles.goalMiniHeader}>
@@ -450,7 +437,7 @@ export default function BudgetsScreen() {
                       {formatMoney(goal.current_amount, 'VND')}
                     </Text>
                     <Text style={styles.goalMiniTarget}>
-                      Mục tiêu: {formatMoney(goal.target_amount, 'VND')}
+                      {t('budgets.goalTarget', { amount: formatMoney(goal.target_amount, 'VND') })}
                     </Text>
                   </View>
                 </Card>
@@ -482,21 +469,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   title: {
-    fontSize: 22,
+    fontSize: 26,
     fontWeight: '800',
     color: Colors.light.text,
   },
-  headerActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  actionBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: Colors.light.backgroundElement,
-    alignItems: 'center',
-    justifyContent: 'center',
+  eyebrow: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1.8,
+    color: Colors.accentDark,
   },
   monthNav: {
     flexDirection: 'row',
@@ -622,6 +603,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: Colors.light.text,
+  },
+  primaryQuickBtn: {
+    backgroundColor: Colors.primaryStrong,
+  },
+  primaryQuickBtnText: {
+    color: '#FFFFFF',
   },
   section: {
     gap: 10,

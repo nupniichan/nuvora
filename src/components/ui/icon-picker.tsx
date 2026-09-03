@@ -1,5 +1,6 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ScrollView,
   StyleSheet,
@@ -121,6 +122,7 @@ export function IconPicker({
   selectedColor = Colors.primaryDark,
   onSelectIcon,
 }: IconPickerProps) {
+  const { t } = useTranslation();
   const [search, setSearch] = useState('');
 
   const filteredIcons = POPULAR_ICONS.filter((name) =>
@@ -135,7 +137,7 @@ export function IconPicker({
         <MaterialIcons name="search" size={18} color={Colors.light.textSecondary} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Tìm kiếm biểu tượng..."
+          placeholder={t('common.searchIcons')}
           placeholderTextColor={Colors.light.textSecondary}
           value={search}
           onChangeText={setSearch}

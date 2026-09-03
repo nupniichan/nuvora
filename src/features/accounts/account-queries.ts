@@ -1,18 +1,29 @@
 import { getDatabase } from '@/database/database';
 import { AccountRow, AccountType } from '@/database/types';
+import { getCurrentLanguage } from '@/i18n/language-state';
 import { generateUUID } from '@/shared/uuid';
+
+function localizeDefaultAccount(account: AccountRow): AccountRow {
+  if (account.type !== 'cash' || !['Cash', 'Tiền mặt'].includes(account.name)) return account;
+  return {
+    ...account,
+    name: getCurrentLanguage() === 'en' ? 'Cash' : 'Tiền mặt',
+  };
+}
 
 export async function getAllAccounts(includeArchived: boolean = false): Promise<AccountRow[]> {
   const db = getDatabase();
   const sql = includeArchived
     ? 'SELECT * FROM accounts ORDER BY sort_order ASC, name ASC;'
     : 'SELECT * FROM accounts WHERE is_archived = 0 ORDER BY sort_order ASC, name ASC;';
-  return await db.getAllAsync<AccountRow>(sql);
+  const rows = await db.getAllAsync<AccountRow>(sql);
+  return rows.map(localizeDefaultAccount);
 }
 
 export async function getAccountById(id: string): Promise<AccountRow | null> {
   const db = getDatabase();
-  return await db.getFirstAsync<AccountRow>('SELECT * FROM accounts WHERE id = ?;', [id]);
+  const row = await db.getFirstAsync<AccountRow>('SELECT * FROM accounts WHERE id = ?;', [id]);
+  return row ? localizeDefaultAccount(row) : null;
 }
 
 export async function createAccount(data: {

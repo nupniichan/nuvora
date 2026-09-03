@@ -31,7 +31,7 @@ import { formatDateISO } from '@/shared/date-utils';
 import { formatMoney } from '@/shared/money';
 
 export default function AddTransactionModal() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const router = useRouter();
 
   const [type, setType] = useState<TransactionType>('expense');
@@ -72,7 +72,7 @@ export default function AddTransactionModal() {
       let accs = await getAllAccounts();
       if (accs.length === 0) {
         const defaultAcc = await createAccount({
-          name: 'Tiền mặt',
+          name: t('transactions.defaultCash'),
           type: 'cash',
           currency: 'VND',
           initialBalance: 0,
@@ -87,8 +87,8 @@ export default function AddTransactionModal() {
         }
       }
     }
-    loadAccounts();
-  }, []);
+    void loadAccounts();
+  }, [t]);
 
   useEffect(() => {
     async function loadCategories() {
@@ -100,7 +100,7 @@ export default function AddTransactionModal() {
         if (grps.length === 0 || cats.length === 0) {
           try {
             const db = getDatabase();
-            await seedStarterCategories(db, 'vi');
+            await seedStarterCategories(db, i18n.resolvedLanguage === 'en' ? 'en' : 'vi');
             [grps, cats] = await Promise.all([
               getAllCategoryGroups(type),
               getAllCategories(type),
@@ -122,8 +122,8 @@ export default function AddTransactionModal() {
         setSelectedCategoryId(null);
       }
     }
-    loadCategories();
-  }, [type]);
+    void loadCategories();
+  }, [i18n.resolvedLanguage, type]);
 
   const handleCreateCustomCat = async () => {
     if (!customCatName.trim()) return;
@@ -140,14 +140,14 @@ export default function AddTransactionModal() {
         icon: targetGroup.icon || 'category',
         color: targetGroup.color || Colors.primaryDark,
       });
-      const updatedCats = await getAllCategories(type);
+      const updatedCats = await getAllCategories(targetGroup.type);
       setCategories(updatedCats);
       setSelectedCategoryId(created.id);
       setCustomCatName('');
       setIsAddingCustomCat(false);
       setIsCategoryExpanded(false);
     } catch (e: any) {
-      console.warn('Lỗi khi tạo danh mục tùy chỉnh', e);
+      console.warn('Could not create custom category', e);
     } finally {
       setCreatingCustomCat(false);
     }
@@ -209,16 +209,16 @@ export default function AddTransactionModal() {
 
   const handleSave = async () => {
     if (amountMinor <= 0) {
-      setError('Vui lòng nhập số tiền hợp lệ');
+      setError(t('transactions.amountRequired'));
       return;
     }
     if (!selectedAccountId) {
-      setError('Vui lòng chọn tài khoản');
+      setError(t('transactions.accountRequired'));
       return;
     }
     if (type === 'transfer') {
       if (!toAccountId || toAccountId === selectedAccountId) {
-        setError('Vui lòng chọn tài khoản đích khác tài khoản nguồn');
+        setError(t('transactions.differentAccountRequired'));
         return;
       }
     }
@@ -239,7 +239,7 @@ export default function AddTransactionModal() {
 
       router.back();
     } catch (e: any) {
-      setError(e.message || 'Lỗi khi lưu giao dịch');
+      setError(e.message || t('transactions.saveError'));
       setLoading(false);
     }
   };
@@ -247,7 +247,7 @@ export default function AddTransactionModal() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Ghi chép Giao dịch</Text>
+        <Text style={styles.title}>{t('transactions.entryTitle')}</Text>
         <TouchableOpacity onPress={() => router.back()} style={styles.closeBtn}>
           <MaterialIcons name="close" size={22} color={Colors.light.text} />
         </TouchableOpacity>
@@ -261,7 +261,7 @@ export default function AddTransactionModal() {
             onPress={() => setType('expense')}
           >
             <Text style={[styles.segmentText, type === 'expense' && styles.activeText]}>
-              Chi tiêu
+              {t('transactions.expense')}
             </Text>
           </TouchableOpacity>
 
@@ -270,7 +270,7 @@ export default function AddTransactionModal() {
             onPress={() => setType('income')}
           >
             <Text style={[styles.segmentText, type === 'income' && styles.activeText]}>
-              Thu nhập
+              {t('transactions.income')}
             </Text>
           </TouchableOpacity>
 
@@ -279,14 +279,14 @@ export default function AddTransactionModal() {
             onPress={() => setType('transfer')}
           >
             <Text style={[styles.segmentText, type === 'transfer' && styles.activeText]}>
-              Chuyển khoản
+              {t('transactions.transfer')}
             </Text>
           </TouchableOpacity>
         </View>
 
         {/* Amount Input */}
         <MoneyInput
-          label="Số tiền"
+          label={t('transactions.amount')}
           currency={currency}
           valueMinor={amountMinor}
           onChangeMinor={setAmountMinor}
@@ -313,11 +313,15 @@ export default function AddTransactionModal() {
                 ]}
               >
                 {limitWarning.isOverLimit
-                  ? 'Vượt hạn mức chi tiêu!'
-                  : `Đạt ${limitWarning.percentUsed}% hạn mức`}
+                  ? t('transactions.limitExceeded')
+                  : t('transactions.limitReached', { percent: limitWarning.percentUsed })}
               </Text>
               <Text style={styles.warningSub}>
-                Hạn mức {selectedCategory?.name}: {formatMoney(limitWarning.limit, 'VND')} (Dự kiến: {formatMoney(limitWarning.projectedTotal, 'VND')})
+                {t('transactions.limitProjection', {
+                  category: selectedCategory?.name,
+                  limit: formatMoney(limitWarning.limit, 'VND'),
+                  projected: formatMoney(limitWarning.projectedTotal, 'VND'),
+                })}
               </Text>
             </View>
           </View>
@@ -325,14 +329,14 @@ export default function AddTransactionModal() {
 
         {/* Date Selector */}
         <Card style={styles.fieldCard}>
-          <Text style={styles.fieldLabel}>Ngày ghi nhận</Text>
+          <Text style={styles.fieldLabel}>{t('transactions.recordedDate')}</Text>
           <View style={styles.datePresetRow}>
             <TouchableOpacity
               style={[styles.datePresetBtn, datePreset === 'today' && styles.activeDatePreset]}
               onPress={() => handleDatePreset('today')}
             >
               <Text style={[styles.datePresetText, datePreset === 'today' && styles.activeDatePresetText]}>
-                Hôm nay
+                {t('transactions.today')}
               </Text>
             </TouchableOpacity>
 
@@ -341,7 +345,7 @@ export default function AddTransactionModal() {
               onPress={() => handleDatePreset('yesterday')}
             >
               <Text style={[styles.datePresetText, datePreset === 'yesterday' && styles.activeDatePresetText]}>
-                Hôm qua
+                {t('transactions.yesterday')}
               </Text>
             </TouchableOpacity>
 
@@ -350,7 +354,7 @@ export default function AddTransactionModal() {
               onPress={() => setDatePreset('custom')}
             >
               <Text style={[styles.datePresetText, datePreset === 'custom' && styles.activeDatePresetText]}>
-                Ngày khác
+                {t('transactions.otherDate')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -368,7 +372,7 @@ export default function AddTransactionModal() {
 
         {/* Source Account Selector */}
         <Card style={styles.fieldCard}>
-          <Text style={styles.fieldLabel}>Tài khoản thanh toán</Text>
+          <Text style={styles.fieldLabel}>{t('transactions.paymentAccount')}</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipList}>
             {accounts.map((acc) => {
               const isSelected = acc.id === selectedAccountId;
@@ -395,7 +399,7 @@ export default function AddTransactionModal() {
         {/* Target Account Selector for Transfer */}
         {type === 'transfer' ? (
           <Card style={styles.fieldCard}>
-            <Text style={styles.fieldLabel}>Tài khoản nhận</Text>
+            <Text style={styles.fieldLabel}>{t('transactions.recipientAccount')}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipList}>
               {accounts
                 .filter((a) => a.id !== selectedAccountId)
@@ -426,34 +430,41 @@ export default function AddTransactionModal() {
         {type !== 'transfer' && (
           <Card style={styles.fieldCard}>
             <View style={styles.fieldHeaderRow}>
-              <Text style={styles.fieldLabel}>Danh mục</Text>
+              <Text style={styles.fieldLabel}>{t('transactions.category')}</Text>
               <View style={styles.catHeaderRight}>
                 <TouchableOpacity onPress={() => setIsCategoryExpanded(!isCategoryExpanded)}>
                   <Text style={styles.toggleCatBtnText}>
-                    {isCategoryExpanded ? 'Thu gọn ▲' : 'Đổi danh mục ▼'}
+                    {isCategoryExpanded
+                      ? t('transactions.collapse')
+                      : t('transactions.changeCategory')}
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => router.push('/(modal)/manage-categories' as any)}>
-                  <Text style={styles.manageCategoryLink}>+ Quản lý</Text>
+                  <Text style={styles.manageCategoryLink}>{t('transactions.manage')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
 
             {categories.length === 0 ? (
               <View style={styles.emptyCatBox}>
-                <Text style={styles.emptyCatText}>Chưa có danh mục cho loại giao dịch này</Text>
+                <Text style={styles.emptyCatText}>{t('transactions.emptyCategories')}</Text>
                 <TouchableOpacity
                   style={styles.seedCatBtn}
                   onPress={async () => {
                     const db = getDatabase();
-                    await seedStarterCategories(db, 'vi');
+                    await seedStarterCategories(
+                      db,
+                      i18n.resolvedLanguage === 'en' ? 'en' : 'vi'
+                    );
                     const cats = await getAllCategories(type);
                     setCategories(cats);
                     if (cats.length > 0) setSelectedCategoryId(cats[0].id);
                   }}
                 >
                   <MaterialIcons name="auto-awesome" size={16} color="#1A1C2E" />
-                  <Text style={styles.seedCatBtnText}>Tạo danh mục mẫu</Text>
+                  <Text style={styles.seedCatBtnText}>
+                    {t('transactions.createStarterCategories')}
+                  </Text>
                 </TouchableOpacity>
               </View>
             ) : (
@@ -488,7 +499,9 @@ export default function AddTransactionModal() {
 
                     <View style={styles.changeBadge}>
                       <Text style={styles.changeBadgeText}>
-                        {isCategoryExpanded ? 'Đang chọn' : 'Đổi'}
+                        {isCategoryExpanded
+                          ? t('transactions.selected')
+                          : t('transactions.change')}
                       </Text>
                       <MaterialIcons
                         name={isCategoryExpanded ? 'keyboard-arrow-up' : 'keyboard-arrow-down'}
@@ -503,7 +516,7 @@ export default function AddTransactionModal() {
                     onPress={() => setIsCategoryExpanded(true)}
                   >
                     <MaterialIcons name="add-circle-outline" size={20} color={Colors.light.textSecondary} />
-                    <Text style={styles.noCatText}>Chọn một danh mục...</Text>
+                    <Text style={styles.noCatText}>{t('transactions.chooseCategory')}</Text>
                   </TouchableOpacity>
                 )}
 
@@ -516,7 +529,7 @@ export default function AddTransactionModal() {
                         <MaterialIcons name="search" size={16} color={Colors.light.textSecondary} />
                         <TextInput
                           style={styles.catSearchInput}
-                          placeholder="Tìm nhanh danh mục..."
+                          placeholder={t('transactions.searchCategory')}
                           placeholderTextColor={Colors.light.textSecondary}
                           value={searchCatQuery}
                           onChangeText={setSearchCatQuery}
@@ -554,7 +567,7 @@ export default function AddTransactionModal() {
                               selectedGroupFilter === 'all' && styles.activeGroupPillText,
                             ]}
                           >
-                            Tất cả ({categories.length})
+                            {t('transactions.allCategories', { count: categories.length })}
                           </Text>
                         </TouchableOpacity>
 
@@ -591,11 +604,12 @@ export default function AddTransactionModal() {
                       <View style={styles.quickAddCatBox}>
                         <View style={styles.quickAddCatHeader}>
                           <Text style={styles.quickAddCatTitle}>
-                            Thêm danh mục con vào "
-                            {selectedGroupFilter === 'all'
-                              ? groups[0]?.name || 'Nhóm chung'
-                              : groups.find((g) => g.id === selectedGroupFilter)?.name || ''}
-                            "
+                            {t('transactions.addChildTo', {
+                              group:
+                                selectedGroupFilter === 'all'
+                                  ? groups[0]?.name || t('transactions.commonGroup')
+                                  : groups.find((g) => g.id === selectedGroupFilter)?.name || '',
+                            })}
                           </Text>
                           <TouchableOpacity onPress={() => setIsAddingCustomCat(false)}>
                             <MaterialIcons name="close" size={18} color={Colors.light.textSecondary} />
@@ -604,7 +618,7 @@ export default function AddTransactionModal() {
                         <View style={styles.quickAddCatInputRow}>
                           <TextInput
                             style={styles.quickAddCatInput}
-                            placeholder="Nhập tên danh mục con (ví dụ: Ăn vặt, Tiền gửi xe...)"
+                            placeholder={t('transactions.childPlaceholder')}
                             placeholderTextColor={Colors.light.textSecondary}
                             value={customCatName}
                             onChangeText={setCustomCatName}
@@ -616,7 +630,7 @@ export default function AddTransactionModal() {
                             onPress={handleCreateCustomCat}
                           >
                             <Text style={styles.quickAddCatSubmitText}>
-                              {creatingCustomCat ? '...' : 'Thêm'}
+                              {creatingCustomCat ? '...' : t('categories.add')}
                             </Text>
                           </TouchableOpacity>
                         </View>
@@ -672,7 +686,9 @@ export default function AddTransactionModal() {
                           onPress={() => setIsAddingCustomCat(true)}
                         >
                           <MaterialIcons name="add" size={16} color={Colors.primaryDark} />
-                          <Text style={styles.addCustomCatBtnText}>+ Thêm con</Text>
+                          <Text style={styles.addCustomCatBtnText}>
+                            {t('transactions.addChild')}
+                          </Text>
                         </TouchableOpacity>
                       </View>
                     </ScrollView>
@@ -685,10 +701,10 @@ export default function AddTransactionModal() {
 
         {/* Note Input with quick suggestions */}
         <Card style={styles.fieldCard}>
-          <Text style={styles.fieldLabel}>Ghi chú</Text>
+          <Text style={styles.fieldLabel}>{t('transactions.noteLabel')}</Text>
           <TextInput
             style={styles.noteInput}
-            placeholder="Ví dụ: Tiền điện tháng 9, Ăn trưa đồng nghiệp, Thưởng quý..."
+            placeholder={t('transactions.noteExample')}
             placeholderTextColor={Colors.light.textSecondary}
             value={note}
             onChangeText={setNote}
@@ -700,7 +716,7 @@ export default function AddTransactionModal() {
 
       <View style={styles.footer}>
         <Button
-          title="Lưu giao dịch"
+          title={t('transactions.saveTransaction')}
           onPress={handleSave}
           variant="primary"
           loading={loading}
@@ -1030,6 +1046,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'transparent',
     maxWidth: '48%',
+  },
+  categoryGridText: {
+    flexShrink: 1,
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.light.text,
+  },
+  selectedCategoryChipText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
   quickAddCatBox: {
     padding: 12,

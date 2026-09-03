@@ -1,24 +1,25 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { Tabs, useRouter } from 'expo-router';
+import { Tabs } from 'expo-router';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 import { Colors } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 
 export default function MainLayout() {
   const { t } = useTranslation();
-  const router = useRouter();
+  const theme = useTheme();
 
   return (
-    <View style={styles.container}>
-      <Tabs
+    <Tabs
         screenOptions={{
           headerShown: false,
-          tabBarActiveTintColor: Colors.primaryDark,
-          tabBarInactiveTintColor: Colors.light.textSecondary,
-          tabBarStyle: styles.tabBar,
+          tabBarActiveTintColor: Colors.primaryStrong,
+          tabBarInactiveTintColor: theme.textSecondary,
+          tabBarStyle: [styles.tabBar, { backgroundColor: theme.surface, borderTopColor: theme.border }],
           tabBarLabelStyle: styles.tabLabel,
+          tabBarHideOnKeyboard: true,
         }}
       >
         <Tabs.Screen
@@ -38,7 +39,7 @@ export default function MainLayout() {
         <Tabs.Screen
           name="budgets"
           options={{
-            title: t('budgets.title'),
+            title: t('navigation.plans'),
             tabBarIcon: ({ color }) => <MaterialIcons name="pie-chart" size={24} color={color} />,
           }}
         />
@@ -49,57 +50,20 @@ export default function MainLayout() {
             tabBarIcon: ({ color }) => <MaterialIcons name="settings" size={24} color={color} />,
           }}
         />
-      </Tabs>
-
-      {/* Floating Action Button (FAB) for Quick Expense Entry */}
-      <TouchableOpacity
-        style={styles.fabButton}
-        activeOpacity={0.85}
-        onPress={() => router.push('/(modal)/add-transaction')}
-      >
-        <MaterialIcons name="add" size={28} color="#1A1C2E" />
-      </TouchableOpacity>
-    </View>
+    </Tabs>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
   tabBar: {
-    height: 64,
-    backgroundColor: Colors.light.surface,
+    height: 72,
     borderTopWidth: 1,
-    borderTopColor: Colors.light.border,
-    paddingBottom: 8,
-    paddingTop: 8,
+    paddingBottom: 10,
+    paddingTop: 9,
+    elevation: 0,
   },
   tabLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  icon: {
-    fontSize: 20,
-  },
-  fabButton: {
-    position: 'absolute',
-    bottom: 24,
-    alignSelf: 'center',
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: Colors.primaryDark,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-    zIndex: 999,
-  },
-  fabText: {
-    fontSize: 24,
+    fontSize: 11,
+    fontWeight: '700',
   },
 });

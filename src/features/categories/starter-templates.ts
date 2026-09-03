@@ -100,6 +100,23 @@ export const STARTER_TEMPLATES: StarterGroupTemplate[] = [
   },
 ];
 
+export function localizeStarterGroupName(name: string, lang: 'vi' | 'en'): string {
+  const template = STARTER_TEMPLATES.find(
+    (item) => item.nameVi === name || item.nameEn === name
+  );
+  return template ? (lang === 'en' ? template.nameEn : template.nameVi) : name;
+}
+
+export function localizeStarterCategoryName(name: string, lang: 'vi' | 'en'): string {
+  for (const template of STARTER_TEMPLATES) {
+    const category = template.categories.find(
+      (item) => item.nameVi === name || item.nameEn === name
+    );
+    if (category) return lang === 'en' ? category.nameEn : category.nameVi;
+  }
+  return name;
+}
+
 /**
  * Seeds a single starter category group template into the active database
  */

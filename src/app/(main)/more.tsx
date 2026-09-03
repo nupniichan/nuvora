@@ -1,25 +1,24 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Colors } from '@/constants/theme';
-import i18n from '@/i18n';
+import { setAppLanguage } from '@/i18n';
 import { lockApp } from '@/services/security/auth-service';
 
 export default function MoreScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const router = useRouter();
-  const [currentLang, setCurrentLang] = useState(i18n.language);
+  const currentLang = i18n.resolvedLanguage === 'en' ? 'en' : 'vi';
 
   const toggleLanguage = () => {
     const nextLang = currentLang === 'vi' ? 'en' : 'vi';
-    i18n.changeLanguage(nextLang);
-    setCurrentLang(nextLang);
+    void setAppLanguage(nextLang);
   };
 
   const handleLock = () => {
@@ -30,21 +29,28 @@ export default function MoreScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>{t('settings.title')}</Text>
+        <View style={styles.pageHeader}>
+          <Text style={styles.eyebrow}>NUVORA</Text>
+          <Text style={styles.title}>{t('settings.title')}</Text>
+        </View>
 
         {/* Security Info Card */}
         <Card style={styles.sectionCard}>
           <Text style={styles.sectionHeader}>{t('settings.security')}</Text>
           <View style={styles.row}>
-            <Text style={styles.rowLabel}>Mã hóa dữ liệu</Text>
-            <Text style={styles.rowValue}>SQLCipher + AES-256</Text>
+            <Text style={styles.rowLabel}>{t('settings.encryption')}</Text>
+            <Text style={styles.rowValue}>
+              {Platform.OS === 'web' ? 'WebCrypto AES-256-GCM' : 'SQLCipher + AES-256-GCM'}
+            </Text>
           </View>
           <View style={styles.row}>
-            <Text style={styles.rowLabel}>Khóa mật khẩu (KDF)</Text>
-            <Text style={styles.rowValue}>Argon2id</Text>
+            <Text style={styles.rowLabel}>{t('settings.kdf')}</Text>
+            <Text style={styles.rowValue}>
+              {Platform.OS === 'web' ? 'PBKDF2-SHA256' : 'Argon2id'}
+            </Text>
           </View>
           <Button
-            title="Khóa ứng dụng ngay"
+            title={t('settings.lockNow')}
             icon={<MaterialIcons name="lock" size={18} color={Colors.primaryDark} />}
             onPress={handleLock}
             variant="outline"
@@ -54,24 +60,22 @@ export default function MoreScreen() {
 
         {/* Customization & Finance Management Card */}
         <Card style={styles.sectionCard}>
-          <Text style={styles.sectionHeader}>Quản lý & Tùy chỉnh Tài chính</Text>
-          <Text style={styles.sectionDesc}>
-            Tự do tùy biến danh mục, màu sắc, biểu tượng, hạn mức và theo dõi mục tiêu cá nhân.
-          </Text>
+          <Text style={styles.sectionHeader}>{t('settings.financeManagement')}</Text>
+          <Text style={styles.sectionDesc}>{t('settings.financeDescription')}</Text>
           <Button
-            title="Quản lý Danh mục thu / chi"
+            title={t('settings.manageCategories')}
             icon={<MaterialIcons name="category" size={18} color={Colors.primaryDark} />}
             onPress={() => router.push('/(modal)/manage-categories' as any)}
             variant="outline"
           />
           <Button
-            title="Mục tiêu tài chính & Quỹ"
+            title={t('settings.manageGoals')}
             icon={<MaterialIcons name="flag" size={18} color={Colors.primaryDark} />}
             onPress={() => router.push('/(modal)/manage-goals' as any)}
             variant="outline"
           />
           <Button
-            title="Cài đặt hạn mức chi tiêu"
+            title={t('settings.spendingLimits')}
             icon={<MaterialIcons name="tune" size={18} color={Colors.primaryDark} />}
             onPress={() => router.push('/(modal)/manage-budget' as any)}
             variant="outline"
@@ -81,11 +85,9 @@ export default function MoreScreen() {
         {/* Backup & Restore Card */}
         <Card style={styles.sectionCard}>
           <Text style={styles.sectionHeader}>{t('settings.backupRestore')}</Text>
-          <Text style={styles.sectionDesc}>
-            Sao lưu dữ liệu mã hóa di động bảo vệ bằng mật khẩu gốc và khôi phục trên thiết bị mới.
-          </Text>
+          <Text style={styles.sectionDesc}>{t('settings.backupDescription')}</Text>
           <Button
-            title="Mở sao lưu & Khôi phục"
+            title={t('settings.openBackup')}
             icon={<MaterialIcons name="backup" size={18} color={Colors.primaryDark} />}
             onPress={() => router.push('/(modal)/backup-restore' as any)}
             variant="outline"
@@ -95,9 +97,7 @@ export default function MoreScreen() {
         {/* Recurring Rules Management */}
         <Card style={styles.sectionCard}>
           <Text style={styles.sectionHeader}>{t('recurring.title')}</Text>
-          <Text style={styles.sectionDesc}>
-            Thiết lập các khoản thu nhập (lương) hoặc hóa đơn lặp lại định kỳ tự động.
-          </Text>
+          <Text style={styles.sectionDesc}>{t('settings.recurringDescription')}</Text>
           <Button
             title={t('recurring.addRule')}
             icon={<MaterialIcons name="event-repeat" size={18} color={Colors.primaryDark} />}
@@ -110,7 +110,7 @@ export default function MoreScreen() {
         <Card style={styles.sectionCard}>
           <Text style={styles.sectionHeader}>{t('settings.language')}</Text>
           <TouchableOpacity style={styles.row} onPress={toggleLanguage}>
-            <Text style={styles.rowLabel}>Ngôn ngữ giao diện</Text>
+            <Text style={styles.rowLabel}>{t('settings.interfaceLanguage')}</Text>
             <View style={styles.langValueContainer}>
               <MaterialIcons name="translate" size={16} color={Colors.primaryDark} />
               <Text style={styles.rowValue}>
@@ -123,10 +123,8 @@ export default function MoreScreen() {
         {/* About App */}
         <Card variant="flat" style={styles.aboutCard}>
           <Text style={styles.appTitle}>Nuvora</Text>
-          <Text style={styles.appVersion}>Version 1.0.0 — Local-First Personal Finance</Text>
-          <Text style={styles.appDesc}>
-            Dữ liệu tài chính được lưu trữ và bảo mật trực tiếp trên thiết bị của bạn.
-          </Text>
+          <Text style={styles.appVersion}>1.0.0 · {t('settings.localFirstTagline')}</Text>
+          <Text style={styles.appDesc}>{t('settings.privacyDescription')}</Text>
         </Card>
       </ScrollView>
     </SafeAreaView>
@@ -139,24 +137,34 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.background,
   },
   content: {
-    padding: 20,
-    gap: 16,
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 28,
+    gap: 14,
+  },
+  pageHeader: {
+    gap: 2,
+    marginBottom: 4,
+  },
+  eyebrow: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1.8,
+    color: Colors.accentDark,
   },
   title: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: '800',
     color: Colors.light.text,
   },
   sectionCard: {
-    gap: 14,
+    gap: 13,
   },
   sectionHeader: {
     fontSize: 16,
     fontWeight: '700',
     color: Colors.light.text,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.light.backgroundElement,
-    paddingBottom: 8,
+    paddingBottom: 2,
   },
   sectionDesc: {
     fontSize: 13,
@@ -167,16 +175,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 4,
+    paddingVertical: 6,
+    gap: 12,
   },
   rowLabel: {
     fontSize: 14,
     color: Colors.light.text,
   },
   rowValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.primaryDark,
+    flexShrink: 1,
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.primaryStrong,
+    textAlign: 'right',
   },
   langValueContainer: {
     flexDirection: 'row',

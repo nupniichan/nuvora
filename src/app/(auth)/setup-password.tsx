@@ -70,11 +70,7 @@ export default function SetupPasswordScreen() {
 
         <Card variant="flat" style={styles.noticeCard}>
           <MaterialIcons name="lightbulb-outline" size={24} color={Colors.primary} />
-          <Text style={styles.noticeText}>
-            {params.lang === 'en'
-              ? 'Keep this password safe. It is required to restore your encrypted backup on a new device.'
-              : 'Lưu giữ mật khẩu này cẩn thận. Mật khẩu này là bắt buộc để khôi phục bản sao lưu mã hóa trên thiết bị mới.'}
-          </Text>
+          <Text style={styles.noticeText}>{t('onboarding.passwordTip')}</Text>
         </Card>
       </View>
 

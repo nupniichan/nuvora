@@ -1,9 +1,8 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert,
   FlatList,
   Modal,
   ScrollView,
@@ -34,6 +33,7 @@ import { alertMessage, confirmAction } from '@/shared/dialog';
 
 export default function TransactionsScreen() {
   const { t } = useTranslation();
+  const router = useRouter();
 
   const [transactions, setTransactions] = useState<TransactionRow[]>([]);
   const [filterType, setFilterType] = useState<TransactionType | 'all'>('all');
@@ -99,15 +99,15 @@ export default function TransactionsScreen() {
     if (!editingTx) return;
     const finalAmount = typeof editAmount === 'number' && !isNaN(editAmount) ? editAmount : 0;
     if (finalAmount <= 0) {
-      alertMessage('Thông báo', 'Số tiền phải lớn hơn 0');
+      alertMessage(t('common.notice'), t('transactions.amountRequired'));
       return;
     }
     if (!editAccountId) {
-      alertMessage('Thông báo', 'Vui lòng chọn tài khoản');
+      alertMessage(t('common.notice'), t('transactions.accountRequired'));
       return;
     }
     if (editType === 'transfer' && (!editToAccountId || editToAccountId === editAccountId)) {
-      alertMessage('Thông báo', 'Vui lòng chọn tài khoản nhận khác tài khoản gửi');
+      alertMessage(t('common.notice'), t('transactions.differentAccountRequired'));
       return;
     }
 
@@ -125,7 +125,7 @@ export default function TransactionsScreen() {
       setEditModalVisible(false);
       await loadData();
     } catch (e: any) {
-      alertMessage('Lỗi', e.message || 'Không thể cập nhật giao dịch');
+      alertMessage(t('common.error'), e.message || t('transactions.updateError'));
     } finally {
       setSaving(false);
     }
@@ -133,8 +133,8 @@ export default function TransactionsScreen() {
 
   const handleDelete = (id: string) => {
     confirmAction(
-      'Xóa giao dịch',
-      'Bạn có chắc chắn muốn xóa giao dịch này không? Số dư tài khoản sẽ được hoàn lại tương ứng.',
+      t('transactions.deleteTitle'),
+      t('transactions.deleteDescription'),
       async () => {
         await deleteTransaction(id);
         if (editModalVisible) {
@@ -142,15 +142,27 @@ export default function TransactionsScreen() {
         }
         await loadData();
       },
-      t('common.delete') || 'Xóa',
-      t('common.cancel') || 'Hủy'
+      t('common.delete'),
+      t('common.cancel')
     );
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>{t('transactions.title')}</Text>
+        <View style={styles.titleRow}>
+          <View>
+            <Text style={styles.eyebrow}>NUVORA</Text>
+            <Text style={styles.title}>{t('transactions.title')}</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => router.push('/(modal)/add-transaction')}
+          >
+            <MaterialIcons name="add" size={18} color="#4A2419" />
+            <Text style={styles.addButtonText}>{t('transactions.addTransaction')}</Text>
+          </TouchableOpacity>
+        </View>
         <View style={styles.filterRow}>
           {(['all', 'expense', 'income', 'transfer'] as const).map((typeItem) => (
             <TouchableOpacity
@@ -168,7 +180,7 @@ export default function TransactionsScreen() {
                 ]}
               >
                 {typeItem === 'all'
-                  ? 'Tất cả'
+                  ? t('common.all')
                   : t(`transactions.${typeItem}`)}
               </Text>
             </TouchableOpacity>
@@ -210,7 +222,7 @@ export default function TransactionsScreen() {
 
                   <View style={styles.txInfo}>
                     <Text style={styles.txNote} numberOfLines={1}>
-                      {item.note || cat?.name || (item.type === 'income' ? 'Thu nhập' : item.type === 'expense' ? 'Chi tiêu' : 'Chuyển khoản')}
+                      {item.note || cat?.name || t(`transactions.${item.type}`)}
                     </Text>
                     <Text style={styles.txDate}>
                       {cat?.name ? `${cat.name} • ` : ''}{acc?.name ? `${acc.name} • ` : ''}{item.date}
@@ -267,7 +279,7 @@ export default function TransactionsScreen() {
       >
         <View style={styles.modalRoot}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Chỉnh sửa Giao dịch</Text>
+            <Text style={styles.modalTitle}>{t('transactions.editTitle')}</Text>
             <TouchableOpacity onPress={() => setEditModalVisible(false)}>
               <MaterialIcons name="close" size={22} color={Colors.light.text} />
             </TouchableOpacity>
@@ -281,7 +293,7 @@ export default function TransactionsScreen() {
                 onPress={() => handleTypeChange('expense')}
               >
                 <Text style={[styles.segmentText, editType === 'expense' && styles.activeText]}>
-                  Chi tiêu
+                  {t('transactions.expense')}
                 </Text>
               </TouchableOpacity>
 
@@ -290,7 +302,7 @@ export default function TransactionsScreen() {
                 onPress={() => handleTypeChange('income')}
               >
                 <Text style={[styles.segmentText, editType === 'income' && styles.activeText]}>
-                  Thu nhập
+                  {t('transactions.income')}
                 </Text>
               </TouchableOpacity>
 
@@ -299,14 +311,14 @@ export default function TransactionsScreen() {
                 onPress={() => handleTypeChange('transfer')}
               >
                 <Text style={[styles.segmentText, editType === 'transfer' && styles.activeText]}>
-                  Chuyển khoản
+                  {t('transactions.transfer')}
                 </Text>
               </TouchableOpacity>
             </View>
 
             {/* Amount */}
             <MoneyInput
-              label="Số tiền"
+              label={t('transactions.amount')}
               currency={editingTx?.currency || 'VND'}
               valueMinor={editAmount}
               onChangeMinor={setEditAmount}
@@ -314,7 +326,7 @@ export default function TransactionsScreen() {
 
             {/* Date */}
             <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Ngày giao dịch (YYYY-MM-DD)</Text>
+              <Text style={styles.formLabel}>{t('transactions.dateFormat')}</Text>
               <TextInput
                 style={styles.textInput}
                 value={editDate}
@@ -327,7 +339,7 @@ export default function TransactionsScreen() {
             {/* Source Account */}
             <View style={styles.formGroup}>
               <Text style={styles.formLabel}>
-                {editType === 'transfer' ? 'Tài khoản nguồn' : 'Tài khoản'}
+                {t(editType === 'transfer' ? 'transactions.sourceAccount' : 'transactions.account')}
               </Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipList}>
                 {accounts.map((acc) => {
@@ -355,7 +367,7 @@ export default function TransactionsScreen() {
             {/* Destination Account for Transfer */}
             {editType === 'transfer' && (
               <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Tài khoản nhận</Text>
+                <Text style={styles.formLabel}>{t('transactions.toAccount')}</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipList}>
                   {accounts
                     .filter((a) => a.id !== editAccountId)
@@ -386,10 +398,10 @@ export default function TransactionsScreen() {
             {editType !== 'transfer' && (
               <View style={styles.formGroup}>
                 <View style={styles.categoryLabelRow}>
-                  <Text style={styles.formLabel}>Danh mục</Text>
+                  <Text style={styles.formLabel}>{t('transactions.category')}</Text>
                   {editCategoryId && (
                     <TouchableOpacity onPress={() => setEditCategoryId(null)}>
-                      <Text style={styles.clearCatText}>Bỏ chọn</Text>
+                      <Text style={styles.clearCatText}>{t('common.removeSelection')}</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -435,10 +447,10 @@ export default function TransactionsScreen() {
 
             {/* Note */}
             <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Ghi chú</Text>
+              <Text style={styles.formLabel}>{t('transactions.note')}</Text>
               <TextInput
                 style={styles.textInput}
-                placeholder="Ghi chú giao dịch..."
+                placeholder={t('transactions.notePlaceholder')}
                 placeholderTextColor={Colors.light.textSecondary}
                 value={editNote}
                 onChangeText={setEditNote}
@@ -448,13 +460,13 @@ export default function TransactionsScreen() {
 
           <View style={styles.modalFooter}>
             <Button
-              title="Xóa giao dịch này"
+              title={t('transactions.deleteThis')}
               variant="outline"
               onPress={() => editingTx && handleDelete(editingTx.id)}
               style={styles.deleteTxBtn}
             />
             <Button
-              title="Cập nhật"
+              title={t('common.update')}
               variant="primary"
               loading={saving}
               onPress={handleSaveEdit}
@@ -478,10 +490,40 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.light.border,
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  eyebrow: {
+    color: Colors.accentDark,
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1.6,
+    marginBottom: 2,
+  },
   title: {
     fontSize: 24,
     fontWeight: '800',
     color: Colors.light.text,
+  },
+  addButton: {
+    minHeight: 42,
+    maxWidth: 170,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    backgroundColor: Colors.accent,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  addButtonText: {
+    color: '#4A2419',
+    fontSize: 13,
+    fontWeight: '800',
+    flexShrink: 1,
   },
   filterRow: {
     flexDirection: 'row',

@@ -1,5 +1,6 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Card } from '@/components/ui/card';
@@ -27,12 +28,15 @@ export interface CategoryBreakdownChartProps {
 }
 
 export function CategoryBreakdownChart({
-  title = 'Phân bổ chi tiêu',
+  title,
   totalAmount,
   currency,
   items,
-  emptyMessage = 'Chưa có dữ liệu phân bổ',
+  emptyMessage,
 }: CategoryBreakdownChartProps) {
+  const { t } = useTranslation();
+  const resolvedTitle = title ?? t('charts.allocation');
+  const resolvedEmptyMessage = emptyMessage ?? t('charts.noDistribution');
   const safeTotal = totalAmount > 0 ? totalAmount : items.reduce((s, i) => s + (i.amount || 0), 0);
 
   // Filter items with positive amount and calculate percentage
@@ -43,10 +47,10 @@ export function CategoryBreakdownChart({
   if (activeItems.length === 0 || safeTotal <= 0) {
     return (
       <Card style={styles.chartCard}>
-        {title ? <Text style={styles.chartTitle}>{title}</Text> : null}
+        <Text style={styles.chartTitle}>{resolvedTitle}</Text>
         <View style={styles.emptyChartContainer}>
           <MaterialIcons name="pie-chart-outline" size={36} color={Colors.light.textSecondary} />
-          <Text style={styles.emptyChartText}>{emptyMessage}</Text>
+          <Text style={styles.emptyChartText}>{resolvedEmptyMessage}</Text>
         </View>
       </Card>
     );
@@ -55,7 +59,7 @@ export function CategoryBreakdownChart({
   return (
     <Card style={styles.chartCard}>
       <View style={styles.chartHeaderRow}>
-        <Text style={styles.chartTitle}>{title}</Text>
+        <Text style={styles.chartTitle}>{resolvedTitle}</Text>
         <Text style={styles.chartTotalValue}>{formatMoney(safeTotal, currency)}</Text>
       </View>
 
@@ -135,6 +139,7 @@ export function CashflowComparisonChart({
   netBalance,
   currency,
 }: CashflowComparisonChartProps) {
+  const { t } = useTranslation();
   const maxVal = Math.max(totalIncome, totalExpense, 1);
   const incomePct = Math.min(100, Math.round((totalIncome / maxVal) * 100));
   const expensePct = Math.min(100, Math.round((totalExpense / maxVal) * 100));
@@ -144,7 +149,7 @@ export function CashflowComparisonChart({
   return (
     <Card style={styles.chartCard}>
       <View style={styles.chartHeaderRow}>
-        <Text style={styles.chartTitle}>So sánh dòng tiền</Text>
+        <Text style={styles.chartTitle}>{t('charts.cashflow')}</Text>
         <View
           style={[
             styles.savingsBadge,
@@ -162,7 +167,7 @@ export function CashflowComparisonChart({
               { color: savingsRate >= 0 ? Colors.income : Colors.expense },
             ]}
           >
-            {savingsRate >= 0 ? `Tiết kiệm ${savingsRate}%` : `Âm ${Math.abs(savingsRate)}%`}
+            {t(savingsRate >= 0 ? 'charts.savings' : 'charts.negative', { percent: Math.abs(savingsRate) })}
           </Text>
         </View>
       </View>
@@ -170,7 +175,7 @@ export function CashflowComparisonChart({
       {/* Income Bar */}
       <View style={styles.cashflowBarGroup}>
         <View style={styles.cashflowBarLabelRow}>
-          <Text style={styles.cashflowBarLabel}>Thu nhập</Text>
+          <Text style={styles.cashflowBarLabel}>{t('charts.income')}</Text>
           <Text style={[styles.cashflowBarValue, { color: Colors.income }]}>
             +{formatMoney(totalIncome, currency)}
           </Text>
@@ -188,7 +193,7 @@ export function CashflowComparisonChart({
       {/* Expense Bar */}
       <View style={styles.cashflowBarGroup}>
         <View style={styles.cashflowBarLabelRow}>
-          <Text style={styles.cashflowBarLabel}>Chi tiêu</Text>
+          <Text style={styles.cashflowBarLabel}>{t('charts.expense')}</Text>
           <Text style={[styles.cashflowBarValue, { color: Colors.expense }]}>
             -{formatMoney(totalExpense, currency)}
           </Text>
@@ -205,7 +210,7 @@ export function CashflowComparisonChart({
 
       {/* Net Balance Footer */}
       <View style={styles.cashflowFooter}>
-        <Text style={styles.netLabel}>Số dư ròng tháng:</Text>
+        <Text style={styles.netLabel}>{t('charts.net')}:</Text>
         <Text
           style={[
             styles.netValue,
@@ -240,10 +245,11 @@ export function SpendingLimitGauge({
   limitAmount,
   currency,
 }: SpendingLimitGaugeProps) {
+  const { t } = useTranslation();
   const percent = limitAmount > 0 ? Math.round((spentAmount / limitAmount) * 100) : 0;
   const isOverLimit = spentAmount > limitAmount;
 
-  let statusColor = Colors.income; // Green < 80%
+  let statusColor: string = Colors.income; // Green < 80%
   if (percent >= 100) {
     statusColor = Colors.expense; // Red > 100%
   } else if (percent >= 80) {
@@ -274,7 +280,7 @@ export function SpendingLimitGauge({
         </View>
 
         <Text style={[styles.gaugePercent, { color: statusColor }]}>
-          {percent}% {isOverLimit ? '(Vượt)' : ''}
+          {percent}% {isOverLimit ? `(${t('charts.over')})` : ''}
         </Text>
       </View>
 
@@ -290,10 +296,10 @@ export function SpendingLimitGauge({
 
       <View style={styles.gaugeFooter}>
         <Text style={styles.gaugeDetail}>
-          Đã chi: <Text style={styles.gaugeBold}>{formatMoney(spentAmount, currency)}</Text>
+          {t('charts.spent')}: <Text style={styles.gaugeBold}>{formatMoney(spentAmount, currency)}</Text>
         </Text>
         <Text style={styles.gaugeDetail}>
-          Hạn mức: <Text style={styles.gaugeBold}>{formatMoney(limitAmount, currency)}</Text>
+          {t('charts.limit')}: <Text style={styles.gaugeBold}>{formatMoney(limitAmount, currency)}</Text>
         </Text>
       </View>
     </View>
@@ -314,6 +320,7 @@ export interface DailySpendingTrendChartProps {
 }
 
 export function DailySpendingTrendChart({ days, currency }: DailySpendingTrendChartProps) {
+  const { t } = useTranslation();
   const maxDayAmount = Math.max(...days.map((d) => d.amount), 1);
   const totalSpent = days.reduce((sum, d) => sum + d.amount, 0);
 
@@ -324,9 +331,9 @@ export function DailySpendingTrendChart({ days, currency }: DailySpendingTrendCh
   return (
     <Card style={styles.chartCard}>
       <View style={styles.chartHeaderRow}>
-        <Text style={styles.chartTitle}>Xu hướng chi tiêu trong tháng</Text>
+        <Text style={styles.chartTitle}>{t('charts.trend')}</Text>
         <Text style={styles.chartSubtitle}>
-          Cao nhất: {formatMoney(maxDayAmount, currency)}
+          {t('charts.highest', { amount: formatMoney(maxDayAmount, currency) })}
         </Text>
       </View>
 

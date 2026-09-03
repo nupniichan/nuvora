@@ -63,13 +63,7 @@ export default function SetupBiometricScreen() {
             <MaterialIcons name="fingerprint" size={36} color={Colors.primaryDark} />
           </View>
           <Text style={styles.infoText}>
-            {available
-              ? params.lang === 'en'
-                ? 'Biometrics detected on your device. Enable for fast unlocking.'
-                : 'Thiết bị của bạn hỗ trợ sinh trắc học. Bật để mở khóa nhanh chóng.'
-              : params.lang === 'en'
-              ? 'Biometrics is not available or not enrolled on this device.'
-              : 'Thiết bị chưa cài đặt hoặc không hỗ trợ sinh trắc học.'}
+            {t(available ? 'onboarding.biometricAvailable' : 'onboarding.biometricUnavailable')}
           </Text>
         </Card>
       </View>
@@ -80,12 +74,14 @@ export default function SetupBiometricScreen() {
             title={t('onboarding.enableBiometrics')}
             onPress={() => handleChoice(true)}
             variant="accent"
+            loading={loading}
           />
         ) : null}
         <Button
           title={t('onboarding.skipForNow')}
           onPress={() => handleChoice(false)}
           variant="outline"
+          loading={loading}
         />
       </View>
     </SafeAreaView>

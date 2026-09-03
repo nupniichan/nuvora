@@ -1,6 +1,11 @@
 import { getDatabase } from '@/database/database';
 import { CategoryGroupRow, CategoryRow, CategoryType } from '@/database/types';
+import { getCurrentLanguage } from '@/i18n/language-state';
 import { generateUUID } from '@/shared/uuid';
+import {
+  localizeStarterCategoryName,
+  localizeStarterGroupName,
+} from './starter-templates';
 
 export interface CategoryWithGroup extends CategoryRow {
   group_name: string;
@@ -27,7 +32,13 @@ export async function getAllCategories(type?: CategoryType): Promise<CategoryWit
 
   sql += ` ORDER BY cg.sort_order ASC, c.sort_order ASC, c.name ASC;`;
 
-  return await db.getAllAsync<CategoryWithGroup>(sql, params);
+  const rows = await db.getAllAsync<CategoryWithGroup>(sql, params);
+  const language = getCurrentLanguage();
+  return rows.map((row) => ({
+    ...row,
+    name: localizeStarterCategoryName(row.name, language),
+    group_name: localizeStarterGroupName(row.group_name, language),
+  }));
 }
 
 /**
@@ -42,7 +53,13 @@ export async function getCategoryById(id: string): Promise<CategoryWithGroup | n
      WHERE c.id = ?;`,
     [id]
   );
-  return row ?? null;
+  if (!row) return null;
+  const language = getCurrentLanguage();
+  return {
+    ...row,
+    name: localizeStarterCategoryName(row.name, language),
+    group_name: localizeStarterGroupName(row.group_name, language),
+  };
 }
 
 /**
@@ -60,7 +77,12 @@ export async function getAllCategoryGroups(type?: CategoryType): Promise<Categor
 
   sql += ` ORDER BY sort_order ASC, name ASC;`;
 
-  return await db.getAllAsync<CategoryGroupRow>(sql, params);
+  const rows = await db.getAllAsync<CategoryGroupRow>(sql, params);
+  const language = getCurrentLanguage();
+  return rows.map((row) => ({
+    ...row,
+    name: localizeStarterGroupName(row.name, language),
+  }));
 }
 
 /**
@@ -101,6 +123,7 @@ export async function updateCategoryGroup(
   id: string,
   data: {
     name?: string;
+    type?: CategoryType;
     icon?: string | null;
     color?: string | null;
   }
@@ -112,6 +135,10 @@ export async function updateCategoryGroup(
   if (data.name !== undefined) {
     updates.push('name = ?');
     params.push(data.name.trim());
+  }
+  if (data.type !== undefined) {
+    updates.push('type = ?');
+    params.push(data.type);
   }
   if (data.icon !== undefined) {
     updates.push('icon = ?');

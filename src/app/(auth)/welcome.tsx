@@ -2,24 +2,24 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Colors } from '@/constants/theme';
-import i18n from '@/i18n';
+import { AppLanguage, setAppLanguage } from '@/i18n';
 
 export default function WelcomeScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const router = useRouter();
-  const [selectedLang, setSelectedLang] = useState<'vi' | 'en'>(
-    (i18n.language as 'vi' | 'en') || 'vi'
+  const [selectedLang, setSelectedLang] = useState<AppLanguage>(
+    i18n.resolvedLanguage === 'en' ? 'en' : 'vi'
   );
 
-  const handleSelectLanguage = (lang: 'vi' | 'en') => {
+  const handleSelectLanguage = (lang: AppLanguage) => {
     setSelectedLang(lang);
-    i18n.changeLanguage(lang);
+    void setAppLanguage(lang);
   };
 
   const handleNext = () => {
@@ -127,11 +127,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
-    shadowColor: Colors.primaryDark,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 4,
+    ...Platform.select({
+      web: { boxShadow: '0 4px 14px rgba(98, 99, 168, 0.2)' },
+      default: {
+        shadowColor: Colors.primaryDark,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 10,
+        elevation: 4,
+      },
+    }),
   },
   logoText: {
     fontSize: 36,

@@ -29,7 +29,6 @@ import {
 import { calculateDueOccurrences } from '@/features/recurring/recurring-engine';
 import {
   PendingOccurrenceWithRule,
-  RecurringRuleWithDetails,
   confirmOccurrence,
   getAllRecurringRules,
   getPendingOccurrences,
@@ -177,7 +176,7 @@ export default function DashboardScreen() {
           </View>
           <TouchableOpacity
             style={styles.profileBadge}
-            onPress={() => router.push('/(main)/more' as any)}
+            onPress={() => router.push('/(main)/more')}
           >
             <MaterialIcons name="settings" size={20} color={Colors.light.text} />
           </TouchableOpacity>
@@ -198,7 +197,7 @@ export default function DashboardScreen() {
 
           <View style={styles.accountRow}>
             <Text style={styles.accountCount}>
-              {accounts.length} {t('accounts.title')}
+              {t('dashboard.accountsCount', { count: accounts.length })}
             </Text>
           </View>
         </Card>
@@ -206,14 +205,14 @@ export default function DashboardScreen() {
         {/* Quick Action Banner */}
         <Card variant="flat" style={styles.quickBanner}>
           <View style={styles.quickInfo}>
-            <Text style={styles.quickTitle}>Ghi chép chi tiêu hôm nay?</Text>
-            <Text style={styles.quickDesc}>Ghi nhận ngay 1 khoản chi bất ngờ nhanh chóng.</Text>
+            <Text style={styles.quickTitle}>{t('dashboard.quickTitle')}</Text>
+            <Text style={styles.quickDesc}>{t('dashboard.quickDescription')}</Text>
           </View>
           <Button
-            title="Chi ngay"
-            icon={<MaterialIcons name="add" size={18} color="#FFFFFF" />}
+            title={t('dashboard.spendNow')}
+            icon={<MaterialIcons name="add" size={18} color="#542515" />}
             variant="accent"
-            onPress={() => router.push('/(modal)/add-transaction' as any)}
+            onPress={() => router.push('/(modal)/add-transaction')}
           />
         </Card>
 
@@ -223,7 +222,7 @@ export default function DashboardScreen() {
             <View style={styles.sectionHeader}>
               <View style={styles.pendingHeaderRow}>
                 <MaterialIcons name="notifications-active" size={18} color={Colors.accent} />
-                <Text style={styles.sectionTitle}>Chờ xác nhận ({pendingOccurrences.length})</Text>
+                <Text style={styles.sectionTitle}>{t('dashboard.pendingCount', { count: pendingOccurrences.length })}</Text>
               </View>
             </View>
 
@@ -233,7 +232,7 @@ export default function DashboardScreen() {
                   <View style={styles.pendingDetails}>
                     <Text style={styles.pendingRuleName}>{item.rule_name}</Text>
                     <Text style={styles.pendingDate}>
-                      Đến hạn ngày {item.scheduled_date} • {item.account_name}
+                      {t('dashboard.dueOn', { date: item.scheduled_date, account: item.account_name })}
                     </Text>
                   </View>
                   <Text
@@ -252,7 +251,7 @@ export default function DashboardScreen() {
                     style={[styles.pendingBtn, styles.skipBtn]}
                     onPress={() => handleSkipOccurrence(item.id)}
                   >
-                    <Text style={styles.skipBtnText}>Bỏ qua</Text>
+                    <Text style={styles.skipBtnText}>{t('dashboard.skip')}</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -260,7 +259,7 @@ export default function DashboardScreen() {
                     onPress={() => handleConfirmOccurrence(item.id)}
                   >
                     <MaterialIcons name="check" size={16} color="#FFFFFF" />
-                    <Text style={styles.confirmBtnText}>Xác nhận ghi sổ</Text>
+                    <Text style={styles.confirmBtnText}>{t('dashboard.post')}</Text>
                   </TouchableOpacity>
                 </View>
               </Card>
@@ -272,40 +271,37 @@ export default function DashboardScreen() {
         {snapshot && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Ngân sách Tháng {snapshot.month}/{snapshot.year}</Text>
-              <TouchableOpacity onPress={() => router.push('/(main)/budgets' as any)}>
-                <Text style={styles.seeAll}>Chi tiết →</Text>
+              <Text style={styles.sectionTitle}>{t('dashboard.monthlyPlan', { month: snapshot.month, year: snapshot.year })}</Text>
+              <TouchableOpacity onPress={() => router.push('/(main)/budgets')}>
+                <Text style={styles.seeAll}>{t('dashboard.details')} →</Text>
               </TouchableOpacity>
             </View>
 
             <TouchableOpacity
               activeOpacity={0.9}
-              onPress={() => router.push('/(main)/budgets' as any)}
+              onPress={() => router.push('/(main)/budgets')}
             >
               <Card style={styles.budgetCard}>
                 <View style={styles.budgetRow}>
-                  <Text style={styles.budgetName}>
-                    {snapshot.netBalance >= 0 ? 'Dư tháng: ' : 'Thâm hụt: '}
-                    {formatMoney(Math.abs(snapshot.netBalance), snapshot.currency)}
-                  </Text>
+                  <Text style={styles.budgetName}>{t(snapshot.netBalance >= 0 ? 'dashboard.surplus' : 'dashboard.deficit', { amount: formatMoney(Math.abs(snapshot.netBalance), snapshot.currency) })}</Text>
                   {snapshot.overLimitCount > 0 ? (
                     <View style={styles.overLimitBadgeSmall}>
                       <MaterialIcons name="warning" size={12} color="#C62828" />
                       <Text style={styles.overLimitBadgeSmallText}>
-                        {snapshot.overLimitCount} mục vượt
+                        {t('dashboard.overCount', { count: snapshot.overLimitCount })}
                       </Text>
                     </View>
                   ) : (
-                    <Text style={[styles.budgetPct, styles.incomeText]}>Cân đối tốt</Text>
+                    <Text style={[styles.budgetPct, styles.incomeText]}>{t('dashboard.balanced')}</Text>
                   )}
                 </View>
 
                 <View style={styles.budgetMetrics}>
                   <Text style={styles.budgetMetricText}>
-                    Thu: <Text style={{ color: Colors.income, fontWeight: '700' }}>+{formatMoney(snapshot.totalIncome, snapshot.currency)}</Text>
+                    {t('dashboard.incomeShort')}: <Text style={{ color: Colors.income, fontWeight: '700' }}>+{formatMoney(snapshot.totalIncome, snapshot.currency)}</Text>
                   </Text>
                   <Text style={styles.budgetMetricText}>
-                    Chi: <Text style={{ color: Colors.expense, fontWeight: '700' }}>-{formatMoney(snapshot.totalExpense, snapshot.currency)}</Text>
+                    {t('dashboard.expenseShort')}: <Text style={{ color: Colors.expense, fontWeight: '700' }}>-{formatMoney(snapshot.totalExpense, snapshot.currency)}</Text>
                   </Text>
                 </View>
               </Card>
@@ -313,7 +309,7 @@ export default function DashboardScreen() {
 
             {snapshot.totalExpense > 0 && (
               <CategoryBreakdownChart
-                title="Cơ cấu chi tiêu tháng"
+                title={t('dashboard.monthlyBreakdown')}
                 totalAmount={snapshot.totalExpense}
                 currency={snapshot.currency}
                 items={(snapshot.expenseCategories || []).map((cat) => ({
@@ -332,9 +328,9 @@ export default function DashboardScreen() {
         {activeGoals.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Mục tiêu tài chính</Text>
-              <TouchableOpacity onPress={() => router.push('/(modal)/manage-goals' as any)}>
-                <Text style={styles.seeAll}>Xem tất cả →</Text>
+              <Text style={styles.sectionTitle}>{t('dashboard.goals')}</Text>
+              <TouchableOpacity onPress={() => router.push('/(modal)/manage-goals')}>
+                <Text style={styles.seeAll}>{t('dashboard.seeAll')} →</Text>
               </TouchableOpacity>
             </View>
 
@@ -342,7 +338,7 @@ export default function DashboardScreen() {
               <TouchableOpacity
                 key={goal.id}
                 activeOpacity={0.8}
-                onPress={() => router.push('/(modal)/manage-goals' as any)}
+                onPress={() => router.push('/(modal)/manage-goals')}
               >
                 <Card style={styles.goalDashCard}>
                   <View style={styles.goalDashRow}>
@@ -372,9 +368,9 @@ export default function DashboardScreen() {
         {upcomingForecast.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Lịch dự kiến (30 ngày tới)</Text>
+              <Text style={styles.sectionTitle}>{t('dashboard.upcoming')}</Text>
               <View style={styles.plannedBadge}>
-                <Text style={styles.plannedBadgeText}>Dự kiến</Text>
+                <Text style={styles.plannedBadgeText}>{t('dashboard.planned')}</Text>
               </View>
             </View>
 
@@ -414,8 +410,8 @@ export default function DashboardScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>{t('dashboard.recentTransactions')}</Text>
-            <TouchableOpacity onPress={() => router.push('/(main)/transactions' as any)}>
-              <Text style={styles.seeAll}>{t('common.search')}</Text>
+            <TouchableOpacity onPress={() => router.push('/(main)/transactions')}>
+              <Text style={styles.seeAll}>{t('dashboard.seeAll')} →</Text>
             </TouchableOpacity>
           </View>
 
@@ -507,19 +503,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   balanceCard: {
-    padding: 20,
+    padding: 22,
     gap: 10,
+    backgroundColor: Colors.primaryStrong,
+    borderWidth: 0,
   },
   balanceLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: Colors.light.textSecondary,
+    color: 'rgba(255,255,255,0.72)',
     textTransform: 'uppercase',
   },
   balanceAmount: {
     fontSize: 32,
     fontWeight: '800',
-    color: Colors.light.text,
+    color: '#FFFFFF',
   },
   accountRow: {
     flexDirection: 'row',
@@ -529,7 +527,7 @@ const styles = StyleSheet.create({
   },
   accountCount: {
     fontSize: 13,
-    color: Colors.light.textSecondary,
+    color: 'rgba(255,255,255,0.72)',
     fontWeight: '500',
   },
   quickBanner: {
@@ -537,9 +535,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 16,
-    backgroundColor: '#FFF3E0',
+    backgroundColor: Colors.accentLight,
     borderWidth: 1,
-    borderColor: '#FFE0B2',
+    borderColor: Colors.accent,
   },
   quickInfo: {
     flex: 1,
@@ -549,11 +547,11 @@ const styles = StyleSheet.create({
   quickTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#E65100',
+    color: '#6F301F',
   },
   quickDesc: {
     fontSize: 12,
-    color: '#F57C00',
+    color: '#8C4A35',
   },
   section: {
     gap: 10,

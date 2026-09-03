@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  ActivityIndicator,
   Alert,
   ScrollView,
   StyleSheet,
@@ -24,7 +25,6 @@ import {
   setMonthlyBudgetTotal,
 } from '@/features/budgets/budget-queries';
 import { getAllCategories } from '@/features/categories/category-queries';
-import { formatDateISO } from '@/shared/date-utils';
 import { formatMoney } from '@/shared/money';
 
 interface CategoryLimitDraft {
@@ -59,7 +59,7 @@ export default function ManageBudgetModal() {
         let active = await getActiveBudget();
         if (!active) {
           active = await createBudget({
-            name: `Ngân sách Tháng ${month}/${year}`,
+            name: t('budgets.monthlyPlanName', { month, year }),
             period_type: 'monthly',
             start_date: `${year}-${monthStr}-01`,
             currency: 'VND',
@@ -105,7 +105,7 @@ export default function ManageBudgetModal() {
       }
     }
     load();
-  }, []);
+  }, [t]);
 
   const handleToggleLimit = (index: number, val: boolean) => {
     setCategoryLimits((prev) => {
@@ -149,7 +149,7 @@ export default function ManageBudgetModal() {
 
       router.back();
     } catch (e: any) {
-      Alert.alert('Lỗi', e.message || 'Không thể lưu hạn mức chi tiêu');
+      Alert.alert(t('common.error'), e.message || t('common.error'));
     } finally {
       setLoading(false);
     }
@@ -158,21 +158,20 @@ export default function ManageBudgetModal() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Hạn mức Chi tiêu</Text>
+        <Text style={styles.title}>{t('budgets.editBudget')}</Text>
         <TouchableOpacity onPress={() => router.back()} style={styles.closeBtn}>
           <MaterialIcons name="close" size={22} color={Colors.light.text} />
         </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
+        {initialLoading ? <ActivityIndicator color={Colors.primaryStrong} /> : null}
         {/* Total Monthly Budget Card */}
         <Card style={styles.sectionCard}>
           <View style={styles.toggleRow}>
             <View style={styles.toggleTextInfo}>
-              <Text style={styles.toggleTitle}>Hạn mức tổng chi tiêu tháng</Text>
-              <Text style={styles.toggleDesc}>
-                Cảnh báo khi tổng tất cả các khoản chi tiêu vượt mức này
-              </Text>
+              <Text style={styles.toggleTitle}>{t('budgets.totalMonthlyLimit')}</Text>
+              <Text style={styles.toggleDesc}>{t('budgets.totalMonthlyLimitDescription')}</Text>
             </View>
             <Switch
               value={totalBudgetEnabled}
@@ -185,7 +184,7 @@ export default function ManageBudgetModal() {
           {totalBudgetEnabled && (
             <View style={styles.totalInputBox}>
               <MoneyInput
-                label="Số tiền hạn mức tổng"
+                label={t('budgets.totalLimitAmount')}
                 valueMinor={totalBudgetAmount}
                 onChangeMinor={setTotalBudgetAmount}
                 currency="VND"
@@ -197,10 +196,10 @@ export default function ManageBudgetModal() {
         {/* Category Spending Limits List */}
         <View style={styles.listSection}>
           <View style={styles.listHeader}>
-            <Text style={styles.listTitle}>Hạn mức theo từng danh mục</Text>
+            <Text style={styles.listTitle}>{t('budgets.byCategory')}</Text>
             {totalLimits > 0 && (
               <Text style={styles.totalLimitsBadge}>
-                Tổng: {formatMoney(totalLimits, 'VND')}
+                {t('budgets.totalLabel', { amount: formatMoney(totalLimits, 'VND') })}
               </Text>
             )}
           </View>
@@ -209,7 +208,10 @@ export default function ManageBudgetModal() {
             <View style={styles.warningBanner}>
               <MaterialIcons name="warning" size={16} color="#E65100" />
               <Text style={styles.warningText}>
-                Tổng hạn mức các danh mục ({formatMoney(totalLimits, 'VND')}) đang lớn hơn hạn mức tổng ({formatMoney(totalBudgetAmount, 'VND')}).
+                {t('budgets.categoryLimitsExceed', {
+                  categoryTotal: formatMoney(totalLimits, 'VND'),
+                  monthlyTotal: formatMoney(totalBudgetAmount, 'VND'),
+                })}
               </Text>
             </View>
           )}
@@ -252,14 +254,14 @@ export default function ManageBudgetModal() {
                   />
                 </View>
               ) : (
-                <Text style={styles.unlimitedText}>Không giới hạn chi tiêu</Text>
+                <Text style={styles.unlimitedText}>{t('budgets.unlimitedSpending')}</Text>
               )}
             </Card>
           ))}
         </View>
 
         <Button
-          title="Lưu hạn mức"
+          title={t('budgets.saveBudget')}
           variant="primary"
           onPress={handleSave}
           loading={loading}

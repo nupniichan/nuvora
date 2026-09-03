@@ -1,33 +1,24 @@
-import '@/i18n';
-
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
-import { Stack } from 'expo-router';
+import { DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
-import { useColorScheme } from 'react-native';
 
-import { isKeyEnvelopeInitialized } from '@/services/security/key-manager';
+import { initializeI18n } from '@/i18n';
 
-SplashScreen.preventAutoHideAsync();
+SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
   const [isReady, setIsReady] = useState(false);
-  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    async function checkInit() {
+    async function prepareApp() {
       try {
-        const initialized = await isKeyEnvelopeInitialized();
-        setIsInitialized(initialized);
-      } catch (e) {
-        setIsInitialized(false);
+        await initializeI18n();
       } finally {
         setIsReady(true);
         await SplashScreen.hideAsync();
       }
     }
-    checkInit();
+    prepareApp();
   }, []);
 
   if (!isReady) {
@@ -35,7 +26,7 @@ export default function RootLayout() {
   }
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <ThemeProvider value={DefaultTheme}>
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="(auth)" />

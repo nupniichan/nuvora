@@ -44,7 +44,7 @@ export default function ManageRecurringModal() {
       let accs = await getAllAccounts();
       if (accs.length === 0) {
         const defaultAcc = await createAccount({
-          name: 'Tiền mặt',
+          name: t('accounts.typeCash'),
           type: 'cash',
           currency: 'VND',
           initialBalance: 0,
@@ -62,23 +62,23 @@ export default function ManageRecurringModal() {
         setSelectedCategoryId(cats[0].id);
       }
     }
-    loadData();
-  }, [type]);
+    void loadData();
+  }, [t, type]);
 
   const activeAccount = accounts.find((a) => a.id === selectedAccountId);
   const currency = activeAccount ? activeAccount.currency : 'VND';
 
   const handleSave = async () => {
     if (!name.trim()) {
-      setError('Vui lòng nhập tên quy tắc');
+      setError(t('recurring.ruleNameRequired'));
       return;
     }
     if (amountMinor <= 0) {
-      setError('Vui lòng nhập số tiền hợp lệ');
+      setError(t('recurring.amountRequired'));
       return;
     }
     if (!selectedAccountId) {
-      setError('Vui lòng chọn tài khoản');
+      setError(t('recurring.accountRequired'));
       return;
     }
 
@@ -106,7 +106,7 @@ export default function ManageRecurringModal() {
 
       router.back();
     } catch (e: any) {
-      setError(e.message || 'Lỗi khi lưu quy tắc định kỳ');
+      setError(e.message || t('recurring.saveError'));
       setLoading(false);
     }
   };
@@ -129,8 +129,8 @@ export default function ManageRecurringModal() {
 
         {/* Rule Name */}
         <Input
-          label="Tên quy tắc định kỳ"
-          placeholder="Ví dụ: Lương tháng, Tiền nhà, Tiền mạng..."
+          label={t('recurring.ruleName')}
+          placeholder={t('recurring.ruleNamePlaceholder')}
           value={name}
           onChangeText={setName}
         />
@@ -193,7 +193,7 @@ export default function ManageRecurringModal() {
         {/* Category Selector */}
         {categories.length > 0 && (
           <Card style={styles.fieldCard}>
-            <Text style={styles.fieldLabel}>Danh mục</Text>
+            <Text style={styles.fieldLabel}>{t('transactions.category')}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipList}>
               {categories.map((cat) => {
                 const isSelected = cat.id === selectedCategoryId;
@@ -237,7 +237,7 @@ export default function ManageRecurringModal() {
 
           {frequency === 'monthly' && (
             <View style={styles.dayPickerRow}>
-              <Text style={styles.dayLabel}>Vào ngày trong tháng:</Text>
+              <Text style={styles.dayLabel}>{t('recurring.dayOfMonth')}:</Text>
               <View style={styles.daySelector}>
                 <TouchableOpacity
                   style={styles.dayStepBtn}
@@ -245,7 +245,9 @@ export default function ManageRecurringModal() {
                 >
                   <MaterialIcons name="remove" size={18} color={Colors.light.text} />
                 </TouchableOpacity>
-                <Text style={styles.dayValue}>Ngày {dayOfMonth}</Text>
+                <Text style={styles.dayValue}>
+                  {t('recurring.dayValue', { day: dayOfMonth })}
+                </Text>
                 <TouchableOpacity
                   style={styles.dayStepBtn}
                   onPress={() => setDayOfMonth((prev) => Math.min(31, prev + 1))}
@@ -259,7 +261,7 @@ export default function ManageRecurringModal() {
 
         {/* Execution Mode */}
         <Card style={styles.fieldCard}>
-          <Text style={styles.fieldLabel}>Chế độ xử lý khi đến kỳ</Text>
+          <Text style={styles.fieldLabel}>{t('recurring.postingMode')}</Text>
           <View style={styles.behaviorRow}>
             <TouchableOpacity
               style={[styles.behaviorBtn, behavior === 'confirm' && styles.activeBehaviorBtn]}
@@ -271,7 +273,7 @@ export default function ManageRecurringModal() {
                 color={behavior === 'confirm' ? '#1A1C2E' : Colors.light.textSecondary}
               />
               <Text style={[styles.behaviorText, behavior === 'confirm' && styles.activeBehaviorText]}>
-                Chờ xác nhận
+                {t('recurring.waitForConfirmation')}
               </Text>
             </TouchableOpacity>
 
@@ -285,7 +287,7 @@ export default function ManageRecurringModal() {
                 color={behavior === 'auto_post' ? '#1A1C2E' : Colors.light.textSecondary}
               />
               <Text style={[styles.behaviorText, behavior === 'auto_post' && styles.activeBehaviorText]}>
-                Tự động ghi sổ
+                {t('recurring.autoPost')}
               </Text>
             </TouchableOpacity>
           </View>

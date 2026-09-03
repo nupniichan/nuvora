@@ -1,6 +1,6 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -25,6 +25,13 @@ export default function LockScreen() {
   const [loading, setLoading] = useState(false);
   const [canBiometric, setCanBiometric] = useState(false);
 
+  const handleBiometric = useCallback(async () => {
+    const success = await unlockWithBiometrics();
+    if (success) {
+      router.replace('/(main)');
+    }
+  }, [router]);
+
   useEffect(() => {
     async function checkBio() {
       const avail = (await isBiometricsAvailable()) && (await isBiometricsEnabled());
@@ -34,7 +41,7 @@ export default function LockScreen() {
       }
     }
     checkBio();
-  }, []);
+  }, [handleBiometric]);
 
   const handlePasswordUnlock = async () => {
     setLoading(true);
@@ -48,13 +55,6 @@ export default function LockScreen() {
     }
   };
 
-  const handleBiometric = async () => {
-    const success = await unlockWithBiometrics();
-    if (success) {
-      router.replace('/(main)');
-    }
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
@@ -63,7 +63,7 @@ export default function LockScreen() {
             <MaterialIcons name="lock-outline" size={32} color={Colors.primaryDark} />
           </View>
           <Text style={styles.title}>Nuvora</Text>
-          <Text style={styles.subtitle}>Nhập mật khẩu để mở khóa dữ liệu</Text>
+          <Text style={styles.subtitle}>{t('onboarding.lockSubtitle')}</Text>
         </View>
 
         <Card style={styles.card}>
@@ -84,7 +84,7 @@ export default function LockScreen() {
 
         {canBiometric ? (
           <Button
-            title="Mở khóa bằng Sinh trắc học"
+            title={t('onboarding.unlockBiometric')}
             icon={<MaterialIcons name="fingerprint" size={20} color={Colors.primaryDark} />}
             onPress={handleBiometric}
             variant="outline"

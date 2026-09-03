@@ -2,8 +2,8 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  Alert,
   Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -30,15 +31,16 @@ import {
 import { alertMessage, confirmAction } from '@/shared/dialog';
 import { formatMoney } from '@/shared/money';
 
-const GOAL_TYPE_OPTIONS: { type: GoalType; label: string; icon: string }[] = [
-  { type: 'saving', label: 'Tiết kiệm', icon: 'savings' },
-  { type: 'debt_payoff', label: 'Trả nợ', icon: 'credit-card' },
-  { type: 'investment', label: 'Đầu tư', icon: 'trending-up' },
-  { type: 'custom', label: 'Mục tiêu khác', icon: 'flag' },
+const GOAL_TYPE_OPTIONS: { type: GoalType; labelKey: string; icon: string }[] = [
+  { type: 'saving', labelKey: 'goals.saving', icon: 'savings' },
+  { type: 'debt_payoff', labelKey: 'goals.debtPayoff', icon: 'credit-card' },
+  { type: 'investment', labelKey: 'goals.investment', icon: 'trending-up' },
+  { type: 'custom', labelKey: 'goals.custom', icon: 'flag' },
 ];
 
 export default function ManageGoalsModal() {
   const router = useRouter();
+  const { t } = useTranslation();
 
   const [goals, setGoals] = useState<FinancialGoalWithProgress[]>([]);
 
@@ -65,24 +67,21 @@ export default function ManageGoalsModal() {
       const items = await getAllGoals();
       setGoals(items);
     } catch (e) {
-      console.warn('Lỗi tải mục tiêu tài chính', e);
+      console.warn(t('goals.loadError'), e);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
-    let isMounted = true;
-    (async () => {
-      try {
-        const items = await getAllGoals();
-        if (isMounted) setGoals(items);
-      } catch (e) {
-        console.warn('Lỗi tải mục tiêu tài chính', e);
-      }
-    })();
+    let active = true;
+    getAllGoals()
+      .then((items) => {
+        if (active) setGoals(items);
+      })
+      .catch((error) => console.warn(t('goals.loadError'), error));
     return () => {
-      isMounted = false;
+      active = false;
     };
-  }, []);
+  }, [t]);
 
   const openCreateModal = () => {
     setEditingGoal(null);
@@ -119,13 +118,13 @@ export default function ManageGoalsModal() {
 
   const handleSaveGoal = async () => {
     if (!goalName.trim()) {
-      alertMessage('Thông báo', 'Vui lòng nhập tên mục tiêu');
+      alertMessage(t('common.notice'), t('goals.nameRequired'));
       return;
     }
     const safeTarget = typeof targetAmount === 'number' && !isNaN(targetAmount) ? targetAmount : 0;
     const safeCurrent = typeof currentAmount === 'number' && !isNaN(currentAmount) ? currentAmount : 0;
     if (safeTarget <= 0) {
-      alertMessage('Thông báo', 'Số tiền mục tiêu phải lớn hơn 0');
+      alertMessage(t('common.notice'), t('goals.targetRequired'));
       return;
     }
 
@@ -156,14 +155,14 @@ export default function ManageGoalsModal() {
       setCreateModalVisible(false);
       await loadData();
     } catch (e: any) {
-      alertMessage('Lỗi', e.message || 'Không thể lưu mục tiêu');
+      alertMessage(t('common.error'), e.message || t('goals.saveError'));
     }
   };
 
   const handleAddContribution = async () => {
     const safeContrib = typeof contribAmount === 'number' && !isNaN(contribAmount) ? contribAmount : 0;
     if (!activeContribGoal || safeContrib <= 0) {
-      alertMessage('Thông báo', 'Vui lòng nhập số tiền hợp lệ');
+      alertMessage(t('common.notice'), t('goals.contributionRequired'));
       return;
     }
 
@@ -172,27 +171,27 @@ export default function ManageGoalsModal() {
       setContribModalVisible(false);
       await loadData();
     } catch (e: any) {
-      alertMessage('Lỗi', e.message || 'Không thể nạp tiền vào mục tiêu');
+      alertMessage(t('common.error'), e.message || t('goals.contributionError'));
     }
   };
 
   const handleDeleteGoal = (goal: FinancialGoalWithProgress) => {
     confirmAction(
-      'Xóa mục tiêu',
-      `Bạn có chắc chắn muốn xóa mục tiêu "${goal.name}" không?`,
+      t('goals.deleteTitle'),
+      t('goals.deleteDescription', { name: goal.name }),
       async () => {
         await deleteGoal(goal.id);
         await loadData();
       },
-      'Xóa',
-      'Hủy'
+      t('common.delete'),
+      t('common.cancel')
     );
   };
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Mục tiêu Tài chính</Text>
+        <Text style={styles.title}>{t('goals.title')}</Text>
         <TouchableOpacity onPress={() => router.back()} style={styles.closeBtn}>
           <MaterialIcons name="close" size={22} color={Colors.light.text} />
         </TouchableOpacity>
@@ -200,7 +199,7 @@ export default function ManageGoalsModal() {
 
       <ScrollView contentContainerStyle={styles.content}>
         <Button
-          title="Tạo mục tiêu mới"
+          title={t('goals.create')}
           variant="primary"
           icon={<MaterialIcons name="add" size={18} color="#FFFFFF" />}
           onPress={openCreateModal}
@@ -209,10 +208,8 @@ export default function ManageGoalsModal() {
         {goals.length === 0 ? (
           <Card variant="flat" style={styles.emptyCard}>
             <MaterialIcons name="flag" size={48} color={Colors.light.textSecondary} />
-            <Text style={styles.emptyTitle}>Chưa có mục tiêu nào</Text>
-            <Text style={styles.emptyDesc}>
-              Tạo các mục tiêu như Quỹ khẩn cấp, Mua nhà, Trả nợ ngân hàng, Tích lũy đầu tư... để theo dõi tiến độ.
-            </Text>
+            <Text style={styles.emptyTitle}>{t('goals.emptyTitle')}</Text>
+            <Text style={styles.emptyDesc}>{t('goals.emptyDescription')}</Text>
           </Card>
         ) : (
           goals.map((goal) => {
@@ -238,20 +235,25 @@ export default function ManageGoalsModal() {
                   <View style={styles.goalTitleDetails}>
                     <Text style={styles.goalName}>{goal.name}</Text>
                     <Text style={styles.goalTypeLabel}>
-                      {GOAL_TYPE_OPTIONS.find((t) => t.type === goal.type)?.label || 'Mục tiêu'}
-                      {goal.target_date ? ` • Hạn: ${goal.target_date}` : ''}
+                      {t(
+                        GOAL_TYPE_OPTIONS.find((option) => option.type === goal.type)?.labelKey ||
+                          'goals.fallbackType'
+                      )}
+                      {goal.target_date
+                        ? ` • ${t('goals.deadline', { date: goal.target_date })}`
+                        : ''}
                     </Text>
                   </View>
 
                   {isCompleted ? (
                     <View style={styles.completedBadge}>
                       <MaterialIcons name="check-circle" size={14} color="#2E7D32" />
-                      <Text style={styles.completedText}>Hoàn thành</Text>
+                      <Text style={styles.completedText}>{t('goals.completed')}</Text>
                     </View>
                   ) : isOverdue ? (
                     <View style={styles.overdueBadge}>
                       <MaterialIcons name="error" size={14} color="#C62828" />
-                      <Text style={styles.overdueText}>Quá hạn</Text>
+                      <Text style={styles.overdueText}>{t('goals.overdue')}</Text>
                     </View>
                   ) : null}
                 </View>
@@ -274,7 +276,7 @@ export default function ManageGoalsModal() {
                 {/* Stats Row */}
                 <View style={styles.statsRow}>
                   <View>
-                    <Text style={styles.statLabel}>Hiện tại</Text>
+                    <Text style={styles.statLabel}>{t('goals.current')}</Text>
                     <Text style={styles.currentAmountText}>
                       {formatMoney(goal.current_amount, 'VND')}
                     </Text>
@@ -285,7 +287,7 @@ export default function ManageGoalsModal() {
                   </View>
 
                   <View style={styles.alignRight}>
-                    <Text style={styles.statLabel}>Mục tiêu</Text>
+                    <Text style={styles.statLabel}>{t('goals.target')}</Text>
                     <Text style={styles.targetAmountText}>
                       {formatMoney(goal.target_amount, 'VND')}
                     </Text>
@@ -299,7 +301,7 @@ export default function ManageGoalsModal() {
                     onPress={() => openContribModal(goal)}
                   >
                     <MaterialIcons name="add-circle-outline" size={16} color={Colors.primaryDark} />
-                    <Text style={styles.actionBtnText}>Cập nhật tiền</Text>
+                    <Text style={styles.actionBtnText}>{t('goals.updateAmount')}</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -332,7 +334,7 @@ export default function ManageGoalsModal() {
         <View style={styles.modalRoot}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>
-              {editingGoal ? 'Chỉnh sửa Mục tiêu' : 'Tạo Mục tiêu Mới'}
+              {editingGoal ? t('goals.editTitle') : t('goals.createTitle')}
             </Text>
             <TouchableOpacity onPress={() => setCreateModalVisible(false)}>
               <MaterialIcons name="close" size={22} color={Colors.light.text} />
@@ -342,10 +344,10 @@ export default function ManageGoalsModal() {
           <ScrollView contentContainerStyle={styles.modalContent}>
             {/* Goal Name */}
             <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Tên mục tiêu</Text>
+              <Text style={styles.formLabel}>{t('goals.name')}</Text>
               <TextInput
                 style={styles.textInput}
-                placeholder="Ví dụ: Quỹ khẩn cấp, Mua xe, Trả nợ ngân hàng..."
+                placeholder={t('goals.namePlaceholder')}
                 placeholderTextColor={Colors.light.textSecondary}
                 value={goalName}
                 onChangeText={setGoalName}
@@ -354,7 +356,7 @@ export default function ManageGoalsModal() {
 
             {/* Goal Type Chips */}
             <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Loại mục tiêu</Text>
+              <Text style={styles.formLabel}>{t('goals.type')}</Text>
               <View style={styles.typeRow}>
                 {GOAL_TYPE_OPTIONS.map((item) => {
                   const isSelected = goalType === item.type;
@@ -373,7 +375,7 @@ export default function ManageGoalsModal() {
                         color={isSelected ? '#1A1C2E' : Colors.light.textSecondary}
                       />
                       <Text style={[styles.typeChipText, isSelected && styles.selectedTypeChipText]}>
-                        {item.label}
+                        {t(item.labelKey)}
                       </Text>
                     </TouchableOpacity>
                   );
@@ -383,7 +385,7 @@ export default function ManageGoalsModal() {
 
             {/* Target Amount */}
             <MoneyInput
-              label="Số tiền mục tiêu"
+              label={t('goals.targetAmount')}
               valueMinor={targetAmount}
               onChangeMinor={setTargetAmount}
               currency="VND"
@@ -391,7 +393,7 @@ export default function ManageGoalsModal() {
 
             {/* Current Amount */}
             <MoneyInput
-              label="Số tiền đã có sẵn (ban đầu)"
+              label={t('goals.initialAmount')}
               valueMinor={currentAmount}
               onChangeMinor={setCurrentAmount}
               currency="VND"
@@ -399,10 +401,10 @@ export default function ManageGoalsModal() {
 
             {/* Target Date */}
             <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Thời hạn hoàn thành (Tùy chọn - YYYY-MM-DD)</Text>
+              <Text style={styles.formLabel}>{t('goals.targetDate')}</Text>
               <TextInput
                 style={styles.textInput}
-                placeholder="Ví dụ: 2026-12-31"
+                placeholder={t('goals.targetDatePlaceholder')}
                 placeholderTextColor={Colors.light.textSecondary}
                 value={targetDate}
                 onChangeText={setTargetDate}
@@ -411,13 +413,13 @@ export default function ManageGoalsModal() {
 
             {/* Color & Icon */}
             <ColorPicker
-              label="Chọn màu đại diện"
+              label={t('goals.pickColor')}
               selectedColor={goalColor}
               onSelectColor={setGoalColor}
             />
 
             <IconPicker
-              label="Chọn biểu tượng"
+              label={t('goals.pickIcon')}
               selectedIcon={goalIcon}
               selectedColor={goalColor}
               onSelectIcon={setGoalIcon}
@@ -426,7 +428,7 @@ export default function ManageGoalsModal() {
 
           <View style={styles.modalFooter}>
             <Button
-              title="Lưu mục tiêu"
+              title={t('goals.save')}
               variant="primary"
               onPress={handleSaveGoal}
             />
@@ -443,23 +445,23 @@ export default function ManageGoalsModal() {
       >
         <View style={styles.dialogOverlay}>
           <View style={styles.dialogCard}>
-            <Text style={styles.dialogTitle}>Cập nhật tiền mục tiêu</Text>
+            <Text style={styles.dialogTitle}>{t('goals.contributionTitle')}</Text>
             <Text style={styles.dialogDesc}>
               {activeContribGoal?.name}
             </Text>
 
             <MoneyInput
-              label="Số tiền thêm (+)"
+              label={t('goals.contributionAmount')}
               valueMinor={contribAmount}
               onChangeMinor={setContribAmount}
               currency="VND"
             />
 
             <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Ghi chú (Tùy chọn)</Text>
+              <Text style={styles.formLabel}>{t('goals.note')}</Text>
               <TextInput
                 style={styles.textInput}
-                placeholder="Ví dụ: Trích lương tháng 9..."
+                placeholder={t('goals.notePlaceholder')}
                 placeholderTextColor={Colors.light.textSecondary}
                 value={contribNote}
                 onChangeText={setContribNote}
@@ -468,13 +470,13 @@ export default function ManageGoalsModal() {
 
             <View style={styles.dialogActions}>
               <Button
-                title="Hủy"
+                title={t('common.cancel')}
                 variant="outline"
                 onPress={() => setContribModalVisible(false)}
                 style={styles.dialogBtn}
               />
               <Button
-                title="Xác nhận"
+                title={t('common.confirm')}
                 variant="primary"
                 onPress={handleAddContribution}
                 style={styles.dialogBtn}
@@ -746,11 +748,16 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 20,
     gap: 16,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
+    ...Platform.select({
+      web: { boxShadow: '0 8px 24px rgba(0, 0, 0, 0.2)' },
+      default: {
+        elevation: 5,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+      },
+    }),
   },
   dialogTitle: {
     fontSize: 18,
