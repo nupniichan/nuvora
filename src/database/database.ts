@@ -312,7 +312,14 @@ export async function initDatabase(dekKeyHex?: string): Promise<SQLite.SQLiteDat
 
   if (dekKeyHex) {
     // PRAGMA key for SQLCipher encryption at rest
-    await db.execAsync(`PRAGMA key = "${dekKeyHex}";`);
+    await db.execAsync(`PRAGMA key = '${dekKeyHex}';`);
+    const cipherVersion = await db.getFirstAsync<{ cipher_version: string }>(
+      'PRAGMA cipher_version;'
+    );
+    if (!cipherVersion?.cipher_version) {
+      await db.closeAsync();
+      throw new Error('SQLCipher is not enabled in this native build.');
+    }
   }
 
   // Enable foreign keys

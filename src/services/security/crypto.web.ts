@@ -1,5 +1,5 @@
 export interface KdfParameters {
-  algorithm: 'argon2id';
+  algorithm: 'pbkdf2-sha256';
   memoryKb: number;
   iterations: number;
   parallelism: number;
@@ -7,7 +7,7 @@ export interface KdfParameters {
 }
 
 export const DEFAULT_KDF_PARAMS: KdfParameters = {
-  algorithm: 'argon2id',
+  algorithm: 'pbkdf2-sha256',
   memoryKb: 65536,
   iterations: 3,
   parallelism: 1,
@@ -16,13 +16,10 @@ export const DEFAULT_KDF_PARAMS: KdfParameters = {
 
 export function generateRandomHex(byteCount: number = 32): string {
   const bytes = new Uint8Array(byteCount);
-  if (typeof window !== 'undefined' && window.crypto) {
-    window.crypto.getRandomValues(bytes);
-  } else {
-    for (let i = 0; i < byteCount; i++) {
-      bytes[i] = Math.floor(Math.random() * 256);
-    }
+  if (typeof window === 'undefined' || !window.crypto) {
+    throw new Error('A secure random number generator is unavailable.');
   }
+  window.crypto.getRandomValues(bytes);
   return Array.from(bytes)
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('');
@@ -39,49 +36,60 @@ export async function deriveKeyArgon2id(
     saltHex.match(/.{1,2}/g)?.map((byte) => parseInt(byte, 16)) || []
   );
 
-  if (typeof window !== 'undefined' && window.crypto && window.crypto.subtle) {
-    const keyMaterial = await window.crypto.subtle.importKey(
-      'raw',
-      passwordData,
-      { name: 'PBKDF2' },
-      false,
-      ['deriveBits']
-    );
-
-    const derivedBits = await window.crypto.subtle.deriveBits(
-      {
-        name: 'PBKDF2',
-        salt: saltData,
-        iterations: 10000,
-        hash: 'SHA-256',
-      },
-      keyMaterial,
-      256
-    );
-
-    const derivedBytes = new Uint8Array(derivedBits);
-    return Array.from(derivedBytes)
-      .map((b) => b.toString(16).padStart(2, '0'))
-      .join('');
+  if (typeof window === 'undefined' || !window.crypto?.subtle) {
+    throw new Error('Web Crypto is unavailable.');
   }
 
-  return generateRandomHex(32);
+  const keyMaterial = await window.crypto.subtle.importKey(
+    'raw',
+    passwordData,
+    { name: 'PBKDF2' },
+    false,
+    ['deriveBits']
+  );
+  const derivedBits = await window.crypto.subtle.deriveBits(
+    {
+      name: 'PBKDF2',
+      salt: saltData,
+      iterations: 310_000,
+      hash: 'SHA-256',
+    },
+    keyMaterial,
+    params.keyLength * 8
+  );
+
+  return bytesToHex(new Uint8Array(derivedBits));
 }
 
 export async function encryptAesGcm(
   plaintext: string,
   keyHex: string
 ): Promise<{ ciphertextHex: string; nonceHex: string; authTagHex: string }> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(plaintext);
-  const hex = Array.from(data)
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('');
+  if (typeof window === 'undefined' || !window.crypto?.subtle) {
+    throw new Error('Web Crypto is unavailable.');
+  }
+
+  const nonce = hexToBytes(generateRandomHex(12));
+  const key = await window.crypto.subtle.importKey(
+    'raw',
+    hexToBytes(keyHex),
+    { name: 'AES-GCM' },
+    false,
+    ['encrypt']
+  );
+  const encrypted = new Uint8Array(
+    await window.crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv: nonce, tagLength: 128 },
+      key,
+      new TextEncoder().encode(plaintext)
+    )
+  );
+  const tagStart = encrypted.length - 16;
 
   return {
-    ciphertextHex: hex,
-    nonceHex: generateRandomHex(12),
-    authTagHex: generateRandomHex(16),
+    ciphertextHex: bytesToHex(encrypted.slice(0, tagStart)),
+    nonceHex: bytesToHex(nonce),
+    authTagHex: bytesToHex(encrypted.slice(tagStart)),
   };
 }
 
@@ -91,9 +99,38 @@ export async function decryptAesGcm(
   nonceHex: string,
   authTagHex: string
 ): Promise<string> {
-  const bytes = new Uint8Array(
-    ciphertextHex.match(/.{1,2}/g)?.map((byte) => parseInt(byte, 16)) || []
+  if (typeof window === 'undefined' || !window.crypto?.subtle) {
+    throw new Error('Web Crypto is unavailable.');
+  }
+
+  const key = await window.crypto.subtle.importKey(
+    'raw',
+    hexToBytes(keyHex),
+    { name: 'AES-GCM' },
+    false,
+    ['decrypt']
   );
-  const decoder = new TextDecoder();
-  return decoder.decode(bytes);
+  const ciphertext = hexToBytes(ciphertextHex);
+  const authTag = hexToBytes(authTagHex);
+  const encrypted = new Uint8Array(ciphertext.length + authTag.length);
+  encrypted.set(ciphertext);
+  encrypted.set(authTag, ciphertext.length);
+  const decrypted = await window.crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv: hexToBytes(nonceHex), tagLength: 128 },
+    key,
+    encrypted
+  );
+
+  return new TextDecoder().decode(decrypted);
+}
+
+function hexToBytes(hex: string): Uint8Array<ArrayBuffer> {
+  if (!/^[0-9a-f]*$/i.test(hex) || hex.length % 2 !== 0) {
+    throw new Error('Invalid hexadecimal input.');
+  }
+  return new Uint8Array(hex.match(/.{2}/g)?.map((byte) => parseInt(byte, 16)) ?? []);
+}
+
+function bytesToHex(bytes: Uint8Array): string {
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
 }

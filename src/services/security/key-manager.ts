@@ -51,7 +51,7 @@ export async function unwrapDEK(masterPassword: string): Promise<string> {
   try {
     const dekHex = await decryptAesGcm(wrappedHex, kekHex, nonceHex, authTagHex);
     return dekHex;
-  } catch (err) {
+  } catch {
     throw new Error('Incorrect password or corrupted key envelope.');
   }
 }

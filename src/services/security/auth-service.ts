@@ -3,8 +3,15 @@ import * as LocalAuthentication from 'expo-local-authentication';
 
 import { initDatabase } from '@/database/database';
 
-import { isKeyEnvelopeInitialized, unwrapDEK } from './key-manager';
-import { StorageKeys, getSecureItem, setSecureItem } from './secure-storage';
+import { unwrapDEK } from './key-manager';
+import {
+  StorageKeys,
+  deleteSecureItem,
+  getBiometricProtectedItem,
+  getSecureItem,
+  setBiometricProtectedItem,
+  setSecureItem,
+} from './secure-storage';
 
 let activeDekInMemory: string | null = null;
 let isUnlockedState: boolean = false;
@@ -37,6 +44,14 @@ export async function isBiometricsEnabled(): Promise<boolean> {
  * Sets biometric unlock state
  */
 export async function setBiometricsEnabled(enabled: boolean): Promise<void> {
+  if (enabled) {
+    if (!activeDekInMemory) {
+      throw new Error('Unlock the app before enabling biometric access.');
+    }
+    await setBiometricProtectedItem(StorageKeys.BIOMETRIC_DEK, activeDekInMemory);
+  } else {
+    await deleteSecureItem(StorageKeys.BIOMETRIC_DEK);
+  }
   await setSecureItem(StorageKeys.BIOMETRIC_ENABLED, enabled ? 'true' : 'false');
 }
 
@@ -52,7 +67,7 @@ export async function unlockWithPassword(password: string): Promise<boolean> {
     // Initialize/open DB with DEK
     await initDatabase(dekHex);
     return true;
-  } catch (error) {
+  } catch {
     activeDekInMemory = null;
     isUnlockedState = false;
     return false;
@@ -68,13 +83,19 @@ export async function unlockWithBiometrics(): Promise<boolean> {
     return false;
   }
 
-  const result = await LocalAuthentication.authenticateAsync({
-    promptMessage: 'Xác thực để mở khóa Nuvora',
-    fallbackLabel: 'Nhập mật khẩu',
-    cancelLabel: 'Hủy',
-  });
+  try {
+    const dekHex = await getBiometricProtectedItem(StorageKeys.BIOMETRIC_DEK);
+    if (!dekHex) return false;
 
-  return result.success;
+    activeDekInMemory = dekHex;
+    await initDatabase(dekHex);
+    isUnlockedState = true;
+    return true;
+  } catch {
+    activeDekInMemory = null;
+    isUnlockedState = false;
+    return false;
+  }
 }
 
 /**

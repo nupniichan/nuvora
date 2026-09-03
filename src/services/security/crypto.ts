@@ -37,38 +37,22 @@ export async function deriveKeyArgon2id(
   return new Promise((resolve, reject) => {
     try {
       const saltBuffer = QuickCrypto.Buffer.from(saltHex, 'hex');
-      const qcAny = QuickCrypto as any;
-
-      if (qcAny.argon2 && typeof qcAny.argon2.hash === 'function') {
-        qcAny.argon2.hash(
-          passwordStr,
-          saltBuffer,
-          {
-            type: 2, // Argon2id
-            memoryCost: params.memoryKb,
-            timeCost: params.iterations,
-            parallelism: params.parallelism,
-            hashLength: params.keyLength,
-          },
-          (err: any, derivedKey: any) => {
-            if (err) return reject(err);
-            resolve(derivedKey.toString('hex'));
-          }
-        );
-      } else {
-        // Fallback PBKDF2 if Argon2 native module unavailable in non-native / JS environments
-        QuickCrypto.pbkdf2(
-          passwordStr,
-          saltBuffer,
-          params.iterations * 10000,
-          params.keyLength,
-          'sha256',
-          (err: any, derivedKey: any) => {
-            if (err) return reject(err);
-            resolve(derivedKey.toString('hex'));
-          }
-        );
-      }
+      QuickCrypto.argon2(
+        'argon2id',
+        {
+          message: QuickCrypto.Buffer.from(passwordStr, 'utf8'),
+          nonce: saltBuffer,
+          parallelism: params.parallelism,
+          tagLength: params.keyLength,
+          memory: params.memoryKb,
+          passes: params.iterations,
+          version: 0x13,
+        },
+        (error, derivedKey) => {
+          if (error) return reject(error);
+          resolve(derivedKey.toString('hex'));
+        }
+      );
     } catch (error) {
       reject(error);
     }

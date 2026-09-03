@@ -7,6 +7,8 @@ const KEYS = {
   DEK_NONCE: 'nuvora_dek_nonce',
   DEK_TAG: 'nuvora_dek_tag',
   BIOMETRIC_ENABLED: 'nuvora_biometric_enabled',
+  BIOMETRIC_DEK: 'nuvora_biometric_dek',
+  LANGUAGE: 'nuvora_language',
   IS_INITIALIZED: 'nuvora_is_initialized',
 };
 
@@ -46,6 +48,27 @@ export async function deleteSecureItem(key: string): Promise<void> {
     return;
   }
   await SecureStore.deleteItemAsync(key);
+}
+
+export async function setBiometricProtectedItem(key: string, value: string): Promise<void> {
+  if (Platform.OS === 'web') {
+    throw new Error('Biometric protected storage is unavailable on web.');
+  }
+
+  await SecureStore.setItemAsync(key, value, {
+    requireAuthentication: true,
+    authenticationPrompt: 'Xác thực để bật mở khóa nhanh Nuvora',
+    keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+  });
+}
+
+export async function getBiometricProtectedItem(key: string): Promise<string | null> {
+  if (Platform.OS === 'web') return null;
+
+  return SecureStore.getItemAsync(key, {
+    requireAuthentication: true,
+    authenticationPrompt: 'Xác thực để mở khóa Nuvora',
+  });
 }
 
 export const StorageKeys = KEYS;
