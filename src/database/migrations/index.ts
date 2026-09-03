@@ -1,4 +1,5 @@
 import { MIGRATION_001_INITIAL } from './001_initial';
+import { MIGRATION_002_GOALS_AND_LIMITS } from './002_goals_and_limits';
 
 export interface Migration {
   version: number;
@@ -6,7 +7,10 @@ export interface Migration {
   up: string[];
 }
 
-export const ALL_MIGRATIONS: Migration[] = [MIGRATION_001_INITIAL];
+export const ALL_MIGRATIONS: Migration[] = [
+  MIGRATION_001_INITIAL,
+  MIGRATION_002_GOALS_AND_LIMITS,
+];
 
 /**
  * Runs pending migrations on SQLite database instance

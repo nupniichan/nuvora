@@ -69,14 +69,27 @@
     "noTransactions": "No transactions yet"
   },
   "budgets": {
-    "title": "Budgets",
+    "title": "Budgets & Goals",
     "createBudget": "Create Budget",
-    "allocated": "Allocated",
+    "editBudget": "Spending Limits",
+    "manageLimits": "Spending Limits",
+    "manageCategories": "Manage Categories",
+    "manageGoals": "Financial Goals",
+    "noActiveBudget": "No Active Budget",
+    "setupBudgetDesc": "Set up spending limits to monitor and control your personal finances effectively.",
+    "spendingLimit": "Limit",
     "spent": "Spent",
     "remaining": "Remaining",
-    "overspent": "Overspent",
-    "fixedRule": "Fixed Amount",
-    "percentageRule": "Percentage (%)"
+    "overLimit": "Over Limit",
+    "unlimited": "Unlimited",
+    "budgetName": "Budget Name",
+    "totalBudget": "Total Monthly Budget",
+    "monthly": "Monthly",
+    "weekly": "Weekly",
+    "totalIncome": "Total Income",
+    "totalExpense": "Total Expenses",
+    "netBalance": "Net Balance",
+    "saveBudget": "Save Limits"
   },
   "recurring": {
     "title": "Recurring",

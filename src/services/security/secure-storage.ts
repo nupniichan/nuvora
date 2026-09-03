@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 
 const KEYS = {
@@ -10,16 +11,40 @@ const KEYS = {
 };
 
 export async function setSecureItem(key: string, value: string): Promise<void> {
+  if (Platform.OS === 'web' || typeof window !== 'undefined') {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem(key, value);
+      }
+    } catch {}
+    return;
+  }
   await SecureStore.setItemAsync(key, value, {
     keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK,
   });
 }
 
 export async function getSecureItem(key: string): Promise<string | null> {
+  if (Platform.OS === 'web' || typeof window !== 'undefined') {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        return window.localStorage.getItem(key);
+      }
+    } catch {}
+    return null;
+  }
   return await SecureStore.getItemAsync(key);
 }
 
 export async function deleteSecureItem(key: string): Promise<void> {
+  if (Platform.OS === 'web' || typeof window !== 'undefined') {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.removeItem(key);
+      }
+    } catch {}
+    return;
+  }
   await SecureStore.deleteItemAsync(key);
 }
 

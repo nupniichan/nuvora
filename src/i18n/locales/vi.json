@@ -69,14 +69,27 @@
     "noTransactions": "Chưa có giao dịch nào"
   },
   "budgets": {
-    "title": "Ngân sách",
+    "title": "Ngân sách & Mục tiêu",
     "createBudget": "Tạo ngân sách",
-    "allocated": "Đã phân bổ",
+    "editBudget": "Hạn mức chi tiêu",
+    "manageLimits": "Hạn mức chi tiêu",
+    "manageCategories": "Quản lý danh mục",
+    "manageGoals": "Mục tiêu tài chính",
+    "noActiveBudget": "Chưa có ngân sách nào",
+    "setupBudgetDesc": "Thiết lập hạn mức chi tiêu để kiểm soát tài chính cá nhân hiệu quả.",
+    "spendingLimit": "Hạn mức",
     "spent": "Đã chi",
     "remaining": "Còn lại",
-    "overspent": "Vượt ngân sách",
-    "fixedRule": "Số tiền cố định",
-    "percentageRule": "Phần trăm (%)"
+    "overLimit": "Vượt hạn mức",
+    "unlimited": "Không giới hạn",
+    "budgetName": "Tên ngân sách",
+    "totalBudget": "Hạn mức tổng tháng",
+    "monthly": "Hàng tháng",
+    "weekly": "Hàng tuần",
+    "totalIncome": "Tổng thu nhập",
+    "totalExpense": "Tổng chi tiêu",
+    "netBalance": "Số dư tháng",
+    "saveBudget": "Lưu hạn mức"
   },
   "recurring": {
     "title": "Định kỳ",

@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
 
 import { initDatabase } from '@/database/database';
@@ -12,9 +13,16 @@ let isUnlockedState: boolean = false;
  * Checks if biometric authentication is available on device
  */
 export async function isBiometricsAvailable(): Promise<boolean> {
-  const hasHardware = await LocalAuthentication.hasHardwareAsync();
-  const isEnrolled = await LocalAuthentication.isEnrolledAsync();
-  return hasHardware && isEnrolled;
+  if (Platform.OS === 'web') {
+    return false;
+  }
+  try {
+    const hasHardware = await LocalAuthentication.hasHardwareAsync();
+    const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+    return hasHardware && isEnrolled;
+  } catch {
+    return false;
+  }
 }
 
 /**

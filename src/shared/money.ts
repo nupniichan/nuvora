@@ -9,6 +9,7 @@ export interface Money {
  * Converts a major unit decimal (e.g. 10.50) to integer minor units (e.g. 1050 for USD, 10500 for VND)
  */
 export function toMinorUnits(majorAmount: number, currencyCode: string): number {
+  if (typeof majorAmount !== 'number' || isNaN(majorAmount)) return 0;
   const meta = getCurrencyMetadata(currencyCode);
   const factor = Math.pow(10, meta.decimalPlaces);
   return Math.round(majorAmount * factor);
@@ -18,6 +19,7 @@ export function toMinorUnits(majorAmount: number, currencyCode: string): number 
  * Converts integer minor units (e.g. 1050) to major unit decimal (e.g. 10.50)
  */
 export function toMajorUnits(minorAmount: number, currencyCode: string): number {
+  if (typeof minorAmount !== 'number' || isNaN(minorAmount)) return 0;
   const meta = getCurrencyMetadata(currencyCode);
   const factor = Math.pow(10, meta.decimalPlaces);
   return minorAmount / factor;
@@ -27,8 +29,9 @@ export function toMajorUnits(minorAmount: number, currencyCode: string): number 
  * Formats minor units into human readable money string (e.g., "100.000 ₫" or "$10.50")
  */
 export function formatMoney(minorAmount: number, currencyCode: string): string {
+  const safeMinor = typeof minorAmount === 'number' && !isNaN(minorAmount) ? minorAmount : 0;
   const meta = getCurrencyMetadata(currencyCode);
-  const major = toMajorUnits(minorAmount, currencyCode);
+  const major = toMajorUnits(safeMinor, currencyCode);
 
   const formattedNum = new Intl.NumberFormat(
     meta.code === 'VND' ? 'vi-VN' : 'en-US',
@@ -38,7 +41,7 @@ export function formatMoney(minorAmount: number, currencyCode: string): string {
     }
   ).format(Math.abs(major));
 
-  const sign = minorAmount < 0 ? '-' : '';
+  const sign = safeMinor < 0 ? '-' : '';
   const space = meta.spaceSeparator ? ' ' : '';
 
   if (meta.symbolPosition === 'prefix') {

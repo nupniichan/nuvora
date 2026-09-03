@@ -20,7 +20,7 @@ export interface AccountRow {
   updated_at: string;
 }
 
-export type CategoryType = 'income' | 'expense';
+export type CategoryType = 'income' | 'expense' | 'saving' | 'investment' | 'debt' | 'custom';
 
 export interface CategoryGroupRow {
   id: string;
@@ -72,21 +72,52 @@ export interface BudgetRow {
   period_type: BudgetPeriodType;
   start_date: string;
   currency: string;
+  total_budget?: number | null; // Total monthly limit if set
   is_active: number;
   created_at: string;
   updated_at: string;
 }
 
-export type AllocationRuleType = 'fixed' | 'percentage';
+export type AllocationRuleType = 'fixed' | 'percentage' | 'limit';
 
 export interface BudgetAllocationRow {
   id: string;
   budget_id: string;
   category_id: string;
   rule_type: AllocationRuleType;
-  amount: number | null; // Integer minor units for fixed
+  amount: number | null; // Integer minor units (used as spending limit)
   percentage: number | null; // 0-100 for percentage
   sort_order: number;
+}
+
+export type GoalType = 'saving' | 'debt_payoff' | 'investment' | 'custom';
+export type GoalStatus = 'active' | 'completed' | 'paused' | 'cancelled';
+
+export interface FinancialGoalRow {
+  id: string;
+  name: string;
+  type: GoalType;
+  icon: string | null;
+  color: string | null;
+  target_amount: number; // Integer minor units
+  current_amount: number; // Integer minor units
+  target_date: string | null; // ISO date YYYY-MM-DD
+  linked_category_id: string | null;
+  linked_account_id: string | null;
+  notes: string | null;
+  status: GoalStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GoalContributionRow {
+  id: string;
+  goal_id: string;
+  amount: number; // Integer minor units
+  transaction_id: string | null;
+  note: string | null;
+  date: string; // ISO date YYYY-MM-DD
+  created_at: string;
 }
 
 export type RecurrenceFrequency = 'daily' | 'weekly' | 'monthly' | 'yearly';
