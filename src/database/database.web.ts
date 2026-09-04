@@ -105,66 +105,78 @@ class WebSQLiteDatabase {
     }
     // UPDATE
     else if (/^UPDATE/i.test(trimmed)) {
-      const updateWithWhere = trimmed.match(/UPDATE\s+([a-zA-Z0-9_]+)\s+SET\s+(.*?)\s+WHERE\s+(.*)/i);
-      const updateWithoutWhere = trimmed.match(/UPDATE\s+([a-zA-Z0-9_]+)\s+SET\s+(.*)/i);
+      const updateMatch = trimmed
+        .replace(/;$/, '')
+        .match(/^UPDATE\s+([a-zA-Z0-9_]+)\s+SET\s+([\s\S]+)$/i);
 
-      if (updateWithWhere) {
-        const tableName = updateWithWhere[1].toLowerCase();
-        const setClause = updateWithWhere[2];
+      if (updateMatch) {
+        const tableName = updateMatch[1].toLowerCase();
+        const setAndWhere = updateMatch[2];
+        const whereMatch = setAndWhere.match(/^([\s\S]*?)\s+WHERE\s+([\s\S]+)$/i);
+        const setClause = (whereMatch?.[1] ?? setAndWhere).trim();
+        const whereClause = whereMatch?.[2]?.trim();
+
         if (this.tables[tableName]) {
-          let paramIdx = 0;
-          const assignments = setClause.split(',').map((s) => s.trim());
-          const idParam = params[params.length - 1];
+          const assignments = setClause.split(',').map((assignment) => assignment.trim());
+          const setParamCount = assignments.reduce(
+            (count, assignment) => count + (assignment.match(/\?/g) || []).length,
+            0
+          );
+          const setParams = params.slice(0, setParamCount);
+          const whereParams = params.slice(setParamCount);
+          const whereConditions = whereClause?.split(/\s+AND\s+/i) ?? [];
+
+          const parseLiteral = (value: string): unknown => {
+            const normalized = value.trim().replace(/^'|'$/g, '');
+            return Number.isNaN(Number(normalized)) ? normalized : Number(normalized);
+          };
 
           this.tables[tableName] = this.tables[tableName].map((row) => {
-            if (row.id === idParam) {
-              const updated = { ...row };
-              paramIdx = 0;
-              for (const assign of assignments) {
-                const plusMatch = assign.match(/([a-zA-Z0-9_]+)\s*=\s*\1\s*\+\s*\?/);
-                const minusMatch = assign.match(/([a-zA-Z0-9_]+)\s*=\s*\1\s*-\s*\?/);
-                const simpleMatch = assign.match(/([a-zA-Z0-9_]+)\s*=\s*\?/);
-
-                if (plusMatch) {
-                  const col = plusMatch[1];
-                  const delta = params[paramIdx++];
-                  updated[col] = (Number(updated[col]) || 0) + Number(delta);
-                } else if (minusMatch) {
-                  const col = minusMatch[1];
-                  const delta = params[paramIdx++];
-                  updated[col] = (Number(updated[col]) || 0) - Number(delta);
-                } else if (simpleMatch) {
-                  const col = simpleMatch[1];
-                  updated[col] = params[paramIdx++];
-                }
+            let whereParamIndex = 0;
+            const matchesWhere = whereConditions.every((condition) => {
+              const parameterMatch = condition.match(
+                /^(?:[a-zA-Z0-9_]+\.)?([a-zA-Z0-9_]+)\s*=\s*\?$/
+              );
+              if (parameterMatch) {
+                return row[parameterMatch[1]] === whereParams[whereParamIndex++];
               }
-              changes++;
-              return updated;
-            }
-            return row;
-          });
 
-          this.saveToStorage();
-        }
-      } else if (updateWithoutWhere) {
-        const tableName = updateWithoutWhere[1].toLowerCase();
-        const setClause = updateWithoutWhere[2].replace(/;$/, '').trim();
-        if (this.tables[tableName]) {
-          const assignments = setClause.split(',').map((s) => s.trim());
-          this.tables[tableName] = this.tables[tableName].map((row) => {
+              const literalMatch = condition.match(
+                /^(?:[a-zA-Z0-9_]+\.)?([a-zA-Z0-9_]+)\s*=\s*(.+)$/
+              );
+              return literalMatch
+                ? row[literalMatch[1]] === parseLiteral(literalMatch[2])
+                : false;
+            });
+
+            if (!matchesWhere) return row;
+
             const updated = { ...row };
-            for (const assign of assignments) {
-              const simpleLitMatch = assign.match(/([a-zA-Z0-9_]+)\s*=\s*([^,;]+)/);
-              if (simpleLitMatch) {
-                const col = simpleLitMatch[1];
-                let val: any = simpleLitMatch[2].trim();
-                if (!isNaN(Number(val))) val = Number(val);
-                updated[col] = val;
+            let setParamIndex = 0;
+            for (const assignment of assignments) {
+              const plusMatch = assignment.match(/([a-zA-Z0-9_]+)\s*=\s*\1\s*\+\s*\?/);
+              const minusMatch = assignment.match(/([a-zA-Z0-9_]+)\s*=\s*\1\s*-\s*\?/);
+              const parameterMatch = assignment.match(/([a-zA-Z0-9_]+)\s*=\s*\?/);
+              const literalMatch = assignment.match(/([a-zA-Z0-9_]+)\s*=\s*([^?]+)$/);
+
+              if (plusMatch) {
+                const column = plusMatch[1];
+                updated[column] =
+                  (Number(updated[column]) || 0) + Number(setParams[setParamIndex++]);
+              } else if (minusMatch) {
+                const column = minusMatch[1];
+                updated[column] =
+                  (Number(updated[column]) || 0) - Number(setParams[setParamIndex++]);
+              } else if (parameterMatch) {
+                updated[parameterMatch[1]] = setParams[setParamIndex++];
+              } else if (literalMatch) {
+                updated[literalMatch[1]] = parseLiteral(literalMatch[2]);
               }
             }
             changes++;
             return updated;
           });
+
           this.saveToStorage();
         }
       }
@@ -218,14 +230,17 @@ class WebSQLiteDatabase {
     // Check for direct JOIN with category_groups (e.g. from categories table)
     if (/JOIN\s+category_groups/i.test(trimmed) && !/JOIN\s+categories/i.test(trimmed)) {
       const groups = this.tables.category_groups || [];
-      rows = rows.map((r) => {
-        const grp = groups.find((g) => g.id === r.group_id);
-        return {
-          ...r,
-          group_name: grp ? grp.name : 'General',
-          group_type: grp ? grp.type : 'expense',
-        };
-      });
+      rows = rows
+        .map((r) => {
+          const grp = groups.find((g) => g.id === r.group_id);
+          if (!grp) return null;
+          return {
+            ...r,
+            group_name: grp.name,
+            group_type: grp.type,
+          };
+        })
+        .filter(Boolean);
     }
 
     // Check for recurring_rules joins
@@ -304,7 +319,7 @@ class WebSQLiteDatabase {
         const catId = params[pIdx++];
         rows = rows.filter((r) => r.category_id === catId);
       }
-      if (/type\s*=\s*\?/i.test(trimmed)) {
+      if (!/cg\.type\s*=\s*\?/i.test(trimmed) && /type\s*=\s*\?/i.test(trimmed)) {
         const typeVal = params[pIdx++];
         rows = rows.filter((r) => r.type === typeVal);
       } else if (/type\s*=\s*'expense'/i.test(trimmed)) {
