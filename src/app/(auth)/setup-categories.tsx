@@ -72,7 +72,7 @@ export default function SetupCategoriesScreen() {
                 </Text>
               </View>
               {selectedTemplate === 'personal' ? (
-                <MaterialIcons name="check" size={20} color={Colors.accent} />
+                <MaterialIcons name="check" size={20} color={Colors.primaryStrong} />
               ) : null}
             </Card>
           </TouchableOpacity>
@@ -95,7 +95,7 @@ export default function SetupCategoriesScreen() {
                 <Text style={styles.cardDesc}>{t('onboarding.templateEmptyDescription')}</Text>
               </View>
               {selectedTemplate === 'empty' ? (
-                <MaterialIcons name="check" size={20} color={Colors.accent} />
+                <MaterialIcons name="check" size={20} color={Colors.primaryStrong} />
               ) : null}
             </Card>
           </TouchableOpacity>
@@ -108,7 +108,7 @@ export default function SetupCategoriesScreen() {
         <Button
           title={t('common.done')}
           onPress={handleFinish}
-          variant="accent"
+          variant="primary"
           loading={loading}
         />
       </View>
@@ -150,7 +150,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   selectedCard: {
-    borderColor: Colors.accent,
+    borderColor: Colors.primaryStrong,
     borderWidth: 2,
     backgroundColor: Colors.primaryFaded,
   },
@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
   checkmark: {
     fontSize: 20,
     fontWeight: '800',
-    color: Colors.accent,
+    color: Colors.primaryStrong,
   },
   errorText: {
     fontSize: 13,

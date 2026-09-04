@@ -25,8 +25,8 @@ export const PRESET_COLORS = [
   '#8D6E63', // Brown
   '#78909C', // Blue Grey
   '#37474F', // Dark Charcoal
-  '#9999FF', // Periwinkle / Brand Purple
-  '#F89E62', // Brand Orange Accent
+  '#CCCCFF', // Periwinkle / Primary brand
+  '#F4A284', // Warm accent
   '#4A148C', // Deep Violet
   '#00695C', // Deep Teal
 ];

@@ -216,7 +216,7 @@ export default function TransactionsScreen() {
                           : 'swap-horiz')
                       }
                       size={20}
-                      color={cat?.color ? '#FFFFFF' : item.type === 'income' ? Colors.income : item.type === 'expense' ? Colors.expense : Colors.accent}
+                      color={cat?.color ? '#FFFFFF' : item.type === 'income' ? Colors.income : item.type === 'expense' ? Colors.expense : Colors.transfer}
                     />
                   </View>
 
@@ -513,14 +513,14 @@ const styles = StyleSheet.create({
     maxWidth: 170,
     paddingHorizontal: 14,
     borderRadius: 14,
-    backgroundColor: Colors.accent,
+    backgroundColor: Colors.primary,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
   },
   addButtonText: {
-    color: '#4A2419',
+    color: Colors.light.text,
     fontSize: 13,
     fontWeight: '800',
     flexShrink: 1,
@@ -591,7 +591,7 @@ const styles = StyleSheet.create({
     color: Colors.expense,
   },
   transferText: {
-    color: Colors.accent,
+    color: Colors.transfer,
   },
   quickActions: {
     flexDirection: 'row',

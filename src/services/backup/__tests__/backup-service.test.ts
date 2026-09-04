@@ -57,7 +57,7 @@ jest.mock('@/database/database', () => {
         currency: 'VND',
         balance: 500000,
         icon: 'account-balance-wallet',
-        color: '#F89E62',
+        color: '#CCCCFF',
         sort_order: 1,
         is_archived: 0,
         created_at: '2026-01-01',
@@ -172,8 +172,9 @@ describe('Encrypted Backup & Recovery Service', () => {
     const backupJson = await createEncryptedBackup(MASTER_PASSWORD);
     const envelope = JSON.parse(backupJson);
 
-    // Tamper ciphertext
-    envelope.ciphertextHex = envelope.ciphertextHex.slice(0, -2) + 'aa';
+    // Flip the first byte so the ciphertext is guaranteed to change.
+    const firstByte = Number.parseInt(envelope.ciphertextHex.slice(0, 2), 16) ^ 0xff;
+    envelope.ciphertextHex = firstByte.toString(16).padStart(2, '0') + envelope.ciphertextHex.slice(2);
     const tamperedJson = JSON.stringify(envelope);
 
     await expect(

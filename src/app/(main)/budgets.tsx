@@ -219,7 +219,7 @@ export default function BudgetsScreen() {
             style={[styles.quickBtn, styles.primaryQuickBtn]}
             onPress={() => router.push('/(modal)/add-transaction')}
           >
-            <MaterialIcons name="add" size={18} color="#FFFFFF" />
+            <MaterialIcons name="add" size={18} color={Colors.light.text} />
             <Text style={[styles.quickBtnText, styles.primaryQuickBtnText]}>{t('budgets.newEntry')}</Text>
           </TouchableOpacity>
 
@@ -605,10 +605,10 @@ const styles = StyleSheet.create({
     color: Colors.light.text,
   },
   primaryQuickBtn: {
-    backgroundColor: Colors.primaryStrong,
+    backgroundColor: Colors.primary,
   },
   primaryQuickBtnText: {
-    color: '#FFFFFF',
+    color: Colors.light.text,
   },
   section: {
     gap: 10,

@@ -63,7 +63,7 @@ export default function SetupCurrencyScreen() {
                     <Text style={styles.name}>{curr.name}</Text>
                   </View>
                   {isSelected ? (
-                    <MaterialIcons name="check" size={20} color={Colors.accent} />
+                    <MaterialIcons name="check" size={20} color={Colors.primaryStrong} />
                   ) : null}
                 </Card>
               </TouchableOpacity>
@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   selectedCard: {
-    borderColor: Colors.accent,
+    borderColor: Colors.primaryStrong,
     borderWidth: 2,
     backgroundColor: Colors.primaryFaded,
   },
@@ -147,7 +147,7 @@ const styles = StyleSheet.create({
   checkmark: {
     fontSize: 20,
     fontWeight: '800',
-    color: Colors.accent,
+    color: Colors.primaryStrong,
   },
   footer: {
     padding: 24,

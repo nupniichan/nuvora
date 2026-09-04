@@ -15,7 +15,7 @@ export const STARTER_TEMPLATES: StarterGroupTemplate[] = [
     nameEn: 'Daily Expenses',
     type: 'expense',
     icon: 'shopping-cart',
-    color: '#F89E62',
+    color: '#F4A284',
     categories: [
       { nameVi: 'Ăn uống', nameEn: 'Food & Dining', icon: 'restaurant', color: '#FF7043' },
       { nameVi: 'Di chuyển', nameEn: 'Transportation', icon: 'directions-car', color: '#42A5F5' },

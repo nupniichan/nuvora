@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
   currencyBadge: {
     fontSize: 14,
     fontWeight: '600',
-    color: Colors.accent,
+    color: Colors.primaryStrong,
     backgroundColor: Colors.primaryFaded,
     paddingHorizontal: 10,
     paddingVertical: 4,

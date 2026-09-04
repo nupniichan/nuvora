@@ -48,7 +48,7 @@ export async function createAccount(data: {
       data.currency,
       data.initialBalance,
       data.icon || 'account-balance-wallet',
-      data.color || '#F89E62',
+      data.color || '#CCCCFF',
       now,
       now,
     ]

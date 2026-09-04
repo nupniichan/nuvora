@@ -54,7 +54,7 @@ export default function WelcomeScreen() {
               <MaterialIcons
                 name="language"
                 size={20}
-                color={selectedLang === 'vi' ? Colors.accent : Colors.light.textSecondary}
+                color={selectedLang === 'vi' ? Colors.primaryStrong : Colors.light.textSecondary}
               />
               <Text
                 style={[
@@ -77,7 +77,7 @@ export default function WelcomeScreen() {
               <MaterialIcons
                 name="language"
                 size={20}
-                color={selectedLang === 'en' ? Colors.accent : Colors.light.textSecondary}
+                color={selectedLang === 'en' ? Colors.primaryStrong : Colors.light.textSecondary}
               />
               <Text
                 style={[
@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.surface,
   },
   selectedOption: {
-    borderColor: Colors.accent,
+    borderColor: Colors.primaryStrong,
     backgroundColor: Colors.primaryFaded,
   },
   flag: {

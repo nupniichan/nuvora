@@ -73,7 +73,7 @@ export default function SetupBiometricScreen() {
           <Button
             title={t('onboarding.enableBiometrics')}
             onPress={() => handleChoice(true)}
-            variant="accent"
+            variant="primary"
             loading={loading}
           />
         ) : null}

@@ -221,7 +221,7 @@ export default function DashboardScreen() {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <View style={styles.pendingHeaderRow}>
-                <MaterialIcons name="notifications-active" size={18} color={Colors.accent} />
+                <MaterialIcons name="notifications-active" size={18} color={Colors.primaryStrong} />
                 <Text style={styles.sectionTitle}>{t('dashboard.pendingCount', { count: pendingOccurrences.length })}</Text>
               </View>
             </View>
@@ -434,7 +434,7 @@ export default function DashboardScreen() {
                           ? Colors.income
                           : tx.type === 'expense'
                           ? Colors.expense
-                          : Colors.accent
+                          : Colors.transfer
                       }
                     />
                   </View>
@@ -505,19 +505,19 @@ const styles = StyleSheet.create({
   balanceCard: {
     padding: 22,
     gap: 10,
-    backgroundColor: Colors.primaryStrong,
+    backgroundColor: Colors.primary,
     borderWidth: 0,
   },
   balanceLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: 'rgba(255,255,255,0.72)',
+    color: 'rgba(32,32,51,0.66)',
     textTransform: 'uppercase',
   },
   balanceAmount: {
     fontSize: 32,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: Colors.light.text,
   },
   accountRow: {
     flexDirection: 'row',
@@ -527,7 +527,7 @@ const styles = StyleSheet.create({
   },
   accountCount: {
     fontSize: 13,
-    color: 'rgba(255,255,255,0.72)',
+    color: 'rgba(32,32,51,0.66)',
     fontWeight: '500',
   },
   quickBanner: {

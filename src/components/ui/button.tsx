@@ -33,7 +33,7 @@ export function Button({
     if (disabled) return theme.backgroundSelected;
     switch (variant) {
       case 'primary':
-        return Colors.primaryStrong;
+        return Colors.primary;
       case 'accent':
         return Colors.accent;
       case 'secondary':
@@ -51,7 +51,7 @@ export function Button({
     if (disabled) return theme.textSecondary;
     switch (variant) {
       case 'primary':
-        return '#FFFFFF';
+        return '#202033';
       case 'accent':
         return '#542515';
       case 'secondary':
@@ -61,7 +61,7 @@ export function Button({
       case 'outline':
         return Colors.primaryStrong;
       default:
-        return '#FFFFFF';
+        return '#202033';
     }
   };
 

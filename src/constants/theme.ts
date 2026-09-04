@@ -28,12 +28,12 @@ export const Colors = {
   light: {
     text: '#202033',
     textSecondary: '#69697C',
-    background: '#F8F7FC',
-    backgroundElement: '#F0EFF6',
-    backgroundSelected: '#E5E3EF',
+    background: '#F8F8FF',
+    backgroundElement: '#F0F0FF',
+    backgroundSelected: '#E4E4FF',
     surface: '#FFFFFF',
-    border: '#E3E1EA',
-    elevatedBorder: '#ECEAF1',
+    border: '#DEDEF2',
+    elevatedBorder: '#E9E9F7',
     overlay: 'rgba(32, 32, 51, 0.44)',
   },
   dark: {
