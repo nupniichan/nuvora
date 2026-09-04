@@ -1,6 +1,6 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ScrollView,
@@ -26,6 +26,7 @@ import {
   getAllCategoryGroups,
 } from '@/features/categories/category-queries';
 import { seedStarterCategories } from '@/features/categories/starter-templates';
+import { useSafeBack } from '@/hooks/use-safe-back';
 import { createTransaction } from '@/features/transactions/transaction-queries';
 import { formatDateISO } from '@/shared/date-utils';
 import { formatMoney } from '@/shared/money';
@@ -33,12 +34,16 @@ import { formatMoney } from '@/shared/money';
 export default function AddTransactionModal() {
   const { t, i18n } = useTranslation();
   const router = useRouter();
+  const closeModal = useSafeBack('/(main)/transactions');
 
   const [type, setType] = useState<TransactionType>('expense');
   const [amountMinor, setAmountMinor] = useState<number>(0);
   const [accounts, setAccounts] = useState<AccountRow[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
   const [toAccountId, setToAccountId] = useState<string>('');
+  const [isAddingRecipientAccount, setIsAddingRecipientAccount] = useState(false);
+  const [recipientAccountName, setRecipientAccountName] = useState('');
+  const [creatingRecipientAccount, setCreatingRecipientAccount] = useState(false);
   const [groups, setGroups] = useState<CategoryGroupRow[]>([]);
   const [categories, setCategories] = useState<CategoryWithGroup[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
@@ -90,40 +95,60 @@ export default function AddTransactionModal() {
     void loadAccounts();
   }, [t]);
 
-  useEffect(() => {
-    async function loadCategories() {
-      if (type !== 'transfer') {
-        let [grps, cats] = await Promise.all([
-          getAllCategoryGroups(type),
-          getAllCategories(type),
-        ]);
-        if (grps.length === 0 || cats.length === 0) {
-          try {
-            const db = getDatabase();
-            await seedStarterCategories(db, i18n.resolvedLanguage === 'en' ? 'en' : 'vi');
-            [grps, cats] = await Promise.all([
-              getAllCategoryGroups(type),
-              getAllCategories(type),
-            ]);
-          } catch (err) {
-            console.warn('Could not auto-seed categories:', err);
-          }
-        }
-        setGroups(grps);
-        setCategories(cats);
-        if (cats.length > 0) {
-          setSelectedCategoryId((prev) => (prev && cats.some((c) => c.id === prev) ? prev : cats[0].id));
-        } else {
-          setSelectedCategoryId(null);
-        }
-      } else {
-        setGroups([]);
-        setCategories([]);
-        setSelectedCategoryId(null);
-      }
+  const loadCategories = useCallback(async () => {
+    if (type === 'transfer') {
+      setGroups([]);
+      setCategories([]);
+      setSelectedCategoryId(null);
+      setSelectedGroupFilter('all');
+      return;
     }
-    void loadCategories();
-  }, [i18n.resolvedLanguage, type]);
+
+    const [grps, cats] = await Promise.all([
+      getAllCategoryGroups(type),
+      getAllCategories(type),
+    ]);
+    setGroups(grps);
+    setCategories(cats);
+    setSelectedCategoryId((previousId) =>
+      previousId && cats.some((category) => category.id === previousId)
+        ? previousId
+        : cats[0]?.id ?? null
+    );
+    setSelectedGroupFilter((previousGroupId) =>
+      previousGroupId === 'all' || grps.some((group) => group.id === previousGroupId)
+        ? previousGroupId
+        : 'all'
+    );
+  }, [type]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadCategories();
+    }, [loadCategories])
+  );
+
+  const selectRecipientForSource = (sourceAccountId: string) => {
+    setToAccountId((previousId) =>
+      previousId !== sourceAccountId && accounts.some((account) => account.id === previousId)
+        ? previousId
+        : accounts.find((account) => account.id !== sourceAccountId)?.id ?? ''
+    );
+  };
+
+  const handleSelectType = (nextType: TransactionType) => {
+    setType(nextType);
+    if (nextType === 'transfer') {
+      selectRecipientForSource(selectedAccountId);
+    }
+  };
+
+  const handleSelectSourceAccount = (accountId: string) => {
+    setSelectedAccountId(accountId);
+    if (type === 'transfer') {
+      selectRecipientForSource(accountId);
+    }
+  };
 
   const handleCreateCustomCat = async () => {
     if (!customCatName.trim()) return;
@@ -150,6 +175,33 @@ export default function AddTransactionModal() {
       console.warn('Could not create custom category', e);
     } finally {
       setCreatingCustomCat(false);
+    }
+  };
+
+  const handleCreateRecipientAccount = async () => {
+    const name = recipientAccountName.trim();
+    if (!name) return;
+
+    setCreatingRecipientAccount(true);
+    setError(null);
+    try {
+      const created = await createAccount({
+        name,
+        type: 'bank',
+        currency,
+        initialBalance: 0,
+        icon: 'account-balance',
+        color: Colors.primary,
+      });
+      const updatedAccounts = await getAllAccounts();
+      setAccounts(updatedAccounts);
+      setToAccountId(created.id);
+      setRecipientAccountName('');
+      setIsAddingRecipientAccount(false);
+    } catch (createError: any) {
+      setError(createError.message || t('transactions.createRecipientAccountError'));
+    } finally {
+      setCreatingRecipientAccount(false);
     }
   };
 
@@ -237,7 +289,7 @@ export default function AddTransactionModal() {
         date,
       });
 
-      router.back();
+      closeModal();
     } catch (e: any) {
       setError(e.message || t('transactions.saveError'));
       setLoading(false);
@@ -248,7 +300,7 @@ export default function AddTransactionModal() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>{t('transactions.entryTitle')}</Text>
-        <TouchableOpacity onPress={() => router.back()} style={styles.closeBtn}>
+        <TouchableOpacity onPress={closeModal} style={styles.closeBtn}>
           <MaterialIcons name="close" size={22} color={Colors.light.text} />
         </TouchableOpacity>
       </View>
@@ -258,7 +310,7 @@ export default function AddTransactionModal() {
         <View style={styles.segmentRow}>
           <TouchableOpacity
             style={[styles.segmentBtn, type === 'expense' && styles.activeExpense]}
-            onPress={() => setType('expense')}
+            onPress={() => handleSelectType('expense')}
           >
             <Text style={[styles.segmentText, type === 'expense' && styles.activeText]}>
               {t('transactions.expense')}
@@ -267,7 +319,7 @@ export default function AddTransactionModal() {
 
           <TouchableOpacity
             style={[styles.segmentBtn, type === 'income' && styles.activeIncome]}
-            onPress={() => setType('income')}
+            onPress={() => handleSelectType('income')}
           >
             <Text style={[styles.segmentText, type === 'income' && styles.activeText]}>
               {t('transactions.income')}
@@ -276,7 +328,7 @@ export default function AddTransactionModal() {
 
           <TouchableOpacity
             style={[styles.segmentBtn, type === 'transfer' && styles.activeTransfer]}
-            onPress={() => setType('transfer')}
+            onPress={() => handleSelectType('transfer')}
           >
             <Text style={[styles.segmentText, type === 'transfer' && styles.activeText]}>
               {t('transactions.transfer')}
@@ -372,7 +424,11 @@ export default function AddTransactionModal() {
 
         {/* Source Account Selector */}
         <Card style={styles.fieldCard}>
-          <Text style={styles.fieldLabel}>{t('transactions.paymentAccount')}</Text>
+          <Text style={styles.fieldLabel}>
+            {type === 'transfer'
+              ? t('transactions.sourceAccount')
+              : t('transactions.paymentAccount')}
+          </Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipList}>
             {accounts.map((acc) => {
               const isSelected = acc.id === selectedAccountId;
@@ -380,7 +436,7 @@ export default function AddTransactionModal() {
                 <TouchableOpacity
                   key={acc.id}
                   style={[styles.chip, isSelected && styles.selectedChip]}
-                  onPress={() => setSelectedAccountId(acc.id)}
+                  onPress={() => handleSelectSourceAccount(acc.id)}
                 >
                   <MaterialIcons
                     name={(acc.icon as any) || 'account-balance-wallet'}
@@ -400,10 +456,16 @@ export default function AddTransactionModal() {
         {type === 'transfer' ? (
           <Card style={styles.fieldCard}>
             <Text style={styles.fieldLabel}>{t('transactions.recipientAccount')}</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipList}>
-              {accounts
-                .filter((a) => a.id !== selectedAccountId)
-                .map((acc) => {
+            <Text style={styles.fieldHelperText}>{t('transactions.recipientAccountHelp')}</Text>
+            {accounts.some((account) => account.id !== selectedAccountId) ? (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.chipList}
+              >
+                {accounts
+                  .filter((account) => account.id !== selectedAccountId)
+                  .map((acc) => {
                   const isSelected = acc.id === toAccountId;
                   return (
                     <TouchableOpacity
@@ -422,7 +484,55 @@ export default function AddTransactionModal() {
                     </TouchableOpacity>
                   );
                 })}
-            </ScrollView>
+              </ScrollView>
+            ) : (
+              <Text style={styles.emptyRecipientText}>
+                {t('transactions.noRecipientAccount')}
+              </Text>
+            )}
+
+            {isAddingRecipientAccount ? (
+              <View style={styles.recipientAccountForm}>
+                <TextInput
+                  style={styles.recipientAccountInput}
+                  placeholder={t('transactions.recipientAccountPlaceholder')}
+                  placeholderTextColor={Colors.light.textSecondary}
+                  value={recipientAccountName}
+                  onChangeText={setRecipientAccountName}
+                  autoFocus
+                />
+                <View style={styles.recipientAccountActions}>
+                  <TouchableOpacity
+                    style={styles.cancelRecipientButton}
+                    onPress={() => {
+                      setRecipientAccountName('');
+                      setIsAddingRecipientAccount(false);
+                    }}
+                  >
+                    <Text style={styles.cancelRecipientButtonText}>{t('common.cancel')}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.createRecipientButton}
+                    disabled={creatingRecipientAccount || !recipientAccountName.trim()}
+                    onPress={handleCreateRecipientAccount}
+                  >
+                    <Text style={styles.createRecipientButtonText}>
+                      {creatingRecipientAccount ? '...' : t('transactions.createRecipientAccount')}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={styles.addRecipientButton}
+                onPress={() => setIsAddingRecipientAccount(true)}
+              >
+                <MaterialIcons name="add" size={16} color={Colors.primaryDark} />
+                <Text style={styles.addRecipientButtonText}>
+                  {t('transactions.addRecipientAccount')}
+                </Text>
+              </TouchableOpacity>
+            )}
           </Card>
         ) : null}
 
@@ -456,9 +566,7 @@ export default function AddTransactionModal() {
                       db,
                       i18n.resolvedLanguage === 'en' ? 'en' : 'vi'
                     );
-                    const cats = await getAllCategories(type);
-                    setCategories(cats);
-                    if (cats.length > 0) setSelectedCategoryId(cats[0].id);
+                    await loadCategories();
                   }}
                 >
                   <MaterialIcons name="auto-awesome" size={16} color="#1A1C2E" />
@@ -827,6 +935,11 @@ const styles = StyleSheet.create({
     color: Colors.light.textSecondary,
     textTransform: 'uppercase',
   },
+  fieldHelperText: {
+    fontSize: 12,
+    lineHeight: 17,
+    color: Colors.light.textSecondary,
+  },
   manageCategoryLink: {
     fontSize: 12,
     fontWeight: '700',
@@ -889,6 +1002,72 @@ const styles = StyleSheet.create({
   selectedChipText: {
     color: '#1A1C2E',
     fontWeight: '700',
+  },
+  emptyRecipientText: {
+    paddingVertical: 4,
+    fontSize: 13,
+    color: Colors.light.textSecondary,
+  },
+  addRecipientButton: {
+    minHeight: 40,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: Colors.primaryDark,
+    borderRadius: 10,
+  },
+  addRecipientButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.primaryDark,
+  },
+  recipientAccountForm: {
+    padding: 12,
+    gap: 10,
+    borderWidth: 1.5,
+    borderColor: Colors.primary,
+    borderRadius: 12,
+    backgroundColor: Colors.light.backgroundElement,
+  },
+  recipientAccountInput: {
+    minHeight: 42,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+    borderRadius: 9,
+    backgroundColor: Colors.light.surface,
+    fontSize: 14,
+    color: Colors.light.text,
+  },
+  recipientAccountActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 8,
+  },
+  cancelRecipientButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 8,
+  },
+  cancelRecipientButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.light.textSecondary,
+  },
+  createRecipientButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 8,
+    backgroundColor: Colors.primary,
+  },
+  createRecipientButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1A1C2E',
   },
   categoryChip: {
     flexDirection: 'row',
