@@ -1,5 +1,4 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   Modal,
@@ -28,6 +27,7 @@ import {
   getAllGoals,
   updateGoal,
 } from '@/features/goals/financial-goals';
+import { useSafeBack } from '@/hooks/use-safe-back';
 import { alertMessage, confirmAction } from '@/shared/dialog';
 import { formatMoney } from '@/shared/money';
 
@@ -39,7 +39,7 @@ const GOAL_TYPE_OPTIONS: { type: GoalType; labelKey: string; icon: string }[] = 
 ];
 
 export default function ManageGoalsModal() {
-  const router = useRouter();
+  const closeModal = useSafeBack('/(main)/budgets');
   const { t } = useTranslation();
 
   const [goals, setGoals] = useState<FinancialGoalWithProgress[]>([]);
@@ -192,7 +192,7 @@ export default function ManageGoalsModal() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>{t('goals.title')}</Text>
-        <TouchableOpacity onPress={() => router.back()} style={styles.closeBtn}>
+        <TouchableOpacity onPress={closeModal} style={styles.closeBtn}>
           <MaterialIcons name="close" size={22} color={Colors.light.text} />
         </TouchableOpacity>
       </View>
@@ -201,7 +201,7 @@ export default function ManageGoalsModal() {
         <Button
           title={t('goals.create')}
           variant="primary"
-          icon={<MaterialIcons name="add" size={18} color="#FFFFFF" />}
+          icon={<MaterialIcons name="add" size={18} color={Colors.light.text} />}
           onPress={openCreateModal}
         />
 

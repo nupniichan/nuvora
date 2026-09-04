@@ -1,5 +1,4 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -39,11 +38,12 @@ import {
   seedSingleGroupTemplate,
   seedStarterCategories,
 } from '@/features/categories/starter-templates';
+import { useSafeBack } from '@/hooks/use-safe-back';
 import { alertMessage, confirmAction } from '@/shared/dialog';
 
 export default function ManageCategoriesModal() {
   const { t, i18n } = useTranslation();
-  const router = useRouter();
+  const closeModal = useSafeBack('/(main)/more');
 
   const [groups, setGroups] = useState<CategoryGroupRow[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
@@ -283,7 +283,7 @@ export default function ManageCategoriesModal() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>{t('categories.title')}</Text>
-        <TouchableOpacity onPress={() => router.back()} style={styles.closeBtn}>
+        <TouchableOpacity onPress={closeModal} style={styles.closeBtn}>
           <MaterialIcons name="close" size={22} color={Colors.light.text} />
         </TouchableOpacity>
       </View>

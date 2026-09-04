@@ -1,5 +1,4 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -25,6 +24,7 @@ import {
   setMonthlyBudgetTotal,
 } from '@/features/budgets/budget-queries';
 import { getAllCategories } from '@/features/categories/category-queries';
+import { useSafeBack } from '@/hooks/use-safe-back';
 import { formatMoney } from '@/shared/money';
 
 interface CategoryLimitDraft {
@@ -39,7 +39,7 @@ interface CategoryLimitDraft {
 
 export default function ManageBudgetModal() {
   const { t } = useTranslation();
-  const router = useRouter();
+  const closeModal = useSafeBack('/(main)/budgets');
 
   const [budgetId, setBudgetId] = useState<string>('');
   const [totalBudgetEnabled, setTotalBudgetEnabled] = useState(false);
@@ -147,7 +147,7 @@ export default function ManageBudgetModal() {
         );
       }
 
-      router.back();
+      closeModal();
     } catch (e: any) {
       Alert.alert(t('common.error'), e.message || t('common.error'));
     } finally {
@@ -159,7 +159,7 @@ export default function ManageBudgetModal() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>{t('budgets.editBudget')}</Text>
-        <TouchableOpacity onPress={() => router.back()} style={styles.closeBtn}>
+        <TouchableOpacity onPress={closeModal} style={styles.closeBtn}>
           <MaterialIcons name="close" size={22} color={Colors.light.text} />
         </TouchableOpacity>
       </View>

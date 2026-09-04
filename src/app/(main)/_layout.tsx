@@ -1,8 +1,8 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { Tabs } from 'expo-router';
+import { Tabs, useRouter } from 'expo-router';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet } from 'react-native';
+import { Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 import { Colors } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -10,9 +10,11 @@ import { useTheme } from '@/hooks/use-theme';
 export default function MainLayout() {
   const { t } = useTranslation();
   const theme = useTheme();
+  const router = useRouter();
 
   return (
-    <Tabs
+    <View style={styles.container}>
+      <Tabs
         screenOptions={{
           headerShown: false,
           tabBarActiveTintColor: Colors.primaryStrong,
@@ -34,6 +36,7 @@ export default function MainLayout() {
           options={{
             title: t('transactions.title'),
             tabBarIcon: ({ color }) => <MaterialIcons name="receipt-long" size={24} color={color} />,
+            tabBarItemStyle: styles.leftOfFabTab,
           }}
         />
         <Tabs.Screen
@@ -41,6 +44,7 @@ export default function MainLayout() {
           options={{
             title: t('navigation.plans'),
             tabBarIcon: ({ color }) => <MaterialIcons name="pie-chart" size={24} color={color} />,
+            tabBarItemStyle: styles.rightOfFabTab,
           }}
         />
         <Tabs.Screen
@@ -50,11 +54,25 @@ export default function MainLayout() {
             tabBarIcon: ({ color }) => <MaterialIcons name="settings" size={24} color={color} />,
           }}
         />
-    </Tabs>
+      </Tabs>
+
+      <TouchableOpacity
+        accessibilityRole="button"
+        accessibilityLabel={t('transactions.addTransaction')}
+        activeOpacity={0.85}
+        style={[styles.fabButton, { borderColor: theme.surface }]}
+        onPress={() => router.push('/(modal)/add-transaction')}
+      >
+        <MaterialIcons name="add" size={30} color="#1A1C2E" />
+      </TouchableOpacity>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   tabBar: {
     height: 72,
     borderTopWidth: 1,
@@ -65,5 +83,36 @@ const styles = StyleSheet.create({
   tabLabel: {
     fontSize: 11,
     fontWeight: '700',
+  },
+  leftOfFabTab: {
+    marginRight: 18,
+  },
+  rightOfFabTab: {
+    marginLeft: 18,
+  },
+  fabButton: {
+    position: 'absolute',
+    bottom: 30,
+    alignSelf: 'center',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    borderWidth: 5,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Platform.select({
+      web: {
+        boxShadow: '0 5px 18px rgba(81, 74, 127, 0.28)',
+      },
+      default: {
+        shadowColor: Colors.primaryDark,
+        shadowOffset: { width: 0, height: 5 },
+        shadowOpacity: 0.28,
+        shadowRadius: 9,
+        elevation: 8,
+      },
+    }),
+    zIndex: 10,
   },
 });

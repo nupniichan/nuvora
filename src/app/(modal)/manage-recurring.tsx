@@ -1,5 +1,4 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -19,11 +18,12 @@ import { AccountRow, TransactionType } from '@/database/types';
 import { createAccount, getAllAccounts } from '@/features/accounts/account-queries';
 import { CategoryWithGroup, getAllCategories } from '@/features/categories/category-queries';
 import { createRecurringRule, processRecurringCatchUp } from '@/features/recurring/recurring-queries';
+import { useSafeBack } from '@/hooks/use-safe-back';
 import { formatDateISO } from '@/shared/date-utils';
 
 export default function ManageRecurringModal() {
   const { t } = useTranslation();
-  const router = useRouter();
+  const closeModal = useSafeBack('/(main)/more');
 
   const [name, setName] = useState('');
   const [type, setType] = useState<TransactionType>('expense');
@@ -104,7 +104,7 @@ export default function ManageRecurringModal() {
       // Run catch up immediately so any due occurrence is populated
       await processRecurringCatchUp();
 
-      router.back();
+      closeModal();
     } catch (e: any) {
       setError(e.message || t('recurring.saveError'));
       setLoading(false);
@@ -115,7 +115,7 @@ export default function ManageRecurringModal() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>{t('recurring.addRule')}</Text>
-        <TouchableOpacity onPress={() => router.back()} style={styles.closeBtn}>
+        <TouchableOpacity onPress={closeModal} style={styles.closeBtn}>
           <MaterialIcons name="close" size={22} color={Colors.light.text} />
         </TouchableOpacity>
       </View>

@@ -1,5 +1,4 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -17,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Colors } from '@/constants/theme';
+import { useSafeBack } from '@/hooks/use-safe-back';
 import {
   RestoreResult,
   createEncryptedBackup,
@@ -25,7 +25,7 @@ import {
 
 export default function BackupRestoreModal() {
   const { t } = useTranslation();
-  const router = useRouter();
+  const closeModal = useSafeBack('/(main)/more');
 
   const [activeTab, setActiveTab] = useState<'backup' | 'restore'>('backup');
   const [backupPassword, setBackupPassword] = useState('');
@@ -115,7 +115,7 @@ export default function BackupRestoreModal() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>{t('settings.backupRestore')}</Text>
-        <TouchableOpacity onPress={() => router.back()} style={styles.closeBtn}>
+        <TouchableOpacity onPress={closeModal} style={styles.closeBtn}>
           <MaterialIcons name="close" size={22} color={Colors.light.text} />
         </TouchableOpacity>
       </View>
