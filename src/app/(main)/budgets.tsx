@@ -1,6 +1,6 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -12,13 +12,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/empty-state';
+import { DailyExpenseChart, MonthlyCashflowChart } from '@/components/ui/insight-charts';
 import {
   CashflowComparisonChart,
   CategoryBreakdownChart,
 } from '@/components/ui/charts';
-import { Colors } from '@/constants/theme';
+import { Colors, MaxContentWidth } from '@/constants/theme';
 import {
   getMonthlySnapshot,
   MonthlySnapshot,
@@ -28,6 +29,7 @@ import {
   getAllGoals,
 } from '@/features/goals/financial-goals';
 import { formatMoney } from '@/shared/money';
+import { getSpendingHistory, SpendingHistory } from '@/features/insights/insight-data';
 
 export default function BudgetsScreen() {
   const { t, i18n } = useTranslation();
@@ -40,23 +42,38 @@ export default function BudgetsScreen() {
   const [snapshot, setSnapshot] = useState<MonthlySnapshot | null>(null);
   const [goals, setGoals] = useState<FinancialGoalWithProgress[]>([]);
   const [loading, setLoading] = useState(true);
+  const [history, setHistory] = useState<SpendingHistory | null>(null);
+  const [loadError, setLoadError] = useState(false);
+  const requestId = useRef(0);
 
   const loadData = useCallback(async () => {
+    const request = ++requestId.current;
+    setLoading(true);
+    setLoadError(false);
+    setSnapshot(null);
+    setHistory(null);
     try {
       const snap = await getMonthlySnapshot(currentYear, currentMonth);
-      const activeGoals = await getAllGoals('active');
+      const [activeGoals, spendingHistory] = await Promise.all([
+        getAllGoals('active'), getSpendingHistory(currentYear, currentMonth, snap.currency),
+      ]);
+      if (request !== requestId.current) return;
       setSnapshot(snap);
+      setHistory(spendingHistory);
       setGoals(activeGoals.slice(0, 3)); // Top 3 goals
     } catch (e) {
+      if (request !== requestId.current) return;
+      setLoadError(true);
       console.warn('Lỗi tải tổng quan ngân sách', e);
     } finally {
-      setLoading(false);
+      if (request === requestId.current) setLoading(false);
     }
   }, [currentYear, currentMonth]);
 
   useFocusEffect(
     useCallback(() => {
       loadData();
+      return () => { requestId.current++; };
     }, [loadData])
   );
 
@@ -101,7 +118,7 @@ export default function BudgetsScreen() {
   }).format(new Date(currentYear, currentMonth - 1, 1));
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.titleRow}>
@@ -113,11 +130,11 @@ export default function BudgetsScreen() {
 
         {/* Month Navigator */}
         <View style={styles.monthNav}>
-          <TouchableOpacity onPress={handlePrevMonth} style={styles.navArrowBtn}>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel={t('charts.previousMonth')} onPress={handlePrevMonth} style={styles.navArrowBtn}>
             <MaterialIcons name="chevron-left" size={24} color={Colors.light.text} />
           </TouchableOpacity>
           <Text style={styles.monthNavTitle}>{monthLabel}</Text>
-          <TouchableOpacity onPress={handleNextMonth} style={styles.navArrowBtn}>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel={t('charts.nextMonth')} onPress={handleNextMonth} style={styles.navArrowBtn}>
             <MaterialIcons name="chevron-right" size={24} color={Colors.light.text} />
           </TouchableOpacity>
         </View>
@@ -125,6 +142,8 @@ export default function BudgetsScreen() {
 
       <ScrollView contentContainerStyle={styles.content}>
         {loading ? <ActivityIndicator color={Colors.primaryStrong} /> : null}
+        {loadError && <TouchableOpacity accessibilityRole="button" onPress={loadData}><Text style={styles.emptyCategoryText}>{t('charts.loadError')} · {t('common.retry')}</Text></TouchableOpacity>}
+        {!loading && !loadError && <>
         {/* Monthly Financial Overview Card */}
         <Card style={styles.overviewCard}>
           <View style={styles.overviewHeader}>
@@ -203,6 +222,11 @@ export default function BudgetsScreen() {
           netBalance={netBalance}
           currency={currency}
         />
+
+        {history && <>
+          <MonthlyCashflowChart key={`months-${currentYear}-${currentMonth}`} months={history.months} currency={history.currency} />
+          <DailyExpenseChart key={`days-${currentYear}-${currentMonth}`} days={history.days} currency={history.currency} />
+        </>}
 
         {/* Category Expense Breakdown Chart */}
         <CategoryBreakdownChart
@@ -382,17 +406,7 @@ export default function BudgetsScreen() {
           </View>
 
           {goals.length === 0 ? (
-            <Card variant="flat" style={styles.emptyCategoryCard}>
-              <Text style={styles.emptyCategoryText}>
-                {t('budgets.noGoals')}
-              </Text>
-              <Button
-                title={t('budgets.createGoalNow')}
-                variant="outline"
-                onPress={() => router.push('/(modal)/manage-goals')}
-                style={styles.addGoalInlineBtn}
-              />
-            </Card>
+            <EmptyState icon="savings" title={t('dashboard.goalPromptTitle')} description={t('budgets.noGoals')} actionLabel={t('budgets.createGoalNow')} onAction={() => router.push('/(modal)/manage-goals')} />
           ) : (
             goals.map((goal) => (
               <TouchableOpacity
@@ -445,6 +459,7 @@ export default function BudgetsScreen() {
             ))
           )}
         </View>
+        </>}
       </ScrollView>
     </SafeAreaView>
   );
@@ -456,6 +471,9 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.background,
   },
   header: {
+    width: '100%',
+    maxWidth: MaxContentWidth,
+    alignSelf: 'center',
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: 14,
@@ -477,13 +495,13 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '800',
     letterSpacing: 1.8,
-    color: Colors.accentDark,
+    color: Colors.primaryDark,
   },
   monthNav: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: Colors.light.backgroundElement,
+    backgroundColor: Colors.primaryLight,
     borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -497,13 +515,18 @@ const styles = StyleSheet.create({
     color: Colors.light.text,
   },
   content: {
+    width: '100%',
+    maxWidth: MaxContentWidth,
+    alignSelf: 'center',
     padding: 20,
     gap: 16,
     paddingBottom: 40,
   },
   overviewCard: {
-    padding: 16,
+    padding: 20,
     gap: 14,
+    borderTopWidth: 4,
+    borderTopColor: Colors.primary,
   },
   overviewHeader: {
     flexDirection: 'row',
@@ -531,28 +554,31 @@ const styles = StyleSheet.create({
     color: '#C62828',
   },
   metricsRow: {
+    gap: 12,
+  },
+  metricItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-  },
-  metricItem: {
-    flex: 1,
-    alignItems: 'center',
+    gap: 12,
   },
   metricDivider: {
-    width: 1,
-    height: 32,
+    height: 1,
     backgroundColor: Colors.light.border,
   },
   metricLabel: {
-    fontSize: 11,
+    fontSize: 13,
+    flexShrink: 1,
     fontWeight: '600',
     color: Colors.light.textSecondary,
     marginBottom: 2,
   },
   metricValue: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '800',
+    flexShrink: 1,
+    textAlign: 'right',
+    fontVariant: ['tabular-nums'],
   },
   overviewProgressSection: {
     gap: 6,

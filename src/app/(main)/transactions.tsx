@@ -16,8 +16,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/empty-state';
 import { MoneyInput } from '@/components/ui/money-input';
-import { Colors } from '@/constants/theme';
+import { Colors, MaxContentWidth } from '@/constants/theme';
 import { AccountRow, TransactionRow, TransactionType } from '@/database/types';
 import { getAllAccounts } from '@/features/accounts/account-queries';
 import { CategoryWithGroup, getAllCategories } from '@/features/categories/category-queries';
@@ -148,7 +149,7 @@ export default function TransactionsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <View style={styles.header}>
         <View style={styles.titleRow}>
           <View>
@@ -159,7 +160,7 @@ export default function TransactionsScreen() {
             style={styles.addButton}
             onPress={() => router.push('/(modal)/add-transaction')}
           >
-            <MaterialIcons name="add" size={18} color="#4A2419" />
+            <MaterialIcons name="add" size={18} color={Colors.primaryStrong} />
             <Text style={styles.addButtonText}>{t('transactions.addTransaction')}</Text>
           </TouchableOpacity>
         </View>
@@ -224,11 +225,12 @@ export default function TransactionsScreen() {
                     <Text style={styles.txNote} numberOfLines={1}>
                       {item.note || cat?.name || t(`transactions.${item.type}`)}
                     </Text>
-                    <Text style={styles.txDate}>
+                    <Text style={styles.txDate} numberOfLines={2}>
                       {cat?.name ? `${cat.name} • ` : ''}{acc?.name ? `${acc.name} • ` : ''}{item.date}
                     </Text>
                   </View>
-
+                </View>
+                <View style={styles.txFooter}>
                   <Text
                     style={[
                       styles.txAmount,
@@ -246,12 +248,16 @@ export default function TransactionsScreen() {
                   <View style={styles.quickActions}>
                     <TouchableOpacity
                       style={styles.actionIconBtn}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('common.edit')}
                       onPress={() => openEditModal(item)}
                     >
                       <MaterialIcons name="edit" size={18} color={Colors.light.textSecondary} />
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.actionIconBtn}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('common.delete')}
                       onPress={() => handleDelete(item.id)}
                     >
                       <MaterialIcons name="delete-outline" size={18} color={Colors.expense} />
@@ -263,10 +269,7 @@ export default function TransactionsScreen() {
           );
         }}
         ListEmptyComponent={
-          <Card variant="flat" style={styles.emptyCard}>
-            <MaterialIcons name="receipt-long" size={36} color={Colors.light.textSecondary} />
-            <Text style={styles.emptyText}>{t('transactions.noTransactions')}</Text>
-          </Card>
+          <EmptyState icon="receipt-long" title={t('transactions.noTransactions')} description={t('dashboard.firstEntryDescription')} actionLabel={t('transactions.addTransaction')} onAction={() => router.push('/(modal)/add-transaction')} />
         }
       />
 
@@ -485,6 +488,9 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.background,
   },
   header: {
+    width: '100%',
+    maxWidth: MaxContentWidth,
+    alignSelf: 'center',
     padding: 20,
     gap: 16,
     borderBottomWidth: 1,
@@ -497,7 +503,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   eyebrow: {
-    color: Colors.accentDark,
+    color: Colors.primaryDark,
     fontSize: 10,
     fontWeight: '800',
     letterSpacing: 1.6,
@@ -527,9 +533,15 @@ const styles = StyleSheet.create({
   },
   filterRow: {
     flexDirection: 'row',
-    gap: 8,
+    flexWrap: 'wrap',
+    gap: 4,
+    padding: 4,
+    borderRadius: 18,
+    backgroundColor: Colors.light.backgroundElement,
   },
   filterChip: {
+    flexGrow: 1,
+    alignItems: 'center',
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
@@ -550,9 +562,14 @@ const styles = StyleSheet.create({
   listContent: {
     padding: 20,
     gap: 10,
+    paddingBottom: 40,
+    width: '100%',
+    maxWidth: MaxContentWidth,
+    alignSelf: 'center',
   },
   txCard: {
-    padding: 12,
+    padding: 16,
+    gap: 10,
   },
   txRow: {
     flexDirection: 'row',
@@ -569,7 +586,7 @@ const styles = StyleSheet.create({
   },
   txInfo: {
     flex: 1,
-    gap: 2,
+    gap: 4,
   },
   txNote: {
     fontSize: 14,
@@ -581,8 +598,10 @@ const styles = StyleSheet.create({
     color: Colors.light.textSecondary,
   },
   txAmount: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '800',
+    flexShrink: 1,
+    fontVariant: ['tabular-nums'],
   },
   incomeText: {
     color: Colors.income,
@@ -600,8 +619,12 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   actionIconBtn: {
-    padding: 6,
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
+  txFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, borderTopWidth: 1, borderTopColor: Colors.light.backgroundElement, paddingTop: 4 },
   emptyCard: {
     padding: 32,
     alignItems: 'center',
