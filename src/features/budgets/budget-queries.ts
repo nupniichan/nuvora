@@ -240,7 +240,7 @@ export async function getMonthlySnapshot(
 
   // 2. Query actual transactions for the month
   const txRows = await db.getAllAsync<any>(
-    `SELECT t.id, t.type, t.amount, t.category_id,
+    `SELECT t.id, t.type, t.amount, t.category_id, t.currency, t.status,
             c.name as category_name, c.icon as category_icon, c.color as category_color,
             cg.name as group_name
      FROM transactions t
@@ -261,6 +261,7 @@ export async function getMonthlySnapshot(
   const expenseMap = new Map<string, { total: number; count: number; name: string; icon: string | null; color: string | null; group: string }>();
 
   for (const row of txRows) {
+    if (row.currency !== currency || row.status !== 'confirmed') continue;
     const amount = Number(row.amount) || 0;
 
     // Resolve category details if not populated by JOIN

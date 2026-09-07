@@ -1,14 +1,15 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import React from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Svg, { Circle, G } from 'react-native-svg';
 
 import { Card } from '@/components/ui/card';
 import { Colors } from '@/constants/theme';
 import { formatMoney } from '@/shared/money';
 
 // -------------------------------------------------------------
-// 1. Category Breakdown Segmented Chart
+// 1. Interactive Category Donut Chart
 // -------------------------------------------------------------
 export interface CategoryBreakdownItem {
   id: string;
@@ -35,6 +36,7 @@ export function CategoryBreakdownChart({
   emptyMessage,
 }: CategoryBreakdownChartProps) {
   const { t } = useTranslation();
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const resolvedTitle = title ?? t('charts.allocation');
   const resolvedEmptyMessage = emptyMessage ?? t('charts.noDistribution');
   const safeTotal = totalAmount > 0 ? totalAmount : items.reduce((s, i) => s + (i.amount || 0), 0);
@@ -43,13 +45,19 @@ export function CategoryBreakdownChart({
   const activeItems = items
     .filter((i) => i.amount > 0)
     .sort((a, b) => b.amount - a.amount);
+  const selected = activeItems.find((item) => item.id === selectedId);
+  const circumference = 2 * Math.PI * 76;
+  const segments = activeItems.reduce<{ item: CategoryBreakdownItem; length: number; offset: number }[]>((result, item) => {
+    const previous = result[result.length - 1];
+    return [...result, { item, length: item.amount / safeTotal * circumference, offset: previous ? previous.offset + previous.length : 0 }];
+  }, []);
 
   if (activeItems.length === 0 || safeTotal <= 0) {
     return (
       <Card style={styles.chartCard}>
         <Text style={styles.chartTitle}>{resolvedTitle}</Text>
         <View style={styles.emptyChartContainer}>
-          <MaterialIcons name="pie-chart-outline" size={36} color={Colors.light.textSecondary} />
+          <View style={styles.emptyChartIcon}><MaterialIcons name="pie-chart-outline" size={36} color={Colors.primaryStrong} /></View>
           <Text style={styles.emptyChartText}>{resolvedEmptyMessage}</Text>
         </View>
       </Card>
@@ -63,32 +71,21 @@ export function CategoryBreakdownChart({
         <Text style={styles.chartTotalValue}>{formatMoney(safeTotal, currency)}</Text>
       </View>
 
-      {/* Segmented multi-color bar */}
-      <View style={styles.segmentedBar}>
-        {activeItems.map((item, idx) => {
-          const pct = Math.max(1, Math.round((item.amount / safeTotal) * 100));
-          const isFirst = idx === 0;
-          const isLast = idx === activeItems.length - 1;
-          const itemColor = item.color || Colors.primaryDark;
-
-          return (
-            <View
-              key={item.id || idx}
-              style={[
-                styles.segmentItem,
-                {
-                  flex: pct,
-                  backgroundColor: itemColor,
-                  borderTopLeftRadius: isFirst ? 6 : 0,
-                  borderBottomLeftRadius: isFirst ? 6 : 0,
-                  borderTopRightRadius: isLast ? 6 : 0,
-                  borderBottomRightRadius: isLast ? 6 : 0,
-                },
-              ]}
-            />
-          );
-        })}
+      <View style={styles.donut} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+        <Svg width={208} height={208} viewBox="0 0 208 208">
+          <Circle cx={104} cy={104} r={76} fill="none" stroke={Colors.light.backgroundElement} strokeWidth={26} />
+          <G transform="rotate(-90 104 104)">
+            {segments.map(({ item, length, offset }) => {
+              return <Circle key={item.id} cx={104} cy={104} r={76} fill="none" stroke={item.color || Colors.primaryDark} strokeWidth={selected?.id === item.id ? 32 : 26} strokeDasharray={[length, circumference]} strokeDashoffset={-offset} opacity={selected && selected.id !== item.id ? 0.25 : 1} />;
+            })}
+          </G>
+        </Svg>
+        <View style={styles.donutCenter}>
+          <Text style={styles.donutValue}>{selected ? `${Math.round(selected.amount / safeTotal * 100)}%` : activeItems.length}</Text>
+          <Text style={styles.donutLabel} numberOfLines={2}>{selected?.name ?? t('charts.categories')}</Text>
+        </View>
       </View>
+      <Text style={styles.chartSubtitle}>{t('charts.tapCategory')}</Text>
 
       {/* Legend & Breakdown list */}
       <View style={styles.breakdownList}>
@@ -97,7 +94,7 @@ export function CategoryBreakdownChart({
           const itemColor = item.color || Colors.primaryDark;
 
           return (
-            <View key={item.id} style={styles.breakdownRow}>
+            <TouchableOpacity key={item.id} accessibilityRole="button" accessibilityState={{ selected: selected?.id === item.id }} accessibilityLabel={`${item.name}, ${formatMoney(item.amount, currency)}, ${pct}%`} onPress={() => setSelectedId(selectedId === item.id ? null : item.id)} style={[styles.breakdownRow, selected?.id === item.id && styles.selectedBreakdown]}>
               <View style={styles.breakdownLeft}>
                 <View style={[styles.legendDot, { backgroundColor: itemColor }]}>
                   {item.icon ? (
@@ -111,11 +108,11 @@ export function CategoryBreakdownChart({
 
               <View style={styles.breakdownRight}>
                 <Text style={styles.legendAmount}>{formatMoney(item.amount, currency)}</Text>
-                <View style={[styles.pctBadge, { backgroundColor: `${itemColor}20` }]}>
-                  <Text style={[styles.pctText, { color: itemColor }]}>{pct}%</Text>
+                <View style={[styles.pctBadge, { backgroundColor: Colors.primaryFaded }]}>
+                  <Text style={[styles.pctText, { color: Colors.primaryStrong }]}>{pct}%</Text>
                 </View>
               </View>
-            </View>
+            </TouchableOpacity>
           );
         })}
       </View>
@@ -306,68 +303,6 @@ export function SpendingLimitGauge({
   );
 }
 
-// -------------------------------------------------------------
-// 4. Daily Spending Trend Mini Chart
-// -------------------------------------------------------------
-export interface DailySpendingItem {
-  day: number;
-  amount: number;
-}
-
-export interface DailySpendingTrendChartProps {
-  days: DailySpendingItem[];
-  currency: string;
-}
-
-export function DailySpendingTrendChart({ days, currency }: DailySpendingTrendChartProps) {
-  const { t } = useTranslation();
-  const maxDayAmount = Math.max(...days.map((d) => d.amount), 1);
-  const totalSpent = days.reduce((sum, d) => sum + d.amount, 0);
-
-  if (days.length === 0 || totalSpent <= 0) {
-    return null;
-  }
-
-  return (
-    <Card style={styles.chartCard}>
-      <View style={styles.chartHeaderRow}>
-        <Text style={styles.chartTitle}>{t('charts.trend')}</Text>
-        <Text style={styles.chartSubtitle}>
-          {t('charts.highest', { amount: formatMoney(maxDayAmount, currency) })}
-        </Text>
-      </View>
-
-      <View style={styles.trendBarsRow}>
-        {days.map((d) => {
-          const heightPct = Math.max(4, Math.round((d.amount / maxDayAmount) * 100));
-          const isHigh = d.amount > 0 && d.amount >= maxDayAmount * 0.7;
-
-          return (
-            <View key={d.day} style={styles.trendCol}>
-              <View style={styles.trendBarContainer}>
-                <View
-                  style={[
-                    styles.trendBarFill,
-                    {
-                      height: `${heightPct}%`,
-                      backgroundColor: isHigh ? Colors.expense : Colors.primary,
-                    },
-                  ]}
-                />
-              </View>
-              {d.day % 5 === 0 || d.day === 1 || d.day === days.length ? (
-                <Text style={styles.trendDayText}>{d.day}</Text>
-              ) : (
-                <View style={styles.trendDaySpacer} />
-              )}
-            </View>
-          );
-        })}
-      </View>
-    </Card>
-  );
-}
-
 const styles = StyleSheet.create({
   chartCard: {
     padding: 16,
@@ -377,6 +312,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
   },
   chartTitle: {
     fontSize: 16,
@@ -396,31 +333,32 @@ const styles = StyleSheet.create({
   emptyChartContainer: {
     paddingVertical: 24,
     alignItems: 'center',
-    gap: 8,
+    gap: 12,
   },
+  emptyChartIcon: { width: 68, height: 68, borderRadius: 24, backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
   emptyChartText: {
     fontSize: 13,
     color: Colors.light.textSecondary,
-  },
-  segmentedBar: {
-    height: 12,
-    flexDirection: 'row',
-    backgroundColor: Colors.light.backgroundElement,
-    borderRadius: 6,
-    overflow: 'hidden',
-  },
-  segmentItem: {
-    height: '100%',
+    textAlign: 'center',
   },
   breakdownList: {
     gap: 10,
     marginTop: 4,
   },
   breakdownRow: {
+    minHeight: 48,
+    borderRadius: 12,
+    paddingHorizontal: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 8,
   },
+  selectedBreakdown: { backgroundColor: Colors.primaryFaded },
+  donut: { width: 208, height: 208, alignSelf: 'center' },
+  donutCenter: { pointerEvents: 'none', position: 'absolute', top: 52, left: 52, width: 104, height: 104, alignItems: 'center', justifyContent: 'center', gap: 4 },
+  donutValue: { fontSize: 32, fontWeight: '800', color: Colors.primaryStrong },
+  donutLabel: { fontSize: 12, lineHeight: 17, color: Colors.light.textSecondary, textAlign: 'center' },
   breakdownLeft: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -573,39 +511,5 @@ const styles = StyleSheet.create({
   gaugeBold: {
     fontWeight: '700',
     color: Colors.light.text,
-  },
-  trendBarsRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    height: 90,
-    gap: 2,
-    paddingTop: 8,
-  },
-  trendCol: {
-    flex: 1,
-    alignItems: 'center',
-    height: '100%',
-    justifyContent: 'flex-end',
-  },
-  trendBarContainer: {
-    width: '100%',
-    flex: 1,
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-  },
-  trendBarFill: {
-    width: '80%',
-    borderRadius: 3,
-    minHeight: 4,
-  },
-  trendDayText: {
-    fontSize: 9,
-    color: Colors.light.textSecondary,
-    marginTop: 4,
-    fontWeight: '600',
-  },
-  trendDaySpacer: {
-    height: 12,
-    marginTop: 4,
   },
 });
