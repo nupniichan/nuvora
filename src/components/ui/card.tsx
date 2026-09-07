@@ -16,6 +16,7 @@ export function Card({ style, variant = 'elevated', children, ...props }: CardPr
         styles.card,
         { backgroundColor: variant === 'flat' ? theme.backgroundElement : theme.surface },
         styles[variant],
+        variant === 'elevated' && { borderColor: theme.elevatedBorder },
         variant === 'outlined' && { borderColor: theme.border },
         style,
       ]}
@@ -32,10 +33,11 @@ const styles = StyleSheet.create({
     padding: 18,
   },
   elevated: {
+    borderWidth: 1,
     ...Platform.select({
-      web: { boxShadow: '0 4px 20px rgba(32, 32, 51, 0.07)' },
+      web: { boxShadow: '0 4px 16px rgba(69, 69, 128, 0.04)' },
       default: {
-        shadowColor: '#000',
+        shadowColor: '#454580',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.07,
         shadowRadius: 16,

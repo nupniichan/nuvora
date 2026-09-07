@@ -297,6 +297,14 @@
     "autoPost": "Post automatically"
   },
   "dashboard": {
+    "greeting": "A fresh day. A little step forward.",
+    "balanceTagline": "Your money, your pace",
+    "thisMonth": "This month's cash flow",
+    "recurringShortcut": "Recurring",
+    "goalPromptTitle": "A little for your future",
+    "goalPromptDescription": "Start with your first savings goal.",
+    "firstEntry": "Add your first transaction",
+    "firstEntryDescription": "From your morning coffee to payday, every entry helps you get to know your money.",
     "title": "Dashboard",
     "totalBalance": "Total Balance",
     "budgetStatus": "Budget Status",
@@ -328,6 +336,22 @@
     "plans": "Plans"
   },
   "charts": {
+    "dailySpending": "Your spending rhythm",
+    "sevenDays": "7 days",
+    "fullMonth": "Full month",
+    "recordedIn": "Recorded transactions · {{currency}}",
+    "previousDay": "Previous day",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "nextDay": "Next day",
+    "dayHint": "Use the arrows to explore each day's spending.",
+    "sixMonthCashflow": "Six months of cash flow",
+    "tapMonth": "Tap to explore each month",
+    "monthInProgress": "The current month is still in progress.",
+    "noActivity": "No transactions in this period yet.",
+    "categories": "categories",
+    "tapCategory": "Tap a category to explore its share.",
+    "loadError": "Could not load chart data",
     "allocation": "Spending allocation",
     "noDistribution": "No distribution data yet",
     "cashflow": "Cash flow comparison",
@@ -374,6 +398,8 @@
     "recurring": "Recurring rules: {{count}}"
   },
   "settings": {
+    "personalSpace": "Your money space",
+    "personalSpaceDescription": "Make it yours. Move forward at your own pace.",
     "title": "Settings",
     "security": "Security",
     "changePassword": "Change Master Password",

@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Colors } from '@/constants/theme';
+import { Colors, MaxContentWidth } from '@/constants/theme';
 import { setAppLanguage } from '@/i18n';
 import { lockApp } from '@/services/security/auth-service';
 
@@ -27,12 +27,21 @@ export default function MoreScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.pageHeader}>
           <Text style={styles.eyebrow}>NUVORA</Text>
           <Text style={styles.title}>{t('settings.title')}</Text>
         </View>
+
+        <Card variant="flat" style={styles.brandCard}>
+          <View style={styles.brandIcon}><MaterialIcons name="spa" size={28} color={Colors.primaryStrong} /></View>
+          <View style={styles.brandInfo}>
+            <Text style={styles.brandTitle}>{t('settings.personalSpace')}</Text>
+            <Text style={styles.brandDescription}>{t('settings.personalSpaceDescription')}</Text>
+          </View>
+          <MaterialIcons name="auto-awesome" size={22} color={Colors.primaryStrong} />
+        </Card>
 
         {/* Security Info Card */}
         <Card style={styles.sectionCard}>
@@ -137,6 +146,9 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.background,
   },
   content: {
+    width: '100%',
+    maxWidth: MaxContentWidth,
+    alignSelf: 'center',
     paddingHorizontal: 20,
     paddingTop: 18,
     paddingBottom: 28,
@@ -150,7 +162,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 1.8,
-    color: Colors.accentDark,
+    color: Colors.primaryDark,
   },
   title: {
     fontSize: 28,
@@ -163,7 +175,7 @@ const styles = StyleSheet.create({
   sectionHeader: {
     fontSize: 16,
     fontWeight: '700',
-    color: Colors.light.text,
+    color: Colors.primaryStrong,
     paddingBottom: 2,
   },
   sectionDesc: {
@@ -201,6 +213,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     gap: 6,
+    backgroundColor: Colors.primaryLight,
   },
   appTitle: {
     fontSize: 18,
@@ -218,4 +231,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 4,
   },
+  brandCard: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: Colors.primary, padding: 20 },
+  brandIcon: { width: 48, height: 48, borderRadius: 17, backgroundColor: '#FFFFFF66', alignItems: 'center', justifyContent: 'center' },
+  brandInfo: { flex: 1, gap: 4 },
+  brandTitle: { fontSize: 17, fontWeight: '800', color: Colors.light.text },
+  brandDescription: { fontSize: 12, lineHeight: 18, color: Colors.primaryStrong },
 });

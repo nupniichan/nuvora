@@ -297,6 +297,14 @@
     "autoPost": "Tự động ghi sổ"
   },
   "dashboard": {
+    "greeting": "Một ngày mới, một bước tiến nhỏ.",
+    "balanceTagline": "Tích lũy theo nhịp của bạn",
+    "thisMonth": "Dòng tiền tháng này",
+    "recurringShortcut": "Định kỳ",
+    "goalPromptTitle": "Dành một chút cho tương lai",
+    "goalPromptDescription": "Tạo mục tiêu tiết kiệm đầu tiên của bạn.",
+    "firstEntry": "Ghi giao dịch đầu tiên",
+    "firstEntryDescription": "Từ ly cà phê đến khoản lương đầu tháng, mỗi ghi chép giúp bạn hiểu tiền của mình hơn.",
     "title": "Tổng quan",
     "totalBalance": "Tổng số dư",
     "budgetStatus": "Tình hình ngân sách",
@@ -328,6 +336,22 @@
     "plans": "Kế hoạch"
   },
   "charts": {
+    "dailySpending": "Nhịp chi tiêu",
+    "sevenDays": "7 ngày",
+    "fullMonth": "Cả tháng",
+    "recordedIn": "Giao dịch đã ghi nhận · {{currency}}",
+    "previousDay": "Ngày trước",
+    "previousMonth": "Tháng trước",
+    "nextMonth": "Tháng tiếp theo",
+    "nextDay": "Ngày tiếp theo",
+    "dayHint": "Dùng mũi tên để xem số tiền của từng ngày.",
+    "sixMonthCashflow": "Thu chi qua 6 tháng",
+    "tapMonth": "Chạm để xem từng tháng",
+    "monthInProgress": "Tháng hiện tại chưa kết thúc.",
+    "noActivity": "Chưa có giao dịch trong khoảng thời gian này.",
+    "categories": "danh mục",
+    "tapCategory": "Chạm vào danh mục để xem tỷ trọng.",
+    "loadError": "Chưa tải được dữ liệu biểu đồ",
     "allocation": "Phân bổ chi tiêu",
     "noDistribution": "Chưa có dữ liệu phân bổ",
     "cashflow": "So sánh dòng tiền",
@@ -374,6 +398,8 @@
     "recurring": "Định kỳ: {{count}}"
   },
   "settings": {
+    "personalSpace": "Góc tài chính của bạn",
+    "personalSpaceDescription": "Sắp xếp theo cách bạn muốn. Tiến từng bước theo nhịp của bạn.",
     "title": "Cài đặt",
     "security": "Bảo mật",
     "changePassword": "Đổi mật khẩu gốc",

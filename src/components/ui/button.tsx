@@ -53,7 +53,7 @@ export function Button({
       case 'primary':
         return '#202033';
       case 'accent':
-        return '#542515';
+        return Colors.accentDark;
       case 'secondary':
         return theme.text;
       case 'destructive':
@@ -67,6 +67,8 @@ export function Button({
 
   return (
     <TouchableOpacity
+      accessibilityRole="button"
+      accessibilityState={{ disabled: !!disabled || loading, busy: loading }}
       style={[
         styles.button,
         { backgroundColor: getBackgroundColor() },

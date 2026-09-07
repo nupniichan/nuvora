@@ -2,7 +2,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/button';
@@ -31,10 +31,16 @@ export default function WelcomeScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
+      <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.heroSection}>
-          <View style={styles.logoBadge}>
-            <Text style={styles.logoText}>N</Text>
+          <View style={styles.illustration}>
+            <View style={styles.orbit} />
+            <View style={styles.logoBadge}>
+              <Text style={styles.logoText}>n.</Text>
+            </View>
+            <View style={[styles.floatIcon, styles.savingsIcon]}><MaterialIcons name="savings" size={25} color={Colors.accentDark} /></View>
+            <View style={[styles.floatIcon, styles.trendIcon]}><MaterialIcons name="trending-up" size={25} color={Colors.primaryStrong} /></View>
+            <View style={styles.spark}><MaterialIcons name="auto-awesome" size={22} color={Colors.primaryDark} /></View>
           </View>
           <Text style={styles.title}>{t('onboarding.welcomeTitle')}</Text>
           <Text style={styles.subtitle}>{t('onboarding.welcomeSubtitle')}</Text>
@@ -90,7 +96,7 @@ export default function WelcomeScreen() {
             </TouchableOpacity>
           </View>
         </Card>
-      </View>
+      </ScrollView>
 
       <View style={styles.footer}>
         <Button
@@ -110,8 +116,12 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.background,
   },
   content: {
-    flex: 1,
+    flexGrow: 1,
+    width: '100%',
+    maxWidth: 520,
+    alignSelf: 'center',
     paddingHorizontal: 24,
+    paddingVertical: 24,
     justifyContent: 'center',
     gap: 32,
   },
@@ -120,9 +130,10 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   logoBadge: {
-    width: 72,
-    height: 72,
-    borderRadius: 24,
+    width: 100,
+    height: 100,
+    borderRadius: 34,
+    transform: [{ rotate: '-8deg' }],
     backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
@@ -139,9 +150,9 @@ const styles = StyleSheet.create({
     }),
   },
   logoText: {
-    fontSize: 36,
+    fontSize: 60,
     fontWeight: '800',
-    color: '#1A1C2E',
+    color: Colors.primaryStrong,
   },
   title: {
     fontSize: 28,
@@ -198,8 +209,17 @@ const styles = StyleSheet.create({
   },
   footer: {
     padding: 24,
+    width: '100%',
+    maxWidth: 520,
+    alignSelf: 'center',
   },
   fullButton: {
     width: '100%',
   },
+  illustration: { width: 230, height: 180, alignItems: 'center', justifyContent: 'center' },
+  orbit: { position: 'absolute', width: 210, height: 150, borderRadius: 100, borderWidth: 1, borderColor: Colors.primaryLight, transform: [{ rotate: '-25deg' }] },
+  floatIcon: { position: 'absolute', width: 54, height: 54, borderRadius: 19, alignItems: 'center', justifyContent: 'center', borderWidth: 4, borderColor: Colors.light.background },
+  savingsIcon: { right: 0, top: 12, backgroundColor: Colors.accent, transform: [{ rotate: '12deg' }] },
+  trendIcon: { left: 0, bottom: 12, backgroundColor: Colors.primaryLight, transform: [{ rotate: '-12deg' }] },
+  spark: { position: 'absolute', right: 22, bottom: 15 },
 });
