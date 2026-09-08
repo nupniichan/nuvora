@@ -2,7 +2,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/button';
@@ -35,9 +35,6 @@ export default function WelcomeScreen() {
         <View style={styles.heroSection}>
           <View style={styles.illustration}>
             <View style={styles.orbit} />
-            <View style={styles.logoBadge}>
-              <Text style={styles.logoText}>n.</Text>
-            </View>
             <View style={[styles.floatIcon, styles.savingsIcon]}><MaterialIcons name="savings" size={25} color={Colors.accentDark} /></View>
             <View style={[styles.floatIcon, styles.trendIcon]}><MaterialIcons name="trending-up" size={25} color={Colors.primaryStrong} /></View>
             <View style={styles.spark}><MaterialIcons name="auto-awesome" size={22} color={Colors.primaryDark} /></View>
@@ -128,31 +125,6 @@ const styles = StyleSheet.create({
   heroSection: {
     alignItems: 'center',
     gap: 12,
-  },
-  logoBadge: {
-    width: 100,
-    height: 100,
-    borderRadius: 34,
-    transform: [{ rotate: '-8deg' }],
-    backgroundColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-    ...Platform.select({
-      web: { boxShadow: '0 4px 14px rgba(98, 99, 168, 0.2)' },
-      default: {
-        shadowColor: Colors.primaryDark,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 10,
-        elevation: 4,
-      },
-    }),
-  },
-  logoText: {
-    fontSize: 60,
-    fontWeight: '800',
-    color: Colors.primaryStrong,
   },
   title: {
     fontSize: 28,

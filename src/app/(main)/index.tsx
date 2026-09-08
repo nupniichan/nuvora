@@ -18,9 +18,10 @@ import { CategoryBreakdownChart } from '@/components/ui/charts';
 import { DailyExpenseChart } from '@/components/ui/insight-charts';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Colors, MaxContentWidth } from '@/constants/theme';
-import { AccountRow, TransactionRow } from '@/database/types';
-import { getAllAccounts } from '@/features/accounts/account-queries';
+import { TransactionRow } from '@/database/types';
+import { getAllAccounts, getDefaultAccount } from '@/features/accounts/account-queries';
 import {
+  GOAL_COMPLETION_CATEGORY_ID,
   getMonthlySnapshot,
   MonthlySnapshot,
 } from '@/features/budgets/budget-queries';
@@ -39,6 +40,7 @@ import {
 } from '@/features/recurring/recurring-queries';
 import { getTransactions } from '@/features/transactions/transaction-queries';
 import { getSpendingHistory, SpendingHistory } from '@/features/insights/insight-data';
+import { BalanceComparison, BalanceComparisonPeriod, buildBalanceComparisons } from '@/features/insights/balance-comparison';
 import { formatDateISO } from '@/shared/date-utils';
 import { formatMoney } from '@/shared/money';
 
@@ -49,7 +51,6 @@ interface UpcomingForecastItem {
   amount: number;
   currency: string;
   date: string;
-  accountName: string;
 }
 
 export default function DashboardScreen() {
@@ -57,8 +58,11 @@ export default function DashboardScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const compact = width < 380;
+  const locale = i18n.resolvedLanguage === 'en' ? 'en-US' : 'vi-VN';
 
-  const [accounts, setAccounts] = useState<AccountRow[]>([]);
+  const [balanceComparisons, setBalanceComparisons] = useState<BalanceComparison[]>([]);
+  const [comparisonPeriod, setComparisonPeriod] = useState<BalanceComparisonPeriod>('month');
+  const [balanceLoadError, setBalanceLoadError] = useState(false);
   const [recentTransactions, setRecentTransactions] = useState<TransactionRow[]>([]);
   const [snapshot, setSnapshot] = useState<MonthlySnapshot | null>(null);
   const [history, setHistory] = useState<SpendingHistory | null>(null);
@@ -69,16 +73,19 @@ export default function DashboardScreen() {
 
   const loadData = useCallback(async () => {
     try {
+      setBalanceLoadError(false);
+      await getDefaultAccount();
+
       // 1. Run recurring catch-up reconciliation
       await processRecurringCatchUp();
 
       // 2. Load accounts
       const accs = await getAllAccounts();
-      setAccounts(accs);
 
       // 3. Load recent confirmed transactions
-      const txs = await getTransactions({ limit: 5 });
-      setRecentTransactions(txs);
+      const txs = await getTransactions();
+      setRecentTransactions(txs.filter((tx) => tx.status === 'confirmed').slice(0, 5));
+      setBalanceComparisons(buildBalanceComparisons(accs, txs));
 
       // 4. Load monthly snapshot for current month
       const now = new Date();
@@ -129,13 +136,13 @@ export default function DashboardScreen() {
             amount: rule.amount,
             currency: rule.currency,
             date: d,
-            accountName: rule.account_name,
           });
         }
       }
       forecastList.sort((a, b) => a.date.localeCompare(b.date));
       setUpcomingForecast(forecastList.slice(0, 5));
     } catch (e) {
+      setBalanceLoadError(true);
       console.error('Failed to load dashboard data', e);
     }
   }, []);
@@ -162,11 +169,6 @@ export default function DashboardScreen() {
     await loadData();
   };
 
-  // Balances by currency
-  const balancesByCurrency = accounts.reduce((acc, curr) => {
-    acc[curr.currency] = (acc[curr.currency] || 0) + curr.balance;
-    return acc;
-  }, {} as Record<string, number>);
   const monthLabel = new Intl.DateTimeFormat(i18n.resolvedLanguage === 'en' ? 'en-US' : 'vi-VN', {
     month: 'long', year: 'numeric',
   }).format(new Date());
@@ -180,12 +182,9 @@ export default function DashboardScreen() {
         }
       >
         <View style={styles.header}>
-          <View style={styles.brandRow}>
-            <View style={styles.brandMark}><Text style={styles.brandLetter}>n.</Text></View>
-            <View style={styles.brandInfo}>
-              <Text style={styles.greeting}>Nuvora</Text>
-              <Text style={styles.headerSubtitle}>{t('dashboard.greeting')}</Text>
-            </View>
+          <View style={styles.brandInfo}>
+            <Text style={styles.greeting}>Nuvora</Text>
+            <Text style={styles.headerSubtitle}>{t('dashboard.greeting')}</Text>
           </View>
           <TouchableOpacity
             style={styles.profileBadge}
@@ -208,22 +207,62 @@ export default function DashboardScreen() {
             </View>
             <MaterialIcons name="auto-awesome" size={24} color={Colors.primaryStrong} />
           </View>
-          {Object.keys(balancesByCurrency).length > 0 ? (
-            Object.entries(balancesByCurrency).map(([curr, total]) => (
-              <Text key={curr} style={[styles.balanceAmount, compact && styles.compactBalanceAmount]}>
-                {formatMoney(total, curr)}
-              </Text>
-            ))
-          ) : (
-            <Text style={[styles.balanceAmount, compact && styles.compactBalanceAmount]}>{formatMoney(0, 'VND')}</Text>
+          {balanceComparisons.map((comparison) => {
+            const change = comparison[comparisonPeriod];
+            const amount = change.amount;
+            const color = amount === null || amount === 0
+              ? Colors.primaryStrong : amount > 0 ? Colors.income : Colors.expense;
+            const percent = change.percent === null ? null : new Intl.NumberFormat(
+              locale,
+              { style: 'percent', maximumFractionDigits: 1 },
+            ).format(Math.abs(change.percent) / 100);
+            const changeKey = amount !== null && amount > 0
+              ? percent === null ? 'dashboard.balanceIncreased' : 'dashboard.balanceIncreasedWithPercent'
+              : percent === null ? 'dashboard.balanceDecreased' : 'dashboard.balanceDecreasedWithPercent';
+            return (
+              <View key={comparison.currency} style={styles.balanceCurrencyBlock}>
+                <Text style={[styles.balanceAmount, compact && styles.compactBalanceAmount]}>
+                  {formatMoney(comparison.balance, comparison.currency, locale)}
+                </Text>
+                <View style={styles.balanceChangeRow} accessibilityLiveRegion="polite">
+                  <MaterialIcons
+                    name={amount === null ? 'info-outline' : amount > 0 ? 'trending-up' : amount < 0 ? 'trending-down' : 'remove'}
+                    size={18}
+                    color={color}
+                  />
+                  <Text style={[styles.balanceChangeText, { color }]}>
+                    {amount === null
+                      ? t('dashboard.balanceNoHistory')
+                      : amount === 0
+                        ? t('dashboard.balanceUnchanged')
+                        : t(changeKey, { amount: formatMoney(Math.abs(amount), comparison.currency, locale), percent })}
+                  </Text>
+                </View>
+              </View>
+            );
+          })}
+          {balanceComparisons.length === 0 && (
+            <Text style={styles.balanceChangeText}>{t(balanceLoadError ? 'dashboard.balanceLoadError' : 'common.loading')}</Text>
           )}
-
-          <View style={styles.accountRow}>
-            <View style={styles.accountPill}>
-              <MaterialIcons name="wallet" size={14} color={Colors.primaryStrong} />
-              <Text style={styles.accountCount}>{t('dashboard.accountsCount', { count: accounts.length })}</Text>
-            </View>
-            <Text style={styles.balanceFooter}>{t('dashboard.balanceTagline')}</Text>
+          {balanceLoadError && balanceComparisons.length > 0 && (
+            <Text style={styles.balanceChangeText}>{t('dashboard.balanceLoadError')}</Text>
+          )}
+          <View style={styles.balanceComparisonFooter}>
+            <Text style={styles.balanceComparisonLabel}>
+              {t(comparisonPeriod === 'month' ? 'dashboard.balanceVsMonth' : 'dashboard.balanceVsYear')}
+            </Text>
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel={t(comparisonPeriod === 'month' ? 'dashboard.switchToYear' : 'dashboard.switchToMonth')}
+              onPress={() => setComparisonPeriod((period) => period === 'month' ? 'year' : 'month')}
+              activeOpacity={0.75}
+              style={styles.balanceSwitch}
+            >
+              <MaterialIcons name="swap-horiz" size={18} color={Colors.primaryStrong} />
+              <Text style={styles.balanceSwitchText}>
+                {t(comparisonPeriod === 'month' ? 'dashboard.previousMonth' : 'dashboard.previousYear')}
+              </Text>
+            </TouchableOpacity>
           </View>
         </Card>
 
@@ -259,7 +298,7 @@ export default function DashboardScreen() {
                   <View style={styles.pendingDetails}>
                     <Text style={styles.pendingRuleName}>{item.rule_name}</Text>
                     <Text style={styles.pendingDate}>
-                      {t('dashboard.dueOn', { date: item.scheduled_date, account: item.account_name })}
+                      {t('dashboard.dueOn', { date: item.scheduled_date })}
                     </Text>
                   </View>
                   <Text
@@ -352,7 +391,7 @@ export default function DashboardScreen() {
                 currency={snapshot.currency}
                 items={(snapshot.expenseCategories || []).map((cat) => ({
                   id: cat.categoryId,
-                  name: cat.categoryName,
+                  name: cat.categoryId === GOAL_COMPLETION_CATEGORY_ID ? t('charts.goalCompletion') : cat.categoryName,
                   amount: cat.totalAmount,
                   color: cat.categoryColor,
                   icon: cat.categoryIcon,
@@ -402,7 +441,7 @@ export default function DashboardScreen() {
                     <View style={styles.goalDashInfo}>
                       <Text style={styles.goalDashName}>{goal.name}</Text>
                       <Text style={styles.goalDashAmounts}>
-                        {formatMoney(goal.current_amount, 'VND')} / {formatMoney(goal.target_amount, 'VND')}
+                        {formatMoney(goal.current_amount, goal.currency)} / {formatMoney(goal.target_amount, goal.currency)}
                       </Text>
                     </View>
                     <Text style={styles.goalDashPct}>{goal.percentage}%</Text>
@@ -441,7 +480,6 @@ export default function DashboardScreen() {
                   </View>
                   <View style={styles.forecastDetails}>
                     <Text style={styles.forecastName}>{item.ruleName}</Text>
-                    <Text style={styles.forecastAccount}>{item.accountName}</Text>
                   </View>
                   <Text
                     style={[
@@ -579,19 +617,6 @@ const styles = StyleSheet.create({
     letterSpacing: -1.2,
     fontVariant: ['tabular-nums'],
     color: Colors.light.text,
-  },
-  accountRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 4,
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  accountCount: {
-    fontSize: 13,
-    color: Colors.primaryStrong,
-    fontWeight: '500',
   },
   section: {
     gap: 10,
@@ -747,10 +772,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Colors.light.text,
   },
-  forecastAccount: {
-    fontSize: 11,
-    color: Colors.light.textSecondary,
-  },
   forecastAmount: {
     fontSize: 14,
     fontWeight: '700',
@@ -847,20 +868,22 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: Colors.primaryDark,
   },
-  brandRow: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
   brandInfo: { flex: 1 },
   compactBalanceAmount: { fontSize: 28 },
   compactFlowAmount: { fontSize: 16 },
   compactFlowCards: { flexDirection: 'column' },
   compactFlowCard: { flex: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' },
-  brandMark: { width: 44, height: 44, borderRadius: 16, backgroundColor: Colors.primaryStrong, alignItems: 'center', justifyContent: 'center' },
-  brandLetter: { color: Colors.primary, fontSize: 30, fontWeight: '800', lineHeight: 36 },
   balanceTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   balanceHeading: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 },
   balanceOrbit: { position: 'absolute', width: 240, height: 240, borderRadius: 120, borderWidth: 1, borderColor: '#FFFFFF60', right: -65, top: -80 },
   balanceOrbitInner: { position: 'absolute', width: 170, height: 170, borderRadius: 85, borderWidth: 32, borderColor: '#FFFFFF24', right: -30, top: -45 },
-  accountPill: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6, paddingHorizontal: 10, borderRadius: 20, backgroundColor: '#FFFFFF55' },
-  balanceFooter: { fontSize: 10, fontWeight: '600', color: Colors.primaryStrong },
+  balanceCurrencyBlock: { gap: 8 },
+  balanceChangeRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  balanceChangeText: { flexShrink: 1, fontSize: 13, lineHeight: 20, fontWeight: '600', color: Colors.primaryStrong },
+  balanceComparisonFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginTop: 8 },
+  balanceComparisonLabel: { flexShrink: 1, fontSize: 12, lineHeight: 18, color: Colors.primaryStrong },
+  balanceSwitch: { marginLeft: 'auto', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 44, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 14, backgroundColor: '#FFFFFF80' },
+  balanceSwitchText: { fontSize: 12, fontWeight: '700', color: Colors.primaryStrong },
   shortcuts: { flexDirection: 'row', gap: 8 },
   shortcut: { flex: 1, alignItems: 'center', gap: 8 },
   shortcutIcon: { width: 52, height: 52, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },

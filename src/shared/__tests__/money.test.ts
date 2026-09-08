@@ -24,6 +24,13 @@ describe('Money Utilities', () => {
     expect(formatMoney(1050, 'USD')).toContain('$10.50');
   });
 
+  test('formatMoney follows the selected language without changing currency precision', () => {
+    expect(formatMoney(150000, 'VND', 'vi-VN')).toBe('150.000 ₫');
+    expect(formatMoney(150000, 'VND', 'en-US')).toBe('150,000 ₫');
+    expect(formatMoney(-1050, 'USD', 'vi-VN')).toBe('-$10,50');
+    expect(formatMoney(-1050, 'USD', 'en-US')).toBe('-$10.50');
+  });
+
   test('addMoney and subtractMoney', () => {
     const a = { amount: 100, currency: 'USD' };
     const b = { amount: 50, currency: 'USD' };

@@ -28,13 +28,13 @@ export function toMajorUnits(minorAmount: number, currencyCode: string): number 
 /**
  * Formats minor units into human readable money string (e.g., "100.000 ₫" or "$10.50")
  */
-export function formatMoney(minorAmount: number, currencyCode: string): string {
+export function formatMoney(minorAmount: number, currencyCode: string, locale?: string): string {
   const safeMinor = typeof minorAmount === 'number' && !isNaN(minorAmount) ? minorAmount : 0;
   const meta = getCurrencyMetadata(currencyCode);
   const major = toMajorUnits(safeMinor, currencyCode);
 
   const formattedNum = new Intl.NumberFormat(
-    meta.code === 'VND' ? 'vi-VN' : 'en-US',
+    locale ?? (meta.code === 'VND' ? 'vi-VN' : 'en-US'),
     {
       minimumFractionDigits: meta.decimalPlaces,
       maximumFractionDigits: meta.decimalPlaces,
