@@ -1,5 +1,6 @@
-import { getDatabase } from '@/database/database';
-import { TransactionRow, TransactionType } from '@/database/types';
+import { getDatabase, withGoalTransaction } from '@/database/database';
+import { runGoalWrite } from '@/database/goal-write';
+import { EntryType, TransactionRow, TransactionType } from '@/database/types';
 import { generateUUID } from '@/shared/uuid';
 
 export interface TransactionFilter {
@@ -53,17 +54,19 @@ export async function getTransactionById(id: string): Promise<TransactionRow | n
  * Creates a transaction and updates involved account balances atomically
  */
 export async function createTransaction(data: {
-  type: TransactionType;
+  type: EntryType;
   amount: number; // Integer minor units
   currency: string;
   accountId: string;
-  toAccountId?: string;
   categoryId?: string;
   recurringRuleId?: string;
   occurrenceId?: string;
   note?: string;
   date: string; // ISO date YYYY-MM-DD
 }): Promise<TransactionRow> {
+  if (data.type !== 'income' && data.type !== 'expense') {
+    throw new Error('Transfers are no longer supported.');
+  }
   const db = getDatabase();
   const id = generateUUID();
   const now = new Date().toISOString();
@@ -79,7 +82,7 @@ export async function createTransaction(data: {
         data.amount,
         data.currency,
         data.accountId,
-        data.toAccountId || null,
+        null,
         data.categoryId || null,
         data.recurringRuleId || null,
         data.occurrenceId || null,
@@ -101,15 +104,6 @@ export async function createTransaction(data: {
         'UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?;',
         [data.amount, now, data.accountId]
       );
-    } else if (data.type === 'transfer' && data.toAccountId) {
-      await db.runAsync(
-        'UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?;',
-        [data.amount, now, data.accountId]
-      );
-      await db.runAsync(
-        'UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?;',
-        [data.amount, now, data.toAccountId]
-      );
     }
   });
 
@@ -123,7 +117,24 @@ export async function createTransaction(data: {
 /**
  * Deletes a transaction and reverses balance changes atomically
  */
+export function isGoalCompletionTransaction(id: string): boolean {
+  return id.startsWith('goal-completion:');
+}
+
 export async function deleteTransaction(id: string): Promise<void> {
+  if (isGoalCompletionTransaction(id)) {
+    return runGoalWrite(async () => {
+      await withGoalTransaction(async (txn) => {
+        const entry = await txn.getFirstAsync<TransactionRow>('SELECT * FROM transactions WHERE id = ?;', [id]);
+        if (!entry) return;
+        const now = new Date().toISOString();
+        await txn.runAsync('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?;', [entry.amount, now, entry.account_id]);
+        await txn.runAsync("UPDATE financial_goals SET status = 'active', current_amount = 0, updated_at = ? WHERE id = ?;", [now, id.slice('goal-completion:'.length)]);
+        await txn.runAsync('DELETE FROM goal_contributions WHERE transaction_id = ?;', [id]);
+        await txn.runAsync('DELETE FROM transactions WHERE id = ?;', [id]);
+      });
+    });
+  }
   const db = getDatabase();
   const tx = await getTransactionById(id);
   if (!tx) return;
@@ -162,19 +173,23 @@ export async function deleteTransaction(id: string): Promise<void> {
 export async function updateTransaction(
   id: string,
   data: {
-    type?: TransactionType;
+    type?: EntryType;
     amount?: number;
     currency?: string;
     accountId?: string;
-    toAccountId?: string | null;
     categoryId?: string | null;
     note?: string | null;
     date?: string;
   }
 ): Promise<TransactionRow> {
+  if (isGoalCompletionTransaction(id)) throw new Error('goalCompletionLocked');
   const db = getDatabase();
   const oldTx = await getTransactionById(id);
   if (!oldTx) throw new Error('Giao dịch không tồn tại');
+
+  if (oldTx.type === 'transfer' || (data.type !== undefined && data.type !== 'income' && data.type !== 'expense')) {
+    throw new Error('Transfers are no longer supported.');
+  }
 
   const now = new Date().toISOString();
 
@@ -192,17 +207,6 @@ export async function updateTransaction(
         now,
         oldTx.account_id,
       ]);
-    } else if (oldTx.type === 'transfer' && oldTx.to_account_id) {
-      await db.runAsync('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?;', [
-        oldTx.amount,
-        now,
-        oldTx.account_id,
-      ]);
-      await db.runAsync('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?;', [
-        oldTx.amount,
-        now,
-        oldTx.to_account_id,
-      ]);
     }
 
     // 2. Prepare new transaction values
@@ -210,7 +214,6 @@ export async function updateTransaction(
     const newAmount = data.amount !== undefined ? data.amount : oldTx.amount;
     const newCurrency = data.currency !== undefined ? data.currency : oldTx.currency;
     const newAccountId = data.accountId !== undefined ? data.accountId : oldTx.account_id;
-    const newToAccountId = data.toAccountId !== undefined ? data.toAccountId : oldTx.to_account_id;
     const newCategoryId = data.categoryId !== undefined ? data.categoryId : oldTx.category_id;
     const newNote = data.note !== undefined ? data.note : oldTx.note;
     const newDate = data.date !== undefined ? data.date : oldTx.date;
@@ -228,17 +231,6 @@ export async function updateTransaction(
         now,
         newAccountId,
       ]);
-    } else if (newType === 'transfer' && newToAccountId) {
-      await db.runAsync('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?;', [
-        newAmount,
-        now,
-        newAccountId,
-      ]);
-      await db.runAsync('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?;', [
-        newAmount,
-        now,
-        newToAccountId,
-      ]);
     }
 
     // 4. Update transaction record
@@ -252,7 +244,7 @@ export async function updateTransaction(
         newAmount,
         newCurrency,
         newAccountId,
-        newToAccountId || null,
+        null,
         newCategoryId || null,
         newNote || null,
         newDate,

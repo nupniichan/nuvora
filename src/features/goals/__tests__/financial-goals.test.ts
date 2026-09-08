@@ -36,7 +36,7 @@ describe('Financial Goals Metrics', () => {
     expect(metrics.isCompleted).toBe(false);
   });
 
-  it('detects goal completion when current >= target', () => {
+  it('allows completion when funded but waits for the explicit action', () => {
     const goal: FinancialGoalRow = {
       id: 'g2',
       name: 'Mua xe máy',
@@ -57,7 +57,8 @@ describe('Financial Goals Metrics', () => {
     const metrics = calculateGoalMetrics(goal);
     expect(metrics.percentage).toBe(100);
     expect(metrics.remainingAmount).toBe(0);
-    expect(metrics.isCompleted).toBe(true);
+    expect(metrics.isCompleted).toBe(false);
+    expect(metrics.canComplete).toBe(true);
   });
 
   it('calculates overdue deadline state correctly', () => {

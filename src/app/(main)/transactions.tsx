@@ -19,11 +19,11 @@ import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { MoneyInput } from '@/components/ui/money-input';
 import { Colors, MaxContentWidth } from '@/constants/theme';
-import { AccountRow, TransactionRow, TransactionType } from '@/database/types';
-import { getAllAccounts } from '@/features/accounts/account-queries';
+import { EntryType, TransactionRow } from '@/database/types';
 import { CategoryWithGroup, getAllCategories } from '@/features/categories/category-queries';
 import {
   deleteTransaction,
+  isGoalCompletionTransaction,
   getTransactions,
   updateTransaction,
 } from '@/features/transactions/transaction-queries';
@@ -37,17 +37,14 @@ export default function TransactionsScreen() {
   const router = useRouter();
 
   const [transactions, setTransactions] = useState<TransactionRow[]>([]);
-  const [filterType, setFilterType] = useState<TransactionType | 'all'>('all');
-  const [accounts, setAccounts] = useState<AccountRow[]>([]);
+  const [filterType, setFilterType] = useState<EntryType | 'all'>('all');
   const [categories, setCategories] = useState<CategoryWithGroup[]>([]);
 
   // Edit modal state
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editingTx, setEditingTx] = useState<TransactionRow | null>(null);
-  const [editType, setEditType] = useState<TransactionType>('expense');
+  const [editType, setEditType] = useState<EntryType>('expense');
   const [editAmount, setEditAmount] = useState<number>(0);
-  const [editAccountId, setEditAccountId] = useState<string>('');
-  const [editToAccountId, setEditToAccountId] = useState<string>('');
   const [editCategoryId, setEditCategoryId] = useState<string | null>(null);
   const [editNote, setEditNote] = useState<string>('');
   const [editDate, setEditDate] = useState<string>('');
@@ -55,13 +52,11 @@ export default function TransactionsScreen() {
 
   const loadData = useCallback(async () => {
     const filter = filterType === 'all' ? {} : { type: filterType };
-    const [txs, accs, cats] = await Promise.all([
+    const [txs, cats] = await Promise.all([
       getTransactions(filter),
-      getAllAccounts(),
       getAllCategories(),
     ]);
     setTransactions(txs);
-    setAccounts(accs);
     setCategories(cats);
   }, [filterType]);
 
@@ -72,27 +67,21 @@ export default function TransactionsScreen() {
   );
 
   const openEditModal = (tx: TransactionRow) => {
+    if (tx.type === 'transfer' || isGoalCompletionTransaction(tx.id)) return;
     setEditingTx(tx);
     setEditType(tx.type);
     setEditAmount(typeof tx.amount === 'number' && !isNaN(tx.amount) ? tx.amount : 0);
-    setEditAccountId(tx.account_id || '');
-    setEditToAccountId(tx.to_account_id || '');
     setEditCategoryId(tx.category_id || null);
     setEditNote(tx.note || '');
     setEditDate(tx.date || formatDateISO(new Date()));
     setEditModalVisible(true);
   };
 
-  const handleTypeChange = (newType: TransactionType) => {
+  const handleTypeChange = (newType: EntryType) => {
     setEditType(newType);
-    if (newType !== 'transfer') {
-      const validCats = categories.filter((c) => c.group_type === newType);
-      const isCurrentValid = validCats.some((c) => c.id === editCategoryId);
-      if (!isCurrentValid) {
-        setEditCategoryId(validCats.length > 0 ? validCats[0].id : null);
-      }
-    } else {
-      setEditCategoryId(null);
+    const validCats = categories.filter((c) => c.group_type === newType);
+    if (!validCats.some((c) => c.id === editCategoryId)) {
+      setEditCategoryId(validCats[0]?.id ?? null);
     }
   };
 
@@ -103,30 +92,19 @@ export default function TransactionsScreen() {
       alertMessage(t('common.notice'), t('transactions.amountRequired'));
       return;
     }
-    if (!editAccountId) {
-      alertMessage(t('common.notice'), t('transactions.accountRequired'));
-      return;
-    }
-    if (editType === 'transfer' && (!editToAccountId || editToAccountId === editAccountId)) {
-      alertMessage(t('common.notice'), t('transactions.differentAccountRequired'));
-      return;
-    }
-
     setSaving(true);
     try {
       await updateTransaction(editingTx.id, {
         type: editType,
         amount: finalAmount,
-        accountId: editAccountId,
-        toAccountId: editType === 'transfer' ? editToAccountId : null,
-        categoryId: editType !== 'transfer' ? (editCategoryId || null) : null,
+        categoryId: editCategoryId || null,
         note: editNote.trim() || null,
         date: editDate.trim() || formatDateISO(new Date()),
       });
       setEditModalVisible(false);
       await loadData();
     } catch (e: any) {
-      alertMessage(t('common.error'), e.message || t('transactions.updateError'));
+      alertMessage(t('common.error'), e.message === 'goalCompletionLocked' ? t('transactions.goalCompletionLocked') : e.message || t('transactions.updateError'));
     } finally {
       setSaving(false);
     }
@@ -135,7 +113,7 @@ export default function TransactionsScreen() {
   const handleDelete = (id: string) => {
     confirmAction(
       t('transactions.deleteTitle'),
-      t('transactions.deleteDescription'),
+      t(isGoalCompletionTransaction(id) ? 'transactions.deleteGoalCompletionDescription' : 'transactions.deleteDescription'),
       async () => {
         await deleteTransaction(id);
         if (editModalVisible) {
@@ -165,7 +143,7 @@ export default function TransactionsScreen() {
           </TouchableOpacity>
         </View>
         <View style={styles.filterRow}>
-          {(['all', 'expense', 'income', 'transfer'] as const).map((typeItem) => (
+          {(['all', 'expense', 'income'] as const).map((typeItem) => (
             <TouchableOpacity
               key={typeItem}
               style={[
@@ -195,10 +173,9 @@ export default function TransactionsScreen() {
         contentContainerStyle={styles.listContent}
         renderItem={({ item }) => {
           const cat = categories.find((c) => c.id === item.category_id);
-          const acc = accounts.find((a) => a.id === item.account_id);
 
           return (
-            <TouchableOpacity onPress={() => openEditModal(item)} activeOpacity={0.8}>
+            <TouchableOpacity onPress={() => openEditModal(item)} disabled={item.type === 'transfer' || isGoalCompletionTransaction(item.id)} activeOpacity={0.8}>
               <Card style={styles.txCard}>
                 <View style={styles.txRow}>
                   <View
@@ -226,7 +203,7 @@ export default function TransactionsScreen() {
                       {item.note || cat?.name || t(`transactions.${item.type}`)}
                     </Text>
                     <Text style={styles.txDate} numberOfLines={2}>
-                      {cat?.name ? `${cat.name} • ` : ''}{acc?.name ? `${acc.name} • ` : ''}{item.date}
+                      {cat?.name ? `${cat.name} • ` : ''}{item.date}
                     </Text>
                   </View>
                 </View>
@@ -246,14 +223,16 @@ export default function TransactionsScreen() {
                   </Text>
 
                   <View style={styles.quickActions}>
-                    <TouchableOpacity
-                      style={styles.actionIconBtn}
-                      accessibilityRole="button"
-                      accessibilityLabel={t('common.edit')}
-                      onPress={() => openEditModal(item)}
-                    >
-                      <MaterialIcons name="edit" size={18} color={Colors.light.textSecondary} />
-                    </TouchableOpacity>
+                    {item.type !== 'transfer' && !isGoalCompletionTransaction(item.id) && (
+                      <TouchableOpacity
+                        style={styles.actionIconBtn}
+                        accessibilityRole="button"
+                        accessibilityLabel={t('common.edit')}
+                        onPress={() => openEditModal(item)}
+                      >
+                        <MaterialIcons name="edit" size={18} color={Colors.light.textSecondary} />
+                      </TouchableOpacity>
+                    )}
                     <TouchableOpacity
                       style={styles.actionIconBtn}
                       accessibilityRole="button"
@@ -308,15 +287,6 @@ export default function TransactionsScreen() {
                   {t('transactions.income')}
                 </Text>
               </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.segmentBtn, editType === 'transfer' && styles.activeTransfer]}
-                onPress={() => handleTypeChange('transfer')}
-              >
-                <Text style={[styles.segmentText, editType === 'transfer' && styles.activeText]}>
-                  {t('transactions.transfer')}
-                </Text>
-              </TouchableOpacity>
             </View>
 
             {/* Amount */}
@@ -339,114 +309,54 @@ export default function TransactionsScreen() {
               />
             </View>
 
-            {/* Source Account */}
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>
-                {t(editType === 'transfer' ? 'transactions.sourceAccount' : 'transactions.account')}
-              </Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipList}>
-                {accounts.map((acc) => {
-                  const isSelected = acc.id === editAccountId;
-                  return (
-                    <TouchableOpacity
-                      key={acc.id}
-                      style={[styles.chip, isSelected && styles.selectedChip]}
-                      onPress={() => setEditAccountId(acc.id)}
-                    >
-                      <MaterialIcons
-                        name={(acc.icon as any) || 'account-balance-wallet'}
-                        size={16}
-                        color={isSelected ? '#1A1C2E' : Colors.light.textSecondary}
-                      />
-                      <Text style={[styles.chipText, isSelected && styles.selectedChipText]}>
-                        {acc.name}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-            </View>
-
-            {/* Destination Account for Transfer */}
-            {editType === 'transfer' && (
-              <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>{t('transactions.toAccount')}</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipList}>
-                  {accounts
-                    .filter((a) => a.id !== editAccountId)
-                    .map((acc) => {
-                      const isSelected = acc.id === editToAccountId;
-                      return (
-                        <TouchableOpacity
-                          key={acc.id}
-                          style={[styles.chip, isSelected && styles.selectedChip]}
-                          onPress={() => setEditToAccountId(acc.id)}
-                        >
-                          <MaterialIcons
-                            name={(acc.icon as any) || 'account-balance-wallet'}
-                            size={16}
-                            color={isSelected ? '#1A1C2E' : Colors.light.textSecondary}
-                          />
-                          <Text style={[styles.chipText, isSelected && styles.selectedChipText]}>
-                            {acc.name}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                </ScrollView>
-              </View>
-            )}
-
             {/* Category for income/expense */}
-            {editType !== 'transfer' && (
-              <View style={styles.formGroup}>
-                <View style={styles.categoryLabelRow}>
-                  <Text style={styles.formLabel}>{t('transactions.category')}</Text>
-                  {editCategoryId && (
-                    <TouchableOpacity onPress={() => setEditCategoryId(null)}>
-                      <Text style={styles.clearCatText}>{t('common.removeSelection')}</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-
-                <View style={styles.categoryGrid}>
-                  {categories
-                    .filter((c) => c.group_type === editType)
-                    .map((cat) => {
-                      const isSelected = cat.id === editCategoryId;
-                      const catColor = cat.color || Colors.primaryDark;
-                      return (
-                        <TouchableOpacity
-                          key={cat.id}
-                          style={[
-                            styles.categoryGridItem,
-                            isSelected && {
-                              backgroundColor: catColor,
-                              borderColor: catColor,
-                            },
-                          ]}
-                          onPress={() => setEditCategoryId(cat.id)}
-                        >
-                          <MaterialIcons
-                            name={(cat.icon as any) || 'category'}
-                            size={16}
-                            color={isSelected ? '#FFFFFF' : catColor}
-                          />
-                          <Text
-                            style={[
-                              styles.categoryGridText,
-                              isSelected && styles.selectedCategoryChipText,
-                            ]}
-                            numberOfLines={1}
-                          >
-                            {cat.name}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                </View>
+            <View style={styles.formGroup}>
+              <View style={styles.categoryLabelRow}>
+                <Text style={styles.formLabel}>{t('transactions.category')}</Text>
+                {editCategoryId && (
+                  <TouchableOpacity onPress={() => setEditCategoryId(null)}>
+                    <Text style={styles.clearCatText}>{t('common.removeSelection')}</Text>
+                  </TouchableOpacity>
+                )}
               </View>
-            )}
+
+              <View style={styles.categoryGrid}>
+                {categories
+                  .filter((c) => c.group_type === editType)
+                  .map((cat) => {
+                    const isSelected = cat.id === editCategoryId;
+                    const catColor = cat.color || Colors.primaryDark;
+                    return (
+                      <TouchableOpacity
+                        key={cat.id}
+                        style={[
+                          styles.categoryGridItem,
+                          isSelected && {
+                            backgroundColor: catColor,
+                            borderColor: catColor,
+                          },
+                        ]}
+                        onPress={() => setEditCategoryId(cat.id)}
+                      >
+                        <MaterialIcons
+                          name={(cat.icon as any) || 'category'}
+                          size={16}
+                          color={isSelected ? '#FFFFFF' : catColor}
+                        />
+                        <Text
+                          style={[
+                            styles.categoryGridText,
+                            isSelected && styles.selectedCategoryChipText,
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {cat.name}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+              </View>
+            </View>
 
             {/* Note */}
             <View style={styles.formGroup}>
@@ -681,9 +591,6 @@ const styles = StyleSheet.create({
   activeIncome: {
     backgroundColor: '#E8F5E9',
   },
-  activeTransfer: {
-    backgroundColor: '#E3F2FD',
-  },
   activeText: {
     color: Colors.light.text,
     fontWeight: '700',
@@ -706,31 +613,6 @@ const styles = StyleSheet.create({
     color: Colors.light.text,
     borderWidth: 1,
     borderColor: Colors.light.border,
-  },
-  chipList: {
-    gap: 8,
-    paddingVertical: 2,
-  },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    backgroundColor: Colors.light.backgroundElement,
-  },
-  selectedChip: {
-    backgroundColor: Colors.primary,
-  },
-  chipText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.light.text,
-  },
-  selectedChipText: {
-    color: '#1A1C2E',
-    fontWeight: '700',
   },
   categoryChip: {
     flexDirection: 'row',

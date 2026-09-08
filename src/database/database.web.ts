@@ -5,6 +5,9 @@ interface TableStore {
 }
 
 class WebSQLiteDatabase {
+  private exclusiveQueue: Promise<void> = Promise.resolve();
+  private exclusiveActive = false;
+  private persist = true;
   private tables: TableStore = {
     app_settings: [],
     accounts: [],
@@ -20,8 +23,8 @@ class WebSQLiteDatabase {
     audit_logs: [],
   };
 
-  constructor() {
-    this.loadFromStorage();
+  constructor(loadStorage = true) {
+    if (loadStorage) this.loadFromStorage();
   }
 
   private loadFromStorage() {
@@ -39,6 +42,7 @@ class WebSQLiteDatabase {
   }
 
   private saveToStorage() {
+    if (!this.persist) return;
     if (typeof window !== 'undefined' && window.localStorage) {
       try {
         window.localStorage.setItem(STORAGE_KEY, JSON.stringify(this.tables));
@@ -54,6 +58,7 @@ class WebSQLiteDatabase {
   }
 
   async runAsync(sql: string, params: any[] = []): Promise<{ lastInsertRowId: number; changes: number }> {
+    if (this.exclusiveActive) throw new Error('database is locked');
     const trimmed = sql.trim();
     let changes = 0;
 
@@ -79,6 +84,8 @@ class WebSQLiteDatabase {
             row[col] = params[paramIdx++];
           } else if (/^'.*'$/.test(valExpr)) {
             row[col] = valExpr.slice(1, -1);
+          } else if (/^NULL$/i.test(valExpr)) {
+            row[col] = null;
           } else if (!isNaN(Number(valExpr))) {
             row[col] = Number(valExpr);
           } else {
@@ -190,7 +197,9 @@ class WebSQLiteDatabase {
         const targetVal = params[0];
         if (this.tables[tableName]) {
           const initialLen = this.tables[tableName].length;
-          this.tables[tableName] = this.tables[tableName].filter((r) => r[colName] !== targetVal);
+          this.tables[tableName] = deleteMatch[2]
+            ? this.tables[tableName].filter((r) => r[colName] !== targetVal)
+            : [];
           changes = initialLen - this.tables[tableName].length;
           this.saveToStorage();
         }
@@ -381,6 +390,24 @@ class WebSQLiteDatabase {
     await cb();
   }
 
+  async withExclusiveTransactionAsync(cb: (txn: WebSQLiteDatabase) => Promise<void>): Promise<void> {
+    const operation = this.exclusiveQueue.then(async () => {
+      this.exclusiveActive = true;
+      const txn = new WebSQLiteDatabase(false);
+      txn.tables = structuredClone(this.tables);
+      txn.persist = false;
+      try {
+        await cb(txn);
+        this.tables = txn.tables;
+        this.saveToStorage();
+      } finally {
+        this.exclusiveActive = false;
+      }
+    });
+    this.exclusiveQueue = operation.catch(() => undefined);
+    await operation;
+  }
+
   async closeAsync(): Promise<void> {
     // No-op
   }
@@ -400,6 +427,10 @@ export function getDatabase(): any {
     dbInstance = new WebSQLiteDatabase();
   }
   return dbInstance;
+}
+
+export async function withGoalTransaction(task: (txn: WebSQLiteDatabase) => Promise<void>): Promise<void> {
+  await getDatabase().withExclusiveTransactionAsync(task);
 }
 
 export async function closeDatabase(): Promise<void> {

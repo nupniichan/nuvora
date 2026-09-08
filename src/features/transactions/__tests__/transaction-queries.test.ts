@@ -1,123 +1,108 @@
-import { createAccount, getAllAccounts } from '@/features/accounts/account-queries';
-import { createTransaction } from '../transaction-queries';
+import { closeDatabase, getDatabase } from '@/database/database.web';
+import { getAccountById, getAllAccounts, getDefaultAccount } from '@/features/accounts/account-queries';
+import { AccountRow } from '@/database/types';
+import { generateUUID } from '@/shared/uuid';
+import { createTransaction, deleteTransaction, getTransactions, updateTransaction } from '../transaction-queries';
 
-// Mock sqlite for in-memory testing or test runner
-jest.mock('@/database/database', () => {
-  const accountsMap = new Map<string, any>();
-  const txsMap = new Map<string, any>();
-
-  const db = {
-    execAsync: jest.fn().mockResolvedValue(undefined),
-    getAllAsync: jest.fn().mockImplementation(async (sql: string, params?: any[]) => {
-      if (sql.includes('FROM accounts')) {
-        return Array.from(accountsMap.values());
-      }
-      if (sql.includes('FROM transactions')) {
-        return Array.from(txsMap.values());
-      }
-      return [];
-    }),
-    getFirstAsync: jest.fn().mockImplementation(async (sql: string, params?: any[]) => {
-      if (sql.includes('FROM accounts')) {
-        return accountsMap.get(params?.[0]) || null;
-      }
-      if (sql.includes('FROM transactions')) {
-        return txsMap.get(params?.[0]) || null;
-      }
-      return null;
-    }),
-    runAsync: jest.fn().mockImplementation(async (sql: string, params?: any[]) => {
-      if (sql.includes('INSERT INTO accounts')) {
-        accountsMap.set(params?.[0], {
-          id: params?.[0],
-          name: params?.[1],
-          type: params?.[2],
-          currency: params?.[3],
-          balance: params?.[4],
-        });
-      } else if (sql.includes('INSERT INTO transactions')) {
-        txsMap.set(params?.[0], {
-          id: params?.[0],
-          type: params?.[1],
-          amount: params?.[2],
-          currency: params?.[3],
-          account_id: params?.[4],
-          to_account_id: params?.[5],
-        });
-      } else if (sql.includes('UPDATE accounts SET balance = balance +')) {
-        const acc = accountsMap.get(params?.[2]);
-        if (acc) acc.balance += params?.[0];
-      } else if (sql.includes('UPDATE accounts SET balance = balance -')) {
-        const acc = accountsMap.get(params?.[2]);
-        if (acc) acc.balance -= params?.[0];
-      } else if (sql.includes('DELETE FROM transactions')) {
-        txsMap.delete(params?.[0]);
-      }
-    }),
-    withTransactionAsync: jest.fn().mockImplementation(async (cb: () => Promise<void>) => {
-      await cb();
-    }),
-  };
-
-  return {
-    getDatabase: () => db,
-    initDatabase: jest.fn().mockResolvedValue(db),
-  };
+jest.mock('@/database/database', () => jest.requireActual('@/database/database.web'));
+jest.mock('@/shared/uuid', () => {
+  let nextId = 0;
+  return { generateUUID: () => String(++nextId) };
 });
 
-describe('Transactions & Account Invariants', () => {
-  test('Income increases account balance', async () => {
-    const acc = await createAccount({
-      name: 'Cash',
-      type: 'cash',
-      currency: 'VND',
-      initialBalance: 100000,
-    });
+// Old databases can contain multiple accounts even though new installs use one.
+async function seedLegacyAccount(data: { name: string; type: string; currency: string; initialBalance: number }): Promise<AccountRow> {
+  const id = generateUUID();
+  await getDatabase().runAsync('INSERT INTO accounts (id, name, type, currency, balance, sort_order, is_archived) VALUES (?, ?, ?, ?, ?, 1, 0);',
+    [id, data.name, data.type, data.currency, data.initialBalance]);
+  return (await getAccountById(id))!;
+}
 
-    const tx = await createTransaction({
-      type: 'income',
-      amount: 50000,
-      currency: 'VND',
-      accountId: acc.id,
-      date: '2025-09-02',
-    });
+beforeEach(async () => { await closeDatabase(); });
 
-    expect(tx.amount).toBe(50000);
-    const updatedAcc = (await getAllAccounts())[0];
-    expect(updatedAcc.balance).toBe(150000);
-  });
+it('uses the configured currency and reuses the default account', async () => {
+  const db = getDatabase();
+  await db.runAsync('INSERT INTO app_settings (key, value) VALUES (?, ?);', ['default_currency', 'USD']);
+  const account = await getDefaultAccount();
+  expect(account.currency).toBe('USD');
+  expect((await getDefaultAccount()).id).toBe(account.id);
+  expect(await getAllAccounts()).toHaveLength(1);
+});
 
-  test('Transfer between accounts alters individual balances but total remains invariant', async () => {
-    const acc1 = await createAccount({
-      name: 'Bank 1',
-      type: 'bank',
-      currency: 'VND',
-      initialBalance: 200000,
-    });
-    const acc2 = await createAccount({
-      name: 'Bank 2',
-      type: 'bank',
-      currency: 'VND',
-      initialBalance: 100000,
-    });
+it('creates a usable default account for an empty database', async () => {
+  const account = await getDefaultAccount();
+  expect(account).toMatchObject({ currency: 'VND', balance: 0 });
+  const tx = await createTransaction({ type: 'income', amount: 50000, currency: account.currency, accountId: account.id, date: '2026-09-08' });
+  expect(tx.to_account_id).toBeNull();
+  expect((await getAccountById(account.id))?.balance).toBe(50000);
+});
 
-    const initialTotal = acc1.balance + acc2.balance; // 300,000
+it('keeps an existing entry on its original account when edited without a picker', async () => {
+  const account = await seedLegacyAccount({ name: 'Original', type: 'bank', currency: 'VND', initialBalance: 100000 });
+  const tx = await createTransaction({ type: 'expense', amount: 20000, currency: 'VND', accountId: account.id, date: '2026-09-08' });
+  const updated = await updateTransaction(tx.id, { amount: 30000 });
+  expect(updated.account_id).toBe(account.id);
+  expect((await getAccountById(account.id))?.balance).toBe(70000);
+  await updateTransaction(tx.id, { type: 'income', amount: 10000 });
+  expect((await getAccountById(account.id))?.balance).toBe(110000);
+  await deleteTransaction(tx.id);
+  expect((await getAccountById(account.id))?.balance).toBe(100000);
+});
 
-    await createTransaction({
-      type: 'transfer',
-      amount: 50000,
-      currency: 'VND',
-      accountId: acc1.id,
-      toAccountId: acc2.id,
-      date: '2025-09-02',
-    });
+it('rejects new transfers and converting an entry to a transfer without changing balances', async () => {
+  const account = await getDefaultAccount();
+  await expect(createTransaction({
+    // @ts-expect-error Verify that older callers cannot bypass the removed feature.
+    type: 'transfer', amount: 50000, currency: 'VND', accountId: account.id, date: '2026-09-08',
+  })).rejects.toThrow('Transfers are no longer supported');
+  expect(await getTransactions()).toHaveLength(0);
+  expect((await getAccountById(account.id))?.balance).toBe(0);
+  const tx = await createTransaction({ type: 'income', amount: 50000, currency: 'VND', accountId: account.id, date: '2026-09-08' });
+  // @ts-expect-error Verify runtime protection as well as the public type.
+  await expect(updateTransaction(tx.id, { type: 'transfer' })).rejects.toThrow('Transfers are no longer supported');
+  expect((await getAccountById(account.id))?.balance).toBe(50000);
+});
 
-    const all = await getAllAccounts();
-    const a1 = all.find((a) => a.id === acc1.id);
-    const a2 = all.find((a) => a.id === acc2.id);
+it('keeps historical transfers readable and reverses both balances when deleted', async () => {
+  const source = await seedLegacyAccount({ name: 'Source', type: 'bank', currency: 'VND', initialBalance: 150000 });
+  const target = await seedLegacyAccount({ name: 'Target', type: 'bank', currency: 'VND', initialBalance: 150000 });
+  await getDatabase().runAsync('INSERT INTO transactions (id, type, amount, currency, account_id, to_account_id, date, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?);',
+    ['legacy', 'transfer', 50000, 'VND', source.id, target.id, '2026-09-01', 'confirmed']);
+  expect(await getTransactions()).toHaveLength(1);
+  await expect(updateTransaction('legacy', { amount: 60000 })).rejects.toThrow('Transfers are no longer supported');
+  await deleteTransaction('legacy');
+  expect((await getAccountById(source.id))?.balance).toBe(200000);
+  expect((await getAccountById(target.id))?.balance).toBe(100000);
+  expect(await getTransactions()).toHaveLength(0);
+});
 
-    expect(a1?.balance).toBe(150000);
-    expect(a2?.balance).toBe(150000);
-    expect(a1!.balance + a2!.balance).toBe(initialTotal);
-  });
+it('initializes only one account when several screens request it concurrently', async () => {
+  const accounts = await Promise.all(Array.from({ length: 5 }, () => getDefaultAccount()));
+  expect(new Set(accounts.map((account) => account.id)).size).toBe(1);
+  expect(await getAllAccounts(true)).toHaveLength(1);
+  await createTransaction({ type: 'income', amount: 50000, currency: 'VND', accountId: accounts[0].id, date: '2026-09-08' });
+  expect((await getDefaultAccount()).balance).toBe(50000);
+});
+
+it('reuses an existing account without creating another when the currency setting differs', async () => {
+  const legacy = await seedLegacyAccount({ name: 'Existing', type: 'cash', currency: 'VND', initialBalance: 100000 });
+  await getDatabase().runAsync('INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?);', ['default_currency', 'USD']);
+  expect(await getDefaultAccount()).toMatchObject({ id: legacy.id, currency: 'VND', balance: 100000 });
+  expect(await getAllAccounts(true)).toHaveLength(1);
+});
+
+it('keeps the chosen account when old accounts are renamed or the currency setting changes', async () => {
+  const chosen = await getDefaultAccount();
+  await seedLegacyAccount({ name: 'A restored account', type: 'bank', currency: 'USD', initialBalance: 3000 });
+  await getDatabase().runAsync('INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?);', ['default_currency', 'USD']);
+  expect((await getDefaultAccount()).id).toBe(chosen.id);
+  expect(await getAllAccounts(true)).toHaveLength(2);
+});
+
+it('recovers from a missing default reference after restoring an older backup', async () => {
+  await getDatabase().runAsync('INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?);', ['default_account_id', 'missing']);
+  const legacy = await seedLegacyAccount({ name: 'Restored', type: 'cash', currency: 'VND', initialBalance: 123000 });
+  expect((await getDefaultAccount()).id).toBe(legacy.id);
+  expect((await getDefaultAccount()).balance).toBe(123000);
+  expect(await getAllAccounts(true)).toHaveLength(1);
 });

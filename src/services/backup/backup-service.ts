@@ -30,6 +30,8 @@ export interface BackupPayload {
   budget_allocations: any[];
   recurring_rules: any[];
   automation_occurrences: any[];
+  financial_goals?: any[];
+  goal_contributions?: any[];
 }
 
 export interface RestoreResult {
@@ -61,6 +63,8 @@ export async function createEncryptedBackup(password: string): Promise<string> {
     budgetAllocations,
     recurringRules,
     automationOccurrences,
+    financialGoals,
+    goalContributions,
   ] = await Promise.all([
     db.getAllAsync('SELECT * FROM app_settings;'),
     db.getAllAsync('SELECT * FROM accounts;'),
@@ -71,6 +75,8 @@ export async function createEncryptedBackup(password: string): Promise<string> {
     db.getAllAsync('SELECT * FROM budget_allocations;'),
     db.getAllAsync('SELECT * FROM recurring_rules;'),
     db.getAllAsync('SELECT * FROM automation_occurrences;'),
+    db.getAllAsync('SELECT * FROM financial_goals;'),
+    db.getAllAsync('SELECT * FROM goal_contributions;'),
   ]);
 
   const payload: BackupPayload = {
@@ -83,6 +89,8 @@ export async function createEncryptedBackup(password: string): Promise<string> {
     budget_allocations: budgetAllocations,
     recurring_rules: recurringRules,
     automation_occurrences: automationOccurrences,
+    financial_goals: financialGoals,
+    goal_contributions: goalContributions,
   };
 
   const payloadStr = JSON.stringify(payload);
@@ -158,6 +166,8 @@ export async function restoreFromEncryptedBackup(
   // Atomic restoration
   await db.withTransactionAsync(async () => {
     // Clear existing data safely in dependency order
+    await db.runAsync('DELETE FROM goal_contributions;');
+    await db.runAsync('DELETE FROM financial_goals;');
     await db.runAsync('DELETE FROM audit_logs;');
     await db.runAsync('DELETE FROM automation_occurrences;');
     await db.runAsync('DELETE FROM transactions;');
@@ -223,6 +233,18 @@ export async function restoreFromEncryptedBackup(
         `INSERT INTO transactions (id, type, amount, currency, account_id, to_account_id, category_id, recurring_rule_id, occurrence_id, note, date, status, created_at, updated_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
         [tx.id, tx.type, tx.amount, tx.currency, tx.account_id, tx.to_account_id, tx.category_id, tx.recurring_rule_id, tx.occurrence_id, tx.note, tx.date, tx.status, tx.created_at, tx.updated_at]
+      );
+    }
+    for (const goal of payload.financial_goals || []) {
+      await db.runAsync(
+        'INSERT INTO financial_goals (id, name, type, icon, color, target_amount, current_amount, target_date, linked_category_id, linked_account_id, notes, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);',
+        [goal.id, goal.name, goal.type, goal.icon, goal.color, goal.target_amount, goal.current_amount, goal.target_date, goal.linked_category_id, goal.linked_account_id, goal.notes, goal.status, goal.created_at, goal.updated_at]
+      );
+    }
+    for (const contribution of payload.goal_contributions || []) {
+      await db.runAsync(
+        'INSERT INTO goal_contributions (id, goal_id, amount, transaction_id, note, date, created_at) VALUES (?, ?, ?, ?, ?, ?, ?);',
+        [contribution.id, contribution.goal_id, contribution.amount, contribution.transaction_id, contribution.note, contribution.date, contribution.created_at]
       );
     }
     for (const o of payload.automation_occurrences || []) {

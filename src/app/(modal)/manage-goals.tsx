@@ -1,8 +1,8 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
 import {
   Modal,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -20,7 +20,10 @@ import { MoneyInput } from '@/components/ui/money-input';
 import { Colors } from '@/constants/theme';
 import { GoalType } from '@/database/types';
 import {
-  addGoalContribution,
+  completeGoal,
+  getGoalFunds,
+  GoalFunds,
+  GoalActionError,
   createGoal,
   deleteGoal,
   FinancialGoalWithProgress,
@@ -40,7 +43,11 @@ const GOAL_TYPE_OPTIONS: { type: GoalType; labelKey: string; icon: string }[] = 
 
 export default function ManageGoalsModal() {
   const closeModal = useSafeBack('/(main)/budgets');
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = i18n.resolvedLanguage === 'en' ? 'en-US' : 'vi-VN';
+  const [funds, setFunds] = useState<GoalFunds | null>(null);
+  const [completingId, setCompletingId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const [goals, setGoals] = useState<FinancialGoalWithProgress[]>([]);
 
@@ -50,45 +57,28 @@ export default function ManageGoalsModal() {
   const [goalName, setGoalName] = useState('');
   const [goalType, setGoalType] = useState<GoalType>('saving');
   const [targetAmount, setTargetAmount] = useState<number>(10000000);
-  const [currentAmount, setCurrentAmount] = useState<number>(0);
   const [targetDate, setTargetDate] = useState<string>('');
   const [goalIcon, setGoalIcon] = useState<string>('savings');
   const [goalColor, setGoalColor] = useState<string>(PRESET_COLORS[9]);
   const [notes, setNotes] = useState('');
 
-  // Contribution State
-  const [contribModalVisible, setContribModalVisible] = useState(false);
-  const [activeContribGoal, setActiveContribGoal] = useState<FinancialGoalWithProgress | null>(null);
-  const [contribAmount, setContribAmount] = useState<number>(500000);
-  const [contribNote, setContribNote] = useState('');
-
   const loadData = useCallback(async () => {
     try {
-      const items = await getAllGoals();
+      const [items, available] = await Promise.all([getAllGoals(), getGoalFunds()]);
       setGoals(items);
+      setFunds(available);
     } catch (e) {
       console.warn(t('goals.loadError'), e);
     }
   }, [t]);
 
-  useEffect(() => {
-    let active = true;
-    getAllGoals()
-      .then((items) => {
-        if (active) setGoals(items);
-      })
-      .catch((error) => console.warn(t('goals.loadError'), error));
-    return () => {
-      active = false;
-    };
-  }, [t]);
+  useFocusEffect(useCallback(() => { void loadData(); }, [loadData]));
 
   const openCreateModal = () => {
     setEditingGoal(null);
     setGoalName('');
     setGoalType('saving');
     setTargetAmount(10000000);
-    setCurrentAmount(0);
     setTargetDate('');
     setGoalIcon('savings');
     setGoalColor(PRESET_COLORS[9]);
@@ -101,7 +91,6 @@ export default function ManageGoalsModal() {
     setGoalName(item.name);
     setGoalType(item.type);
     setTargetAmount(item.target_amount);
-    setCurrentAmount(item.current_amount);
     setTargetDate(item.target_date || '');
     setGoalIcon(item.icon || 'savings');
     setGoalColor(item.color || PRESET_COLORS[9]);
@@ -109,32 +98,25 @@ export default function ManageGoalsModal() {
     setCreateModalVisible(true);
   };
 
-  const openContribModal = (item: FinancialGoalWithProgress) => {
-    setActiveContribGoal(item);
-    setContribAmount(500000);
-    setContribNote('');
-    setContribModalVisible(true);
-  };
-
   const handleSaveGoal = async () => {
+    if (saving || !funds) return;
     if (!goalName.trim()) {
       alertMessage(t('common.notice'), t('goals.nameRequired'));
       return;
     }
     const safeTarget = typeof targetAmount === 'number' && !isNaN(targetAmount) ? targetAmount : 0;
-    const safeCurrent = typeof currentAmount === 'number' && !isNaN(currentAmount) ? currentAmount : 0;
     if (safeTarget <= 0) {
       alertMessage(t('common.notice'), t('goals.targetRequired'));
       return;
     }
 
+    setSaving(true);
     try {
       if (editingGoal) {
         await updateGoal(editingGoal.id, {
           name: goalName.trim(),
           type: goalType,
           target_amount: safeTarget,
-          current_amount: safeCurrent,
           target_date: targetDate.trim() || null,
           icon: goalIcon,
           color: goalColor,
@@ -145,7 +127,6 @@ export default function ManageGoalsModal() {
           name: goalName.trim(),
           type: goalType,
           target_amount: safeTarget,
-          current_amount: safeCurrent,
           target_date: targetDate.trim() || null,
           icon: goalIcon,
           color: goalColor,
@@ -155,33 +136,39 @@ export default function ManageGoalsModal() {
       setCreateModalVisible(false);
       await loadData();
     } catch (e: any) {
-      alertMessage(t('common.error'), e.message || t('goals.saveError'));
+      alertMessage(t('common.error'), e instanceof GoalActionError ? t('goals.errors.' + e.code) : t('goals.saveError'));
+    } finally {
+      setSaving(false);
     }
   };
 
-  const handleAddContribution = async () => {
-    const safeContrib = typeof contribAmount === 'number' && !isNaN(contribAmount) ? contribAmount : 0;
-    if (!activeContribGoal || safeContrib <= 0) {
-      alertMessage(t('common.notice'), t('goals.contributionRequired'));
-      return;
-    }
-
+  const handleCompleteGoal = async (goal: FinancialGoalWithProgress) => {
+    if (completingId) return;
+    setCompletingId(goal.id);
     try {
-      await addGoalContribution(activeContribGoal.id, safeContrib, contribNote);
-      setContribModalVisible(false);
+      await completeGoal(goal.id, t('goals.completionTransaction', { name: goal.name }));
       await loadData();
-    } catch (e: any) {
-      alertMessage(t('common.error'), e.message || t('goals.contributionError'));
+    } catch (error) {
+      alertMessage(t('common.error'), error instanceof GoalActionError ? t('goals.errors.' + error.code) : t('goals.completionError'));
+      await loadData();
+    } finally {
+      setCompletingId(null);
     }
   };
 
   const handleDeleteGoal = (goal: FinancialGoalWithProgress) => {
+    if (goal.isCompleted || completingId) return;
     confirmAction(
       t('goals.deleteTitle'),
       t('goals.deleteDescription', { name: goal.name }),
       async () => {
-        await deleteGoal(goal.id);
-        await loadData();
+        try {
+          await deleteGoal(goal.id);
+        } catch (error) {
+          alertMessage(t('common.error'), error instanceof GoalActionError ? t('goals.errors.' + error.code) : t('goals.deleteError'));
+        } finally {
+          await loadData();
+        }
       },
       t('common.delete'),
       t('common.cancel')
@@ -203,6 +190,7 @@ export default function ManageGoalsModal() {
           variant="primary"
           icon={<MaterialIcons name="add" size={18} color={Colors.light.text} />}
           onPress={openCreateModal}
+          disabled={!funds || !!completingId}
         />
 
         {goals.length === 0 ? (
@@ -276,9 +264,9 @@ export default function ManageGoalsModal() {
                 {/* Stats Row */}
                 <View style={styles.statsRow}>
                   <View>
-                    <Text style={styles.statLabel}>{t('goals.current')}</Text>
+                    <Text style={styles.statLabel}>{t(isCompleted ? 'goals.amountUsed' : 'goals.availableBalance')}</Text>
                     <Text style={styles.currentAmountText}>
-                      {formatMoney(goal.current_amount, 'VND')}
+                      {formatMoney(goal.current_amount, goal.currency, locale)}
                     </Text>
                   </View>
 
@@ -289,35 +277,38 @@ export default function ManageGoalsModal() {
                   <View style={styles.alignRight}>
                     <Text style={styles.statLabel}>{t('goals.target')}</Text>
                     <Text style={styles.targetAmountText}>
-                      {formatMoney(goal.target_amount, 'VND')}
+                      {formatMoney(goal.target_amount, goal.currency, locale)}
                     </Text>
                   </View>
                 </View>
 
-                {/* Actions */}
-                <View style={styles.goalActions}>
-                  <TouchableOpacity
-                    style={styles.actionBtnSecondary}
-                    onPress={() => openContribModal(goal)}
-                  >
-                    <MaterialIcons name="add-circle-outline" size={16} color={Colors.primaryDark} />
-                    <Text style={styles.actionBtnText}>{t('goals.updateAmount')}</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={styles.iconActionBtn}
-                    onPress={() => openEditModal(goal)}
-                  >
+                {goal.status === 'active' && (
+                  <Text style={styles.balanceHelp}>
+                    {goal.canComplete
+                      ? t('goals.balanceAfterCompletion', { amount: formatMoney(goal.current_amount - goal.target_amount, goal.currency, locale) })
+                      : t('goals.amountNeeded', { amount: formatMoney(goal.remainingAmount, goal.currency, locale) })}
+                  </Text>
+                )}
+                {!isCompleted && <View style={styles.goalActions}>
+                  {goal.canComplete && (
+                    <Button
+                      title={t('goals.completeAction')}
+                      icon={<MaterialIcons name="check-circle-outline" size={18} color={Colors.primaryStrong} />}
+                      onPress={() => handleCompleteGoal(goal)}
+                      loading={completingId === goal.id}
+                      disabled={!!completingId}
+                      style={styles.completeButton}
+                    />
+                  )}
+                  <TouchableOpacity accessibilityRole="button" accessibilityLabel={t('goals.editTitle')}
+                    disabled={!!completingId} style={styles.iconActionBtn} onPress={() => openEditModal(goal)}>
                     <MaterialIcons name="edit" size={18} color={Colors.light.textSecondary} />
                   </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={styles.iconActionBtn}
-                    onPress={() => handleDeleteGoal(goal)}
-                  >
+                  <TouchableOpacity accessibilityRole="button" accessibilityLabel={t('goals.deleteTitle')}
+                    disabled={!!completingId} style={styles.iconActionBtn} onPress={() => handleDeleteGoal(goal)}>
                     <MaterialIcons name="delete-outline" size={18} color={Colors.expense} />
                   </TouchableOpacity>
-                </View>
+                </View>}
               </Card>
             );
           })
@@ -388,16 +379,16 @@ export default function ManageGoalsModal() {
               label={t('goals.targetAmount')}
               valueMinor={targetAmount}
               onChangeMinor={setTargetAmount}
-              currency="VND"
+              currency={funds?.currency || 'VND'}
             />
 
-            {/* Current Amount */}
-            <MoneyInput
-              label={t('goals.initialAmount')}
-              valueMinor={currentAmount}
-              onChangeMinor={setCurrentAmount}
-              currency="VND"
-            />
+            <View style={styles.formGroup}>
+              <Text style={styles.formLabel}>{t('goals.availableBalance')}</Text>
+              <Text style={styles.currentAmountText}>
+                {funds ? formatMoney(funds.balance, funds.currency, locale) : t('common.loading')}
+              </Text>
+              <Text style={styles.balanceHelp}>{t('goals.balanceHelp')}</Text>
+            </View>
 
             {/* Target Date */}
             <View style={styles.formGroup}>
@@ -431,60 +422,13 @@ export default function ManageGoalsModal() {
               title={t('goals.save')}
               variant="primary"
               onPress={handleSaveGoal}
+              loading={saving}
+              disabled={!funds || saving}
             />
           </View>
         </View>
       </Modal>
 
-      {/* Contribution Modal */}
-      <Modal
-        visible={contribModalVisible}
-        animationType="fade"
-        transparent
-        onRequestClose={() => setContribModalVisible(false)}
-      >
-        <View style={styles.dialogOverlay}>
-          <View style={styles.dialogCard}>
-            <Text style={styles.dialogTitle}>{t('goals.contributionTitle')}</Text>
-            <Text style={styles.dialogDesc}>
-              {activeContribGoal?.name}
-            </Text>
-
-            <MoneyInput
-              label={t('goals.contributionAmount')}
-              valueMinor={contribAmount}
-              onChangeMinor={setContribAmount}
-              currency="VND"
-            />
-
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>{t('goals.note')}</Text>
-              <TextInput
-                style={styles.textInput}
-                placeholder={t('goals.notePlaceholder')}
-                placeholderTextColor={Colors.light.textSecondary}
-                value={contribNote}
-                onChangeText={setContribNote}
-              />
-            </View>
-
-            <View style={styles.dialogActions}>
-              <Button
-                title={t('common.cancel')}
-                variant="outline"
-                onPress={() => setContribModalVisible(false)}
-                style={styles.dialogBtn}
-              />
-              <Button
-                title={t('common.confirm')}
-                variant="primary"
-                onPress={handleAddContribution}
-                style={styles.dialogBtn}
-              />
-            </View>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -634,6 +578,8 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: Colors.primaryDark,
   },
+  completeButton: { flex: 1 },
+  balanceHelp: { fontSize: 12, lineHeight: 18, color: Colors.light.textSecondary },
   goalActions: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -642,21 +588,6 @@ const styles = StyleSheet.create({
     borderTopColor: Colors.light.backgroundElement,
     paddingTop: 10,
     marginTop: 2,
-  },
-  actionBtnSecondary: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 8,
-    borderRadius: 8,
-    backgroundColor: Colors.light.backgroundElement,
-  },
-  actionBtnText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: Colors.primaryDark,
   },
   iconActionBtn: {
     padding: 8,
@@ -734,48 +665,5 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: Colors.light.border,
     backgroundColor: Colors.light.background,
-  },
-  dialogOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  dialogCard: {
-    width: '100%',
-    backgroundColor: Colors.light.surface,
-    borderRadius: 20,
-    padding: 20,
-    gap: 16,
-    ...Platform.select({
-      web: { boxShadow: '0 8px 24px rgba(0, 0, 0, 0.2)' },
-      default: {
-        elevation: 5,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-      },
-    }),
-  },
-  dialogTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: Colors.light.text,
-  },
-  dialogDesc: {
-    fontSize: 14,
-    color: Colors.primaryDark,
-    fontWeight: '600',
-    marginTop: -8,
-  },
-  dialogActions: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 4,
-  },
-  dialogBtn: {
-    flex: 1,
   },
 });

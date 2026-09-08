@@ -346,6 +346,12 @@ export function getDatabase(): SQLite.SQLiteDatabase {
   return dbInstance;
 }
 
+/** Keep the transaction on the existing SQLCipher-unlocked connection. */
+export async function withGoalTransaction(task: (txn: SQLite.SQLiteDatabase) => Promise<void>): Promise<void> {
+  const db = getDatabase();
+  await db.withTransactionAsync(() => task(db));
+}
+
 /**
  * Closes the database instance (useful during reset/restore)
  */
