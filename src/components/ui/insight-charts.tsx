@@ -37,14 +37,19 @@ export function DailyExpenseChart({ days, currency }: { days: DailySpendingPoint
   const points = days.slice(start, end);
   const index = Math.max(start, Math.min(end - 1, selection));
   const selected = days[index];
-  const maximum = Math.max(...points.map((point) => point.amount), 0);
+  const maximum = Math.max(...points.flatMap((point) => [point.amount, point.income]), 0);
   const scale = maximum || 1;
-  const total = points.reduce((sum, point) => sum + point.amount, 0);
-  const coordinates = points.map((point, pointIndex) => ({
+  const expenseTotal = points.reduce((sum, point) => sum + point.amount, 0);
+  const incomeTotal = points.reduce((sum, point) => sum + point.income, 0);
+  const coordinatesFor = (value: (point: DailySpendingPoint) => number) => points.map((point, pointIndex) => ({
     x: points.length === 1 ? 150 : 10 + pointIndex * 280 / (points.length - 1),
-    y: 142 - point.amount / scale * 122,
+    y: 142 - value(point) / scale * 122,
   }));
-  const line = coordinates.map((point, pointIndex) => `${pointIndex === 0 ? 'M' : 'L'}${point.x},${point.y}`).join(' ');
+  const expenseCoordinates = coordinatesFor((point) => point.amount);
+  const incomeCoordinates = coordinatesFor((point) => point.income);
+  const pathFor = (coordinates: { x: number; y: number }[]) => coordinates.map((point, pointIndex) => `${pointIndex === 0 ? 'M' : 'L'}${point.x},${point.y}`).join(' ');
+  const expenseLine = pathFor(expenseCoordinates);
+  const incomeLine = pathFor(incomeCoordinates);
   const dateLabel = (date: string) => new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short' }).format(new Date(`${date}T12:00:00`));
 
   return (
@@ -62,19 +67,32 @@ export function DailyExpenseChart({ days, currency }: { days: DailySpendingPoint
           ))}
         </View>
       </View>
-      <Text style={styles.total}>{formatMoney(total, currency)}</Text>
+      <View style={styles.dailyTotals}>
+        <View style={styles.dailyMetric}>
+          <View style={[styles.dot, { backgroundColor: Colors.expense }]} />
+          <View><Text style={styles.hint}>{t('charts.expense')}</Text><Text style={[styles.dailyTotalValue, { color: Colors.expense }]}>-{formatMoney(expenseTotal, currency)}</Text></View>
+        </View>
+        <View style={styles.dailyMetric}>
+          <View style={[styles.dot, { backgroundColor: Colors.income }]} />
+          <View><Text style={styles.hint}>{t('charts.income')}</Text><Text style={[styles.dailyTotalValue, { color: Colors.income }]}>+{formatMoney(incomeTotal, currency)}</Text></View>
+        </View>
+      </View>
       <Text style={styles.hint}>{points.length ? `${dateLabel(points[0].date)} – ${dateLabel(points[points.length - 1].date)}` : ''}</Text>
       {maximum === 0 ? <EmptyChart /> : (
         <>
           <View style={styles.axisHeader}><Text style={styles.axisText}>{compactMoney(maximum, currency, locale)}</Text><Text style={styles.axisText}>{currency}</Text></View>
           <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
           <Svg width="100%" height={170} viewBox="0 0 300 158">
-            <Defs><LinearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1"><Stop offset="0" stopColor={Colors.primary} stopOpacity={0.75} /><Stop offset="1" stopColor={Colors.primary} stopOpacity={0.08} /></LinearGradient></Defs>
+            <Defs><LinearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1"><Stop offset="0" stopColor={Colors.expense} stopOpacity={0.3} /><Stop offset="1" stopColor={Colors.expense} stopOpacity={0.03} /></LinearGradient></Defs>
             {[20, 81, 142].map((y) => <Line key={y} x1="10" x2="290" y1={y} y2={y} stroke={Colors.light.border} strokeDasharray="4 5" />)}
-            <Path d={`${line} L${coordinates[coordinates.length - 1].x},142 L${coordinates[0].x},142 Z`} fill={`url(#${gradientId})`} />
-            <Path d={line} fill="none" stroke={Colors.primaryDark} strokeWidth={3} strokeLinejoin="round" />
-            {coordinates.map((point, pointIndex) => (
-              <Circle key={points[pointIndex].date} cx={point.x} cy={point.y} r={index === start + pointIndex ? 6 : 3} fill={index === start + pointIndex ? Colors.primaryStrong : Colors.primary} stroke={Colors.light.surface} strokeWidth={2} />
+            <Path d={`${expenseLine} L${expenseCoordinates[expenseCoordinates.length - 1].x},142 L${expenseCoordinates[0].x},142 Z`} fill={`url(#${gradientId})`} />
+            <Path d={expenseLine} fill="none" stroke={Colors.expense} strokeWidth={3} strokeLinejoin="round" />
+            <Path d={incomeLine} fill="none" stroke={Colors.income} strokeWidth={3} strokeLinejoin="round" />
+            {expenseCoordinates.map((point, pointIndex) => (
+              <Circle key={`expense-${points[pointIndex].date}`} cx={point.x} cy={point.y} r={index === start + pointIndex ? 5 : 2.5} fill={Colors.expense} stroke={Colors.light.surface} strokeWidth={2} />
+            ))}
+            {incomeCoordinates.map((point, pointIndex) => (
+              <Circle key={`income-${points[pointIndex].date}`} cx={point.x} cy={point.y} r={index === start + pointIndex ? 5 : 2.5} fill={Colors.income} stroke={Colors.light.surface} strokeWidth={2} />
             ))}
           </Svg>
           </View>
@@ -86,7 +104,10 @@ export function DailyExpenseChart({ days, currency }: { days: DailySpendingPoint
             </TouchableOpacity>
             <View style={styles.detailText} accessibilityLiveRegion="polite">
               <Text style={styles.hint}>{selected ? dateLabel(selected.date) : ''}</Text>
-              <Text style={styles.detailAmount}>{formatMoney(selected?.amount ?? 0, currency)}</Text>
+              <View style={styles.selectedValues}>
+                <Text style={[styles.detailAmount, { color: Colors.expense }]}>-{formatMoney(selected?.amount ?? 0, currency)}</Text>
+                <Text style={[styles.detailAmount, { color: Colors.income }]}>+{formatMoney(selected?.income ?? 0, currency)}</Text>
+              </View>
             </View>
             <TouchableOpacity accessibilityRole="button" accessibilityLabel={t('charts.nextDay')} accessibilityState={{ disabled: index >= end - 1 }} disabled={index >= end - 1} style={styles.arrow} onPress={() => setSelection(index + 1)}>
               <MaterialIcons name="chevron-right" size={24} color={index >= end - 1 ? Colors.light.border : Colors.primaryStrong} />
@@ -153,7 +174,9 @@ const styles = StyleSheet.create({
   heading: { gap: 4 },
   title: { fontSize: 16, fontWeight: '800', color: Colors.light.text },
   hint: { fontSize: 12, lineHeight: 18, color: Colors.light.textSecondary },
-  total: { fontSize: 26, fontWeight: '800', color: Colors.primaryStrong, fontVariant: ['tabular-nums'] },
+  dailyTotals: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 22 },
+  dailyMetric: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  dailyTotalValue: { fontSize: 18, fontWeight: '800', fontVariant: ['tabular-nums'] },
   toggle: { flexDirection: 'row', backgroundColor: Colors.light.backgroundElement, borderRadius: 12, padding: 3 },
   toggleButton: { minHeight: 38, paddingHorizontal: 12, justifyContent: 'center', borderRadius: 10 },
   toggleActive: { backgroundColor: Colors.primary },
@@ -164,6 +187,7 @@ const styles = StyleSheet.create({
   detail: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, backgroundColor: Colors.primaryFaded, borderRadius: 14, padding: 4 },
   arrow: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   detailText: { alignItems: 'center', gap: 2, flex: 1 },
+  selectedValues: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 12 },
   detailAmount: { fontSize: 15, fontWeight: '700', color: Colors.primaryStrong },
   empty: { paddingVertical: 28, alignItems: 'center', gap: 14 },
   emptyIcon: { width: 64, height: 64, borderRadius: 22, backgroundColor: Colors.primaryLight, justifyContent: 'center', alignItems: 'center' },

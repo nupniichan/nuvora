@@ -5,6 +5,7 @@ import { formatYMD, getDaysInMonth } from '@/shared/date-utils';
 export interface DailySpendingPoint {
   date: string;
   amount: number;
+  income: number;
 }
 
 export interface MonthlyCashflowPoint {
@@ -28,7 +29,7 @@ export function buildSpendingHistory(
   currency: string,
 ): SpendingHistory {
   const days = Array.from({ length: getDaysInMonth(year, month) }, (_, index) => ({
-    date: formatYMD(year, month, index + 1), amount: 0,
+    date: formatYMD(year, month, index + 1), amount: 0, income: 0,
   }));
   const months = Array.from({ length: 6 }, (_, index) => {
     const date = new Date(year, month - 6 + index, 1);
@@ -44,7 +45,11 @@ export function buildSpendingHistory(
     if (txMonth < 1 || txMonth > 12 || txDay < 1 || txDay > getDaysInMonth(txYear, txMonth)) continue;
     const period = monthlyMap.get(tx.date.slice(0, 7));
     if (!period) continue;
-    if (tx.type === 'income') period.income += tx.amount;
+    if (tx.type === 'income') {
+      period.income += tx.amount;
+      const day = dailyMap.get(tx.date);
+      if (day) day.income += tx.amount;
+    }
     if (tx.type === 'expense') {
       period.expense += tx.amount;
       const day = dailyMap.get(tx.date);

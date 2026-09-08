@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/charts';
 import { Colors, MaxContentWidth } from '@/constants/theme';
 import {
+  GOAL_COMPLETION_CATEGORY_ID,
   getMonthlySnapshot,
   MonthlySnapshot,
 } from '@/features/budgets/budget-queries';
@@ -107,7 +108,7 @@ export default function BudgetsScreen() {
   // Prepare breakdown items for chart
   const expenseChartItems = (snapshot?.expenseCategories || []).map((cat) => ({
     id: cat.categoryId,
-    name: cat.categoryName,
+    name: cat.categoryId === GOAL_COMPLETION_CATEGORY_ID ? t('charts.goalCompletion') : cat.categoryName,
     amount: cat.totalAmount,
     color: cat.categoryColor,
     icon: cat.categoryIcon,
@@ -342,7 +343,7 @@ export default function BudgetsScreen() {
 
                     <View style={styles.catDetails}>
                       <View style={styles.catTitleRow}>
-                        <Text style={styles.catName}>{cat.categoryName}</Text>
+                        <Text style={styles.catName}>{cat.categoryId === GOAL_COMPLETION_CATEGORY_ID ? t('charts.goalCompletion') : cat.categoryName}</Text>
                         <Text
                           style={[
                             styles.catRemainingText,
@@ -448,10 +449,10 @@ export default function BudgetsScreen() {
 
                   <View style={styles.goalMiniAmounts}>
                     <Text style={styles.goalMiniCurrent}>
-                      {formatMoney(goal.current_amount, 'VND')}
+                      {formatMoney(goal.current_amount, goal.currency)}
                     </Text>
                     <Text style={styles.goalMiniTarget}>
-                      {t('budgets.goalTarget', { amount: formatMoney(goal.target_amount, 'VND') })}
+                      {t('budgets.goalTarget', { amount: formatMoney(goal.target_amount, goal.currency) })}
                     </Text>
                   </View>
                 </Card>

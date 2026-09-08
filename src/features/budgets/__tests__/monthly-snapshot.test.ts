@@ -13,6 +13,7 @@ describe('monthly chart totals', () => {
     const entries = [
       ['income', 'income', 400000, 'VND', 'confirmed', '2026-09-01'],
       ['expense', 'expense', 100000, 'VND', 'confirmed', '2026-09-07'],
+      ['goal-completion:goal', 'expense', 50000, 'VND', 'confirmed', '2026-09-08'],
       ['planned', 'expense', 900000, 'VND', 'planned', '2026-09-08'],
       ['foreign', 'expense', 1250, 'USD', 'confirmed', '2026-09-07'],
       ['transfer', 'transfer', 500000, 'VND', 'confirmed', '2026-09-07'],
@@ -25,10 +26,14 @@ describe('monthly chart totals', () => {
     const snapshot = await getMonthlySnapshot(2026, 9, 'VND');
     const history = await getSpendingHistory(2026, 9, 'VND');
     expect(snapshot.totalIncome).toBe(400000);
-    expect(snapshot.totalExpense).toBe(100000);
+    expect(snapshot.totalExpense).toBe(150000);
     expect(snapshot.uncategorizedExpense).toBe(100000);
+    expect(snapshot.expenseCategories).toEqual(expect.arrayContaining([
+      expect.objectContaining({ categoryId: 'goal_completion', totalAmount: 50000, transactionCount: 1 }),
+    ]));
     expect(history.months[5]).toMatchObject({ income: snapshot.totalIncome, expense: snapshot.totalExpense });
     expect(history.days[6].amount).toBe(100000);
+    expect(history.days[7].amount).toBe(50000);
     const usd = await getMonthlySnapshot(2026, 9, 'USD');
     expect(usd.totalExpense).toBe(1250);
     expect(usd.totalIncome).toBe(0);

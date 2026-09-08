@@ -6,6 +6,8 @@ import {
 } from '@/database/types';
 import { generateUUID } from '@/shared/uuid';
 
+export const GOAL_COMPLETION_CATEGORY_ID = 'goal_completion';
+
 export interface CategoryIncomeSummary {
   categoryId: string;
   categoryName: string;
@@ -309,7 +311,19 @@ export async function getMonthlySnapshot(
       }
     } else if (row.type === 'expense') {
       totalExpense += amount;
-      if (!row.category_id) {
+      if (String(row.id).startsWith('goal-completion:')) {
+        const cur = expenseMap.get(GOAL_COMPLETION_CATEGORY_ID) || {
+          total: 0,
+          count: 0,
+          name: GOAL_COMPLETION_CATEGORY_ID,
+          icon: 'flag',
+          color: '#6464A8',
+          group: GOAL_COMPLETION_CATEGORY_ID,
+        };
+        cur.total += amount;
+        cur.count += 1;
+        expenseMap.set(GOAL_COMPLETION_CATEGORY_ID, cur);
+      } else if (!row.category_id) {
         uncategorizedExpense += amount;
         uncategorizedExpenseCount += 1;
       } else {
