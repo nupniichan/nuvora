@@ -1,5 +1,5 @@
 import { getDatabase } from '@/database/database';
-import { AccountRow, AccountType } from '@/database/types';
+import { AccountRow } from '@/database/types';
 import { getCurrentLanguage } from '@/i18n/language-state';
 import { generateUUID } from '@/shared/uuid';
 
@@ -26,105 +26,62 @@ export async function getAccountById(id: string): Promise<AccountRow | null> {
   return row ? localizeDefaultAccount(row) : null;
 }
 
-export async function createAccount(data: {
-  name: string;
-  type: AccountType;
-  currency: string;
-  initialBalance: number; // Integer minor units
-  icon?: string;
-  color?: string;
-}): Promise<AccountRow> {
+// Share initialization across screens, but always reload balances on later calls.
+const pendingDefaults = new WeakMap<object, Promise<AccountRow>>();
+
+/** Return the one account used for all new entries. Legacy accounts stay intact. */
+export function getDefaultAccount(): Promise<AccountRow> {
   const db = getDatabase();
-  const id = generateUUID();
-  const now = new Date().toISOString();
+  const pending = pendingDefaults.get(db);
+  if (pending) return pending;
 
-  await db.runAsync(
-    `INSERT INTO accounts (id, name, type, currency, balance, icon, color, sort_order, is_archived, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, 10, 0, ?, ?);`,
-    [
-      id,
-      data.name,
-      data.type,
-      data.currency,
-      data.initialBalance,
-      data.icon || 'account-balance-wallet',
-      data.color || '#CCCCFF',
-      now,
-      now,
-    ]
-  );
-
-  const created = await getAccountById(id);
-  if (!created) {
-    throw new Error('Failed to retrieve newly created account.');
-  }
-  return created;
+  const request = resolveDefaultAccount().finally(() => pendingDefaults.delete(db));
+  pendingDefaults.set(db, request);
+  return request;
 }
 
-export async function updateAccount(
-  id: string,
-  data: Partial<Pick<AccountRow, 'name' | 'type' | 'currency' | 'icon' | 'color' | 'is_archived'>>
-): Promise<void> {
+async function resolveDefaultAccount(): Promise<AccountRow> {
   const db = getDatabase();
-  const now = new Date().toISOString();
+  let account: AccountRow | null = null;
 
-  const updates: string[] = ['updated_at = ?'];
-  const values: any[] = [now];
+  await db.withTransactionAsync(async () => {
+    const saved = await db.getFirstAsync<{ value: string }>(
+      'SELECT value FROM app_settings WHERE key = ?;', ['default_account_id']
+    );
+    if (saved) account = await getAccountById(saved.value);
 
-  if (data.name !== undefined) {
-    updates.push('name = ?');
-    values.push(data.name);
-  }
-  if (data.type !== undefined) {
-    updates.push('type = ?');
-    values.push(data.type);
-  }
-  if (data.currency !== undefined) {
-    updates.push('currency = ?');
-    values.push(data.currency);
-  }
-  if (data.icon !== undefined) {
-    updates.push('icon = ?');
-    values.push(data.icon);
-  }
-  if (data.color !== undefined) {
-    updates.push('color = ?');
-    values.push(data.color);
-  }
-  if (data.is_archived !== undefined) {
-    updates.push('is_archived = ?');
-    values.push(data.is_archived);
-  }
+    if (!account) {
+      const setting = await db.getFirstAsync<{ value: string }>(
+        'SELECT value FROM app_settings WHERE key = ?;', ['default_currency']
+      );
+      const currency = setting?.value || 'VND';
+      const accounts = await getAllAccounts(true);
+      account = accounts.find((item) => !item.is_archived && item.currency === currency)
+        || accounts.find((item) => !item.is_archived)
+        || accounts[0]
+        || null;
 
-  values.push(id);
-  await db.runAsync(`UPDATE accounts SET ${updates.join(', ')} WHERE id = ?;`, values);
-}
+      if (!account) {
+        const id = generateUUID();
+        const now = new Date().toISOString();
+        await db.runAsync(
+          "INSERT INTO accounts (id, name, type, currency, balance, icon, color, sort_order, is_archived, created_at, updated_at) VALUES (?, ?, 'cash', ?, 0, 'account-balance-wallet', '#CCCCFF', 1, 0, ?, ?);",
+          [id, getCurrentLanguage() === 'en' ? 'Cash' : 'Tiền mặt', currency, now, now]
+        );
+        account = await getAccountById(id);
+      }
+    }
 
-/**
- * Gets transaction count for an account to determine if safe to delete
- */
-export async function getAccountTransactionCount(id: string): Promise<number> {
-  const db = getDatabase();
-  const res = await db.getFirstAsync<{ count: number }>(
-    `SELECT COUNT(*) as count FROM transactions WHERE account_id = ? OR to_account_id = ?;`,
-    [id, id]
-  );
-  return res ? Number(res.count) : 0;
-}
+    if (!account) throw new Error('Failed to initialize the default account.');
+    if (account.is_archived) {
+      await db.runAsync('UPDATE accounts SET is_archived = 0, updated_at = ? WHERE id = ?;',
+        [new Date().toISOString(), account.id]);
+      account = { ...account, is_archived: 0 };
+    }
+    await db.runAsync('INSERT OR REPLACE INTO app_settings (key, value, updated_at) VALUES (?, ?, ?);',
+      ['default_account_id', account.id, new Date().toISOString()]);
+  });
 
-/**
- * Deletes or archives an account safely
- */
-export async function deleteAccount(id: string): Promise<boolean> {
-  const db = getDatabase();
-  const count = await getAccountTransactionCount(id);
-  if (count > 0) {
-    // If account has transactions, soft-delete (archive) to preserve history
-    await updateAccount(id, { is_archived: 1 });
-    return false;
-  }
-
-  // Hard delete if completely clean
-  await db.runAsync('DELETE FROM accounts WHERE id = ?;', [id]);
-  return true;
+  if (!account) throw new Error('Failed to initialize the default account.');
+  return account;
 }

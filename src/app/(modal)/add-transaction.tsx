@@ -16,8 +16,8 @@ import { Card } from '@/components/ui/card';
 import { MoneyInput } from '@/components/ui/money-input';
 import { Colors } from '@/constants/theme';
 import { getDatabase } from '@/database/database';
-import { AccountRow, CategoryGroupRow, TransactionType } from '@/database/types';
-import { createAccount, getAllAccounts } from '@/features/accounts/account-queries';
+import { AccountRow, CategoryGroupRow, EntryType } from '@/database/types';
+import { getDefaultAccount } from '@/features/accounts/account-queries';
 import { checkSpendingLimit } from '@/features/budgets/budget-queries';
 import {
   CategoryWithGroup,
@@ -36,14 +36,9 @@ export default function AddTransactionModal() {
   const router = useRouter();
   const closeModal = useSafeBack('/(main)/transactions');
 
-  const [type, setType] = useState<TransactionType>('expense');
+  const [type, setType] = useState<EntryType>('expense');
   const [amountMinor, setAmountMinor] = useState<number>(0);
-  const [accounts, setAccounts] = useState<AccountRow[]>([]);
-  const [selectedAccountId, setSelectedAccountId] = useState<string>('');
-  const [toAccountId, setToAccountId] = useState<string>('');
-  const [isAddingRecipientAccount, setIsAddingRecipientAccount] = useState(false);
-  const [recipientAccountName, setRecipientAccountName] = useState('');
-  const [creatingRecipientAccount, setCreatingRecipientAccount] = useState(false);
+  const [activeAccount, setActiveAccount] = useState<AccountRow | null>(null);
   const [groups, setGroups] = useState<CategoryGroupRow[]>([]);
   const [categories, setCategories] = useState<CategoryWithGroup[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
@@ -73,37 +68,10 @@ export default function AddTransactionModal() {
   } | null>(null);
 
   useEffect(() => {
-    async function loadAccounts() {
-      let accs = await getAllAccounts();
-      if (accs.length === 0) {
-        const defaultAcc = await createAccount({
-          name: t('transactions.defaultCash'),
-          type: 'cash',
-          currency: 'VND',
-          initialBalance: 0,
-        });
-        accs = [defaultAcc];
-      }
-      setAccounts(accs);
-      if (accs.length > 0) {
-        setSelectedAccountId(accs[0].id);
-        if (accs.length > 1) {
-          setToAccountId(accs[1].id);
-        }
-      }
-    }
-    void loadAccounts();
+    getDefaultAccount().then(setActiveAccount).catch(() => setError(t('transactions.saveError')));
   }, [t]);
 
   const loadCategories = useCallback(async () => {
-    if (type === 'transfer') {
-      setGroups([]);
-      setCategories([]);
-      setSelectedCategoryId(null);
-      setSelectedGroupFilter('all');
-      return;
-    }
-
     const [grps, cats] = await Promise.all([
       getAllCategoryGroups(type),
       getAllCategories(type),
@@ -127,28 +95,6 @@ export default function AddTransactionModal() {
       void loadCategories();
     }, [loadCategories])
   );
-
-  const selectRecipientForSource = (sourceAccountId: string) => {
-    setToAccountId((previousId) =>
-      previousId !== sourceAccountId && accounts.some((account) => account.id === previousId)
-        ? previousId
-        : accounts.find((account) => account.id !== sourceAccountId)?.id ?? ''
-    );
-  };
-
-  const handleSelectType = (nextType: TransactionType) => {
-    setType(nextType);
-    if (nextType === 'transfer') {
-      selectRecipientForSource(selectedAccountId);
-    }
-  };
-
-  const handleSelectSourceAccount = (accountId: string) => {
-    setSelectedAccountId(accountId);
-    if (type === 'transfer') {
-      selectRecipientForSource(accountId);
-    }
-  };
 
   const handleCreateCustomCat = async () => {
     if (!customCatName.trim()) return;
@@ -175,33 +121,6 @@ export default function AddTransactionModal() {
       console.warn('Could not create custom category', e);
     } finally {
       setCreatingCustomCat(false);
-    }
-  };
-
-  const handleCreateRecipientAccount = async () => {
-    const name = recipientAccountName.trim();
-    if (!name) return;
-
-    setCreatingRecipientAccount(true);
-    setError(null);
-    try {
-      const created = await createAccount({
-        name,
-        type: 'bank',
-        currency,
-        initialBalance: 0,
-        icon: 'account-balance',
-        color: Colors.primary,
-      });
-      const updatedAccounts = await getAllAccounts();
-      setAccounts(updatedAccounts);
-      setToAccountId(created.id);
-      setRecipientAccountName('');
-      setIsAddingRecipientAccount(false);
-    } catch (createError: any) {
-      setError(createError.message || t('transactions.createRecipientAccountError'));
-    } finally {
-      setCreatingRecipientAccount(false);
     }
   };
 
@@ -243,7 +162,6 @@ export default function AddTransactionModal() {
     checkLimit();
   }, [type, selectedCategoryId, amountMinor, date]);
 
-  const activeAccount = accounts.find((a) => a.id === selectedAccountId);
   const currency = activeAccount ? activeAccount.currency : 'VND';
   const selectedCategory = categories.find((c) => c.id === selectedCategoryId);
 
@@ -260,21 +178,11 @@ export default function AddTransactionModal() {
   };
 
   const handleSave = async () => {
+    if (!activeAccount) return;
     if (amountMinor <= 0) {
       setError(t('transactions.amountRequired'));
       return;
     }
-    if (!selectedAccountId) {
-      setError(t('transactions.accountRequired'));
-      return;
-    }
-    if (type === 'transfer') {
-      if (!toAccountId || toAccountId === selectedAccountId) {
-        setError(t('transactions.differentAccountRequired'));
-        return;
-      }
-    }
-
     setLoading(true);
     setError(null);
     try {
@@ -282,9 +190,8 @@ export default function AddTransactionModal() {
         type,
         amount: amountMinor,
         currency,
-        accountId: selectedAccountId,
-        toAccountId: type === 'transfer' ? toAccountId : undefined,
-        categoryId: type !== 'transfer' ? (selectedCategoryId || undefined) : undefined,
+        accountId: activeAccount.id,
+        categoryId: selectedCategoryId || undefined,
         note: note || undefined,
         date,
       });
@@ -310,7 +217,7 @@ export default function AddTransactionModal() {
         <View style={styles.segmentRow}>
           <TouchableOpacity
             style={[styles.segmentBtn, type === 'expense' && styles.activeExpense]}
-            onPress={() => handleSelectType('expense')}
+            onPress={() => setType('expense')}
           >
             <Text style={[styles.segmentText, type === 'expense' && styles.activeText]}>
               {t('transactions.expense')}
@@ -319,19 +226,10 @@ export default function AddTransactionModal() {
 
           <TouchableOpacity
             style={[styles.segmentBtn, type === 'income' && styles.activeIncome]}
-            onPress={() => handleSelectType('income')}
+            onPress={() => setType('income')}
           >
             <Text style={[styles.segmentText, type === 'income' && styles.activeText]}>
               {t('transactions.income')}
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.segmentBtn, type === 'transfer' && styles.activeTransfer]}
-            onPress={() => handleSelectType('transfer')}
-          >
-            <Text style={[styles.segmentText, type === 'transfer' && styles.activeText]}>
-              {t('transactions.transfer')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -422,390 +320,274 @@ export default function AddTransactionModal() {
           )}
         </Card>
 
-        {/* Source Account Selector */}
+        {/* Category Selector for Income / Expense (Compact & Expandable with Group Pills) */}
         <Card style={styles.fieldCard}>
-          <Text style={styles.fieldLabel}>
-            {type === 'transfer'
-              ? t('transactions.sourceAccount')
-              : t('transactions.paymentAccount')}
-          </Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipList}>
-            {accounts.map((acc) => {
-              const isSelected = acc.id === selectedAccountId;
-              return (
-                <TouchableOpacity
-                  key={acc.id}
-                  style={[styles.chip, isSelected && styles.selectedChip]}
-                  onPress={() => handleSelectSourceAccount(acc.id)}
-                >
-                  <MaterialIcons
-                    name={(acc.icon as any) || 'account-balance-wallet'}
-                    size={16}
-                    color={isSelected ? '#1A1C2E' : Colors.light.textSecondary}
-                  />
-                  <Text style={[styles.chipText, isSelected && styles.selectedChipText]}>
-                    {acc.name}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </Card>
-
-        {/* Target Account Selector for Transfer */}
-        {type === 'transfer' ? (
-          <Card style={styles.fieldCard}>
-            <Text style={styles.fieldLabel}>{t('transactions.recipientAccount')}</Text>
-            <Text style={styles.fieldHelperText}>{t('transactions.recipientAccountHelp')}</Text>
-            {accounts.some((account) => account.id !== selectedAccountId) ? (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.chipList}
-              >
-                {accounts
-                  .filter((account) => account.id !== selectedAccountId)
-                  .map((acc) => {
-                  const isSelected = acc.id === toAccountId;
-                  return (
-                    <TouchableOpacity
-                      key={acc.id}
-                      style={[styles.chip, isSelected && styles.selectedChip]}
-                      onPress={() => setToAccountId(acc.id)}
-                    >
-                      <MaterialIcons
-                        name={(acc.icon as any) || 'account-balance'}
-                        size={16}
-                        color={isSelected ? '#1A1C2E' : Colors.light.textSecondary}
-                      />
-                      <Text style={[styles.chipText, isSelected && styles.selectedChipText]}>
-                        {acc.name}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-            ) : (
-              <Text style={styles.emptyRecipientText}>
-                {t('transactions.noRecipientAccount')}
-              </Text>
-            )}
-
-            {isAddingRecipientAccount ? (
-              <View style={styles.recipientAccountForm}>
-                <TextInput
-                  style={styles.recipientAccountInput}
-                  placeholder={t('transactions.recipientAccountPlaceholder')}
-                  placeholderTextColor={Colors.light.textSecondary}
-                  value={recipientAccountName}
-                  onChangeText={setRecipientAccountName}
-                  autoFocus
-                />
-                <View style={styles.recipientAccountActions}>
-                  <TouchableOpacity
-                    style={styles.cancelRecipientButton}
-                    onPress={() => {
-                      setRecipientAccountName('');
-                      setIsAddingRecipientAccount(false);
-                    }}
-                  >
-                    <Text style={styles.cancelRecipientButtonText}>{t('common.cancel')}</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.createRecipientButton}
-                    disabled={creatingRecipientAccount || !recipientAccountName.trim()}
-                    onPress={handleCreateRecipientAccount}
-                  >
-                    <Text style={styles.createRecipientButtonText}>
-                      {creatingRecipientAccount ? '...' : t('transactions.createRecipientAccount')}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ) : (
-              <TouchableOpacity
-                style={styles.addRecipientButton}
-                onPress={() => setIsAddingRecipientAccount(true)}
-              >
-                <MaterialIcons name="add" size={16} color={Colors.primaryDark} />
-                <Text style={styles.addRecipientButtonText}>
-                  {t('transactions.addRecipientAccount')}
+          <View style={styles.fieldHeaderRow}>
+            <Text style={styles.fieldLabel}>{t('transactions.category')}</Text>
+            <View style={styles.catHeaderRight}>
+              <TouchableOpacity onPress={() => setIsCategoryExpanded(!isCategoryExpanded)}>
+                <Text style={styles.toggleCatBtnText}>
+                  {isCategoryExpanded
+                    ? t('transactions.collapse')
+                    : t('transactions.changeCategory')}
                 </Text>
               </TouchableOpacity>
-            )}
-          </Card>
-        ) : null}
-
-        {/* Category Selector for Income / Expense (Compact & Expandable with Group Pills) */}
-        {type !== 'transfer' && (
-          <Card style={styles.fieldCard}>
-            <View style={styles.fieldHeaderRow}>
-              <Text style={styles.fieldLabel}>{t('transactions.category')}</Text>
-              <View style={styles.catHeaderRight}>
-                <TouchableOpacity onPress={() => setIsCategoryExpanded(!isCategoryExpanded)}>
-                  <Text style={styles.toggleCatBtnText}>
-                    {isCategoryExpanded
-                      ? t('transactions.collapse')
-                      : t('transactions.changeCategory')}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => router.push('/(modal)/manage-categories' as any)}>
-                  <Text style={styles.manageCategoryLink}>{t('transactions.manage')}</Text>
-                </TouchableOpacity>
-              </View>
+              <TouchableOpacity onPress={() => router.push('/(modal)/manage-categories' as any)}>
+                <Text style={styles.manageCategoryLink}>{t('transactions.manage')}</Text>
+              </TouchableOpacity>
             </View>
+          </View>
 
-            {categories.length === 0 ? (
-              <View style={styles.emptyCatBox}>
-                <Text style={styles.emptyCatText}>{t('transactions.emptyCategories')}</Text>
+          {categories.length === 0 ? (
+            <View style={styles.emptyCatBox}>
+              <Text style={styles.emptyCatText}>{t('transactions.emptyCategories')}</Text>
+              <TouchableOpacity
+                style={styles.seedCatBtn}
+                onPress={async () => {
+                  const db = getDatabase();
+                  await seedStarterCategories(
+                    db,
+                    i18n.resolvedLanguage === 'en' ? 'en' : 'vi'
+                  );
+                  await loadCategories();
+                }}
+              >
+                <MaterialIcons name="auto-awesome" size={16} color="#1A1C2E" />
+                <Text style={styles.seedCatBtnText}>
+                  {t('transactions.createStarterCategories')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.categoryCardBody}>
+              {/* 1. Selected Category Highlight Tile (Compact view) */}
+              {selectedCategory ? (
                 <TouchableOpacity
-                  style={styles.seedCatBtn}
-                  onPress={async () => {
-                    const db = getDatabase();
-                    await seedStarterCategories(
-                      db,
-                      i18n.resolvedLanguage === 'en' ? 'en' : 'vi'
-                    );
-                    await loadCategories();
-                  }}
+                  style={[
+                    styles.selectedCategoryTile,
+                    { borderColor: selectedCategory.color || Colors.primaryDark },
+                  ]}
+                  onPress={() => setIsCategoryExpanded(!isCategoryExpanded)}
+                  activeOpacity={0.8}
                 >
-                  <MaterialIcons name="auto-awesome" size={16} color="#1A1C2E" />
-                  <Text style={styles.seedCatBtnText}>
-                    {t('transactions.createStarterCategories')}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <View style={styles.categoryCardBody}>
-                {/* 1. Selected Category Highlight Tile (Compact view) */}
-                {selectedCategory ? (
-                  <TouchableOpacity
+                  <View
                     style={[
-                      styles.selectedCategoryTile,
-                      { borderColor: selectedCategory.color || Colors.primaryDark },
+                      styles.selectedCatIconBadge,
+                      { backgroundColor: selectedCategory.color || Colors.primaryDark },
                     ]}
-                    onPress={() => setIsCategoryExpanded(!isCategoryExpanded)}
-                    activeOpacity={0.8}
                   >
-                    <View
-                      style={[
-                        styles.selectedCatIconBadge,
-                        { backgroundColor: selectedCategory.color || Colors.primaryDark },
-                      ]}
-                    >
-                      <MaterialIcons
-                        name={(selectedCategory.icon as any) || 'category'}
-                        size={20}
-                        color="#FFFFFF"
+                    <MaterialIcons
+                      name={(selectedCategory.icon as any) || 'category'}
+                      size={20}
+                      color="#FFFFFF"
+                    />
+                  </View>
+
+                  <View style={styles.selectedCatInfo}>
+                    <Text style={styles.selectedCatName}>{selectedCategory.name}</Text>
+                    <Text style={styles.selectedCatGroup}>{selectedCategory.group_name}</Text>
+                  </View>
+
+                  <View style={styles.changeBadge}>
+                    <Text style={styles.changeBadgeText}>
+                      {isCategoryExpanded
+                        ? t('transactions.selected')
+                        : t('transactions.change')}
+                    </Text>
+                    <MaterialIcons
+                      name={isCategoryExpanded ? 'keyboard-arrow-up' : 'keyboard-arrow-down'}
+                      size={18}
+                      color={Colors.primaryDark}
+                    />
+                  </View>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={styles.noCatTile}
+                  onPress={() => setIsCategoryExpanded(true)}
+                >
+                  <MaterialIcons name="add-circle-outline" size={20} color={Colors.light.textSecondary} />
+                  <Text style={styles.noCatText}>{t('transactions.chooseCategory')}</Text>
+                </TouchableOpacity>
+              )}
+
+              {/* 2. Expanded Category Selector Panel with Group Tabs & Search */}
+              {isCategoryExpanded && (
+                <View style={styles.expandedCatPanel}>
+                  {/* Search input if more than 6 categories */}
+                  {categories.length > 6 && (
+                    <View style={styles.catSearchBox}>
+                      <MaterialIcons name="search" size={16} color={Colors.light.textSecondary} />
+                      <TextInput
+                        style={styles.catSearchInput}
+                        placeholder={t('transactions.searchCategory')}
+                        placeholderTextColor={Colors.light.textSecondary}
+                        value={searchCatQuery}
+                        onChangeText={setSearchCatQuery}
                       />
-                    </View>
-
-                    <View style={styles.selectedCatInfo}>
-                      <Text style={styles.selectedCatName}>{selectedCategory.name}</Text>
-                      <Text style={styles.selectedCatGroup}>{selectedCategory.group_name}</Text>
-                    </View>
-
-                    <View style={styles.changeBadge}>
-                      <Text style={styles.changeBadgeText}>
-                        {isCategoryExpanded
-                          ? t('transactions.selected')
-                          : t('transactions.change')}
-                      </Text>
-                      <MaterialIcons
-                        name={isCategoryExpanded ? 'keyboard-arrow-up' : 'keyboard-arrow-down'}
-                        size={18}
-                        color={Colors.primaryDark}
-                      />
-                    </View>
-                  </TouchableOpacity>
-                ) : (
-                  <TouchableOpacity
-                    style={styles.noCatTile}
-                    onPress={() => setIsCategoryExpanded(true)}
-                  >
-                    <MaterialIcons name="add-circle-outline" size={20} color={Colors.light.textSecondary} />
-                    <Text style={styles.noCatText}>{t('transactions.chooseCategory')}</Text>
-                  </TouchableOpacity>
-                )}
-
-                {/* 2. Expanded Category Selector Panel with Group Tabs & Search */}
-                {isCategoryExpanded && (
-                  <View style={styles.expandedCatPanel}>
-                    {/* Search input if more than 6 categories */}
-                    {categories.length > 6 && (
-                      <View style={styles.catSearchBox}>
-                        <MaterialIcons name="search" size={16} color={Colors.light.textSecondary} />
-                        <TextInput
-                          style={styles.catSearchInput}
-                          placeholder={t('transactions.searchCategory')}
-                          placeholderTextColor={Colors.light.textSecondary}
-                          value={searchCatQuery}
-                          onChangeText={setSearchCatQuery}
-                        />
-                        {searchCatQuery ? (
-                          <TouchableOpacity onPress={() => setSearchCatQuery('')}>
-                            <MaterialIcons name="close" size={16} color={Colors.light.textSecondary} />
-                          </TouchableOpacity>
-                        ) : null}
-                      </View>
-                    )}
-
-                    {/* Group Filter Tabs / Pills (Danh mục tổng) */}
-                    {groups.length > 0 && (
-                      <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={styles.groupPillsRow}
-                      >
-                        <TouchableOpacity
-                          style={[
-                            styles.groupPill,
-                            selectedGroupFilter === 'all' && styles.activeGroupPill,
-                          ]}
-                          onPress={() => setSelectedGroupFilter('all')}
-                        >
-                          <MaterialIcons
-                            name="apps"
-                            size={14}
-                            color={selectedGroupFilter === 'all' ? '#1A1C2E' : Colors.light.textSecondary}
-                          />
-                          <Text
-                            style={[
-                              styles.groupPillText,
-                              selectedGroupFilter === 'all' && styles.activeGroupPillText,
-                            ]}
-                          >
-                            {t('transactions.allCategories', { count: categories.length })}
-                          </Text>
+                      {searchCatQuery ? (
+                        <TouchableOpacity onPress={() => setSearchCatQuery('')}>
+                          <MaterialIcons name="close" size={16} color={Colors.light.textSecondary} />
                         </TouchableOpacity>
+                      ) : null}
+                    </View>
+                  )}
 
-                        {groups.map((grp) => {
-                          const count = categories.filter((c) => c.group_id === grp.id).length;
-                          const isSelected = selectedGroupFilter === grp.id;
-                          return (
-                            <TouchableOpacity
-                              key={grp.id}
-                              style={[styles.groupPill, isSelected && styles.activeGroupPill]}
-                              onPress={() => setSelectedGroupFilter(grp.id)}
-                            >
-                              <MaterialIcons
-                                name={(grp.icon as any) || 'folder'}
-                                size={14}
-                                color={isSelected ? '#1A1C2E' : grp.color || Colors.light.textSecondary}
-                              />
-                              <Text
-                                style={[
-                                  styles.groupPillText,
-                                  isSelected && styles.activeGroupPillText,
-                                ]}
-                              >
-                                {grp.name} ({count})
-                              </Text>
-                            </TouchableOpacity>
-                          );
-                        })}
-                      </ScrollView>
-                    )}
+                  {/* Group Filter Tabs / Pills (Danh mục tổng) */}
+                  {groups.length > 0 && (
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={styles.groupPillsRow}
+                    >
+                      <TouchableOpacity
+                        style={[
+                          styles.groupPill,
+                          selectedGroupFilter === 'all' && styles.activeGroupPill,
+                        ]}
+                        onPress={() => setSelectedGroupFilter('all')}
+                      >
+                        <MaterialIcons
+                          name="apps"
+                          size={14}
+                          color={selectedGroupFilter === 'all' ? '#1A1C2E' : Colors.light.textSecondary}
+                        />
+                        <Text
+                          style={[
+                            styles.groupPillText,
+                            selectedGroupFilter === 'all' && styles.activeGroupPillText,
+                          ]}
+                        >
+                          {t('transactions.allCategories', { count: categories.length })}
+                        </Text>
+                      </TouchableOpacity>
 
-                    {/* Quick Inline Custom Category Form */}
-                    {isAddingCustomCat ? (
-                      <View style={styles.quickAddCatBox}>
-                        <View style={styles.quickAddCatHeader}>
-                          <Text style={styles.quickAddCatTitle}>
-                            {t('transactions.addChildTo', {
-                              group:
-                                selectedGroupFilter === 'all'
-                                  ? groups[0]?.name || t('transactions.commonGroup')
-                                  : groups.find((g) => g.id === selectedGroupFilter)?.name || '',
-                            })}
-                          </Text>
-                          <TouchableOpacity onPress={() => setIsAddingCustomCat(false)}>
-                            <MaterialIcons name="close" size={18} color={Colors.light.textSecondary} />
-                          </TouchableOpacity>
-                        </View>
-                        <View style={styles.quickAddCatInputRow}>
-                          <TextInput
-                            style={styles.quickAddCatInput}
-                            placeholder={t('transactions.childPlaceholder')}
-                            placeholderTextColor={Colors.light.textSecondary}
-                            value={customCatName}
-                            onChangeText={setCustomCatName}
-                            autoFocus
-                          />
+                      {groups.map((grp) => {
+                        const count = categories.filter((c) => c.group_id === grp.id).length;
+                        const isSelected = selectedGroupFilter === grp.id;
+                        return (
                           <TouchableOpacity
-                            style={styles.quickAddCatSubmitBtn}
-                            disabled={creatingCustomCat || !customCatName.trim()}
-                            onPress={handleCreateCustomCat}
+                            key={grp.id}
+                            style={[styles.groupPill, isSelected && styles.activeGroupPill]}
+                            onPress={() => setSelectedGroupFilter(grp.id)}
                           >
-                            <Text style={styles.quickAddCatSubmitText}>
-                              {creatingCustomCat ? '...' : t('categories.add')}
+                            <MaterialIcons
+                              name={(grp.icon as any) || 'folder'}
+                              size={14}
+                              color={isSelected ? '#1A1C2E' : grp.color || Colors.light.textSecondary}
+                            />
+                            <Text
+                              style={[
+                                styles.groupPillText,
+                                isSelected && styles.activeGroupPillText,
+                              ]}
+                            >
+                              {grp.name} ({count})
                             </Text>
                           </TouchableOpacity>
-                        </View>
+                        );
+                      })}
+                    </ScrollView>
+                  )}
+
+                  {/* Quick Inline Custom Category Form */}
+                  {isAddingCustomCat ? (
+                    <View style={styles.quickAddCatBox}>
+                      <View style={styles.quickAddCatHeader}>
+                        <Text style={styles.quickAddCatTitle}>
+                          {t('transactions.addChildTo', {
+                            group:
+                              selectedGroupFilter === 'all'
+                                ? groups[0]?.name || t('transactions.commonGroup')
+                                : groups.find((g) => g.id === selectedGroupFilter)?.name || '',
+                          })}
+                        </Text>
+                        <TouchableOpacity onPress={() => setIsAddingCustomCat(false)}>
+                          <MaterialIcons name="close" size={18} color={Colors.light.textSecondary} />
+                        </TouchableOpacity>
                       </View>
-                    ) : null}
-
-                    {/* Category Grid Items */}
-                    <ScrollView
-                      style={styles.catGridScroll}
-                      nestedScrollEnabled
-                      showsVerticalScrollIndicator={false}
-                    >
-                      <View style={styles.categoryGridContainer}>
-                        {filteredCategories.map((cat) => {
-                          const isSelected = cat.id === selectedCategoryId;
-                          const catColor = cat.color || Colors.primaryDark;
-                          return (
-                            <TouchableOpacity
-                              key={cat.id}
-                              style={[
-                                styles.categoryGridItem,
-                                isSelected && {
-                                  backgroundColor: catColor,
-                                  borderColor: catColor,
-                                },
-                              ]}
-                              onPress={() => {
-                                setSelectedCategoryId(cat.id);
-                                setIsCategoryExpanded(false);
-                              }}
-                            >
-                              <MaterialIcons
-                                name={(cat.icon as any) || 'category'}
-                                size={16}
-                                color={isSelected ? '#FFFFFF' : catColor}
-                              />
-                              <Text
-                                style={[
-                                  styles.categoryGridText,
-                                  isSelected && styles.selectedCategoryChipText,
-                                ]}
-                                numberOfLines={1}
-                              >
-                                {cat.name}
-                              </Text>
-                            </TouchableOpacity>
-                          );
-                        })}
-
-                        {/* Button to add custom category */}
+                      <View style={styles.quickAddCatInputRow}>
+                        <TextInput
+                          style={styles.quickAddCatInput}
+                          placeholder={t('transactions.childPlaceholder')}
+                          placeholderTextColor={Colors.light.textSecondary}
+                          value={customCatName}
+                          onChangeText={setCustomCatName}
+                          autoFocus
+                        />
                         <TouchableOpacity
-                          style={styles.addCustomCatBtn}
-                          onPress={() => setIsAddingCustomCat(true)}
+                          style={styles.quickAddCatSubmitBtn}
+                          disabled={creatingCustomCat || !customCatName.trim()}
+                          onPress={handleCreateCustomCat}
                         >
-                          <MaterialIcons name="add" size={16} color={Colors.primaryDark} />
-                          <Text style={styles.addCustomCatBtnText}>
-                            {t('transactions.addChild')}
+                          <Text style={styles.quickAddCatSubmitText}>
+                            {creatingCustomCat ? '...' : t('categories.add')}
                           </Text>
                         </TouchableOpacity>
                       </View>
-                    </ScrollView>
-                  </View>
-                )}
-              </View>
-            )}
-          </Card>
-        )}
+                    </View>
+                  ) : null}
+
+                  {/* Category Grid Items */}
+                  <ScrollView
+                    style={styles.catGridScroll}
+                    nestedScrollEnabled
+                    showsVerticalScrollIndicator={false}
+                  >
+                    <View style={styles.categoryGridContainer}>
+                      {filteredCategories.map((cat) => {
+                        const isSelected = cat.id === selectedCategoryId;
+                        const catColor = cat.color || Colors.primaryDark;
+                        return (
+                          <TouchableOpacity
+                            key={cat.id}
+                            style={[
+                              styles.categoryGridItem,
+                              isSelected && {
+                                backgroundColor: catColor,
+                                borderColor: catColor,
+                              },
+                            ]}
+                            onPress={() => {
+                              setSelectedCategoryId(cat.id);
+                              setIsCategoryExpanded(false);
+                            }}
+                          >
+                            <MaterialIcons
+                              name={(cat.icon as any) || 'category'}
+                              size={16}
+                              color={isSelected ? '#FFFFFF' : catColor}
+                            />
+                            <Text
+                              style={[
+                                styles.categoryGridText,
+                                isSelected && styles.selectedCategoryChipText,
+                              ]}
+                              numberOfLines={1}
+                            >
+                              {cat.name}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+
+                      {/* Button to add custom category */}
+                      <TouchableOpacity
+                        style={styles.addCustomCatBtn}
+                        onPress={() => setIsAddingCustomCat(true)}
+                      >
+                        <MaterialIcons name="add" size={16} color={Colors.primaryDark} />
+                        <Text style={styles.addCustomCatBtnText}>
+                          {t('transactions.addChild')}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </ScrollView>
+                </View>
+              )}
+            </View>
+          )}
+        </Card>
 
         {/* Note Input with quick suggestions */}
         <Card style={styles.fieldCard}>
@@ -828,6 +610,7 @@ export default function AddTransactionModal() {
           onPress={handleSave}
           variant="primary"
           loading={loading}
+          disabled={!activeAccount}
         />
       </View>
     </View>
@@ -885,9 +668,6 @@ const styles = StyleSheet.create({
   activeIncome: {
     backgroundColor: '#E8F5E9',
   },
-  activeTransfer: {
-    backgroundColor: '#E3F2FD',
-  },
   activeText: {
     color: Colors.light.text,
     fontWeight: '700',
@@ -935,11 +715,6 @@ const styles = StyleSheet.create({
     color: Colors.light.textSecondary,
     textTransform: 'uppercase',
   },
-  fieldHelperText: {
-    fontSize: 12,
-    lineHeight: 17,
-    color: Colors.light.textSecondary,
-  },
   manageCategoryLink: {
     fontSize: 12,
     fontWeight: '700',
@@ -977,97 +752,6 @@ const styles = StyleSheet.create({
     color: Colors.light.text,
     borderWidth: 1,
     borderColor: Colors.light.border,
-  },
-  chipList: {
-    gap: 8,
-    paddingVertical: 2,
-  },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 10,
-    backgroundColor: Colors.light.backgroundElement,
-  },
-  selectedChip: {
-    backgroundColor: Colors.primary,
-  },
-  chipText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.light.text,
-  },
-  selectedChipText: {
-    color: '#1A1C2E',
-    fontWeight: '700',
-  },
-  emptyRecipientText: {
-    paddingVertical: 4,
-    fontSize: 13,
-    color: Colors.light.textSecondary,
-  },
-  addRecipientButton: {
-    minHeight: 40,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: Colors.primaryDark,
-    borderRadius: 10,
-  },
-  addRecipientButtonText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: Colors.primaryDark,
-  },
-  recipientAccountForm: {
-    padding: 12,
-    gap: 10,
-    borderWidth: 1.5,
-    borderColor: Colors.primary,
-    borderRadius: 12,
-    backgroundColor: Colors.light.backgroundElement,
-  },
-  recipientAccountInput: {
-    minHeight: 42,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-    borderRadius: 9,
-    backgroundColor: Colors.light.surface,
-    fontSize: 14,
-    color: Colors.light.text,
-  },
-  recipientAccountActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 8,
-  },
-  cancelRecipientButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: 8,
-  },
-  cancelRecipientButtonText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: Colors.light.textSecondary,
-  },
-  createRecipientButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: 8,
-    backgroundColor: Colors.primary,
-  },
-  createRecipientButtonText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#1A1C2E',
   },
   categoryChip: {
     flexDirection: 'row',

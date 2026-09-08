@@ -1,6 +1,7 @@
 import { getDatabase } from '@/database/database';
 import {
   AutomationOccurrenceRow,
+  EntryType,
   RecurringRuleRow,
 } from '@/database/types';
 import { createTransaction } from '@/features/transactions/transaction-queries';
@@ -29,13 +30,14 @@ export interface PendingOccurrenceWithRule extends AutomationOccurrenceRow {
  */
 export async function getAllRecurringRules(): Promise<RecurringRuleWithDetails[]> {
   const db = getDatabase();
-  return await db.getAllAsync<RecurringRuleWithDetails>(
+  const rules = await db.getAllAsync<RecurringRuleWithDetails>(
     `SELECT rr.*, a.name as account_name, c.name as category_name
      FROM recurring_rules rr
      JOIN accounts a ON a.id = rr.account_id
      LEFT JOIN categories c ON c.id = rr.category_id
      ORDER BY rr.created_at DESC;`
   );
+  return rules.filter((rule) => rule.type !== 'transfer');
 }
 
 /**
@@ -43,11 +45,10 @@ export async function getAllRecurringRules(): Promise<RecurringRuleWithDetails[]
  */
 export async function createRecurringRule(data: {
   name: string;
-  type: 'income' | 'expense' | 'transfer';
+  type: EntryType;
   amount: number;
   currency: string;
   accountId: string;
-  toAccountId?: string | null;
   categoryId?: string | null;
   frequency: 'daily' | 'weekly' | 'monthly' | 'yearly';
   interval?: number;
@@ -58,6 +59,9 @@ export async function createRecurringRule(data: {
   endDate?: string | null;
   behavior?: 'auto_post' | 'confirm';
 }): Promise<RecurringRuleRow> {
+  if (data.type !== 'income' && data.type !== 'expense') {
+    throw new Error('Transfers are no longer supported.');
+  }
   const db = getDatabase();
   const id = generateUUID();
   const now = new Date().toISOString();
@@ -75,7 +79,7 @@ export async function createRecurringRule(data: {
       data.amount,
       data.currency,
       data.accountId,
-      data.toAccountId || null,
+      null,
       data.categoryId || null,
       data.frequency,
       data.interval ?? 1,
@@ -103,7 +107,7 @@ export async function createRecurringRule(data: {
  */
 export async function getPendingOccurrences(): Promise<PendingOccurrenceWithRule[]> {
   const db = getDatabase();
-  return await db.getAllAsync<PendingOccurrenceWithRule>(
+  const occurrences = await db.getAllAsync<PendingOccurrenceWithRule>(
     `SELECT ao.*, rr.name as rule_name, rr.type as rule_type, rr.amount as rule_amount,
             rr.currency as rule_currency, rr.account_id, a.name as account_name,
             rr.category_id, c.name as category_name
@@ -114,6 +118,7 @@ export async function getPendingOccurrences(): Promise<PendingOccurrenceWithRule
      WHERE ao.status = 'pending'
      ORDER BY ao.scheduled_date ASC;`
   );
+  return occurrences.filter((occurrence) => occurrence.rule_type !== 'transfer');
 }
 
 /**
@@ -131,16 +136,15 @@ export async function confirmOccurrence(occurrenceId: string): Promise<void> {
     `SELECT * FROM recurring_rules WHERE id = ?;`,
     [occurrence.recurring_rule_id]
   );
-  if (!rule) return;
+  if (!rule || rule.type === 'transfer') return;
 
   await db.withTransactionAsync(async () => {
     // 1. Create financial transaction
     const tx = await createTransaction({
-      type: rule.type as any,
+      type: rule.type as EntryType,
       amount: rule.amount,
       currency: rule.currency,
       accountId: rule.account_id,
-      toAccountId: rule.to_account_id || undefined,
       categoryId: rule.category_id || undefined,
       recurringRuleId: rule.id,
       occurrenceId: occurrence.id,
@@ -189,6 +193,7 @@ export async function processRecurringCatchUp(
   let processedCount = 0;
 
   for (const rule of activeRules) {
+    if (rule.type === 'transfer') continue;
     const fromDate = rule.last_processed_date
       ? formatDateISO(new Date(new Date(rule.last_processed_date).getTime() + 86400000))
       : rule.start_date;
@@ -224,11 +229,10 @@ export async function processRecurringCatchUp(
         // Auto-post: create confirmed transaction & marked occurrence
         await db.withTransactionAsync(async () => {
           const tx = await createTransaction({
-            type: rule.type as any,
+            type: rule.type as EntryType,
             amount: rule.amount,
             currency: rule.currency,
             accountId: rule.account_id,
-            toAccountId: rule.to_account_id || undefined,
             categoryId: rule.category_id || undefined,
             recurringRuleId: rule.id,
             occurrenceId,

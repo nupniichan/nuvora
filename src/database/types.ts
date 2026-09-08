@@ -44,7 +44,9 @@ export interface CategoryRow {
   created_at: string;
 }
 
-export type TransactionType = 'income' | 'expense' | 'transfer';
+export type EntryType = 'income' | 'expense';
+// Keep transfer records readable in existing databases and backups.
+export type TransactionType = EntryType | 'transfer';
 export type TransactionStatus = 'confirmed' | 'planned';
 
 export interface TransactionRow {

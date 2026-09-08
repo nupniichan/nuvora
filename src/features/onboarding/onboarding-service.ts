@@ -2,7 +2,7 @@ import { getDatabase } from '@/database/database';
 import { seedStarterCategories } from '@/features/categories/starter-templates';
 import { setBiometricsEnabled, unlockWithPassword } from '@/services/security/auth-service';
 import { initializeKeyEnvelope } from '@/services/security/key-manager';
-import { generateUUID } from '@/shared/uuid';
+import { getDefaultAccount } from '@/features/accounts/account-queries';
 
 export interface OnboardingConfig {
   masterPassword: string;
@@ -43,11 +43,6 @@ export async function completeOnboarding(config: OnboardingConfig): Promise<void
     await seedStarterCategories(db, config.language);
   }
 
-  // 6. Create default primary cash account
-  const accountName = config.language === 'vi' ? 'Tiền mặt' : 'Cash';
-  await db.runAsync(
-    `INSERT INTO accounts (id, name, type, currency, balance, icon, color, sort_order, is_archived, created_at, updated_at)
-     VALUES (?, ?, 'cash', ?, 0, 'account-balance-wallet', '#CCCCFF', 1, 0, ?, ?);`,
-    [generateUUID(), accountName, config.currency, now, now]
-  );
+  // 6. Initialize the same account used by transaction and recurring forms.
+  await getDefaultAccount();
 }

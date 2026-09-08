@@ -14,8 +14,8 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { MoneyInput } from '@/components/ui/money-input';
 import { Colors } from '@/constants/theme';
-import { AccountRow, TransactionType } from '@/database/types';
-import { createAccount, getAllAccounts } from '@/features/accounts/account-queries';
+import { AccountRow, EntryType } from '@/database/types';
+import { getDefaultAccount } from '@/features/accounts/account-queries';
 import { CategoryWithGroup, getAllCategories } from '@/features/categories/category-queries';
 import { createRecurringRule, processRecurringCatchUp } from '@/features/recurring/recurring-queries';
 import { useSafeBack } from '@/hooks/use-safe-back';
@@ -26,10 +26,9 @@ export default function ManageRecurringModal() {
   const closeModal = useSafeBack('/(main)/more');
 
   const [name, setName] = useState('');
-  const [type, setType] = useState<TransactionType>('expense');
+  const [type, setType] = useState<EntryType>('expense');
   const [amountMinor, setAmountMinor] = useState<number>(0);
-  const [accounts, setAccounts] = useState<AccountRow[]>([]);
-  const [selectedAccountId, setSelectedAccountId] = useState<string>('');
+  const [activeAccount, setActiveAccount] = useState<AccountRow | null>(null);
   const [categories, setCategories] = useState<CategoryWithGroup[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
 
@@ -41,34 +40,22 @@ export default function ManageRecurringModal() {
 
   useEffect(() => {
     async function loadData() {
-      let accs = await getAllAccounts();
-      if (accs.length === 0) {
-        const defaultAcc = await createAccount({
-          name: t('accounts.typeCash'),
-          type: 'cash',
-          currency: 'VND',
-          initialBalance: 0,
-        });
-        accs = [defaultAcc];
-      }
-      setAccounts(accs);
-      if (accs.length > 0) {
-        setSelectedAccountId(accs[0].id);
-      }
-
-      const cats = await getAllCategories(type === 'transfer' ? undefined : type);
+      const cats = await getAllCategories(type);
       setCategories(cats);
       if (cats.length > 0) {
         setSelectedCategoryId(cats[0].id);
       }
     }
-    void loadData();
+    void loadData().catch(() => setError(t('recurring.saveError')));
   }, [t, type]);
 
-  const activeAccount = accounts.find((a) => a.id === selectedAccountId);
+  useEffect(() => {
+    getDefaultAccount().then(setActiveAccount).catch(() => setError(t('recurring.saveError')));
+  }, [t]);
   const currency = activeAccount ? activeAccount.currency : 'VND';
 
   const handleSave = async () => {
+    if (!activeAccount) return;
     if (!name.trim()) {
       setError(t('recurring.ruleNameRequired'));
       return;
@@ -77,11 +64,6 @@ export default function ManageRecurringModal() {
       setError(t('recurring.amountRequired'));
       return;
     }
-    if (!selectedAccountId) {
-      setError(t('recurring.accountRequired'));
-      return;
-    }
-
     setLoading(true);
     setError(null);
     try {
@@ -91,8 +73,8 @@ export default function ManageRecurringModal() {
         type,
         amount: amountMinor,
         currency,
-        accountId: selectedAccountId,
-        categoryId: type !== 'transfer' ? (selectedCategoryId || null) : null,
+        accountId: activeAccount.id,
+        categoryId: selectedCategoryId || null,
         frequency,
         interval: 1,
         dayOfMonth: frequency === 'monthly' ? dayOfMonth : null,
@@ -163,32 +145,6 @@ export default function ManageRecurringModal() {
           valueMinor={amountMinor}
           onChangeMinor={setAmountMinor}
         />
-
-        {/* Account Selector */}
-        <Card style={styles.fieldCard}>
-          <Text style={styles.fieldLabel}>{t('transactions.account')}</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipList}>
-            {accounts.map((acc) => {
-              const isSelected = acc.id === selectedAccountId;
-              return (
-                <TouchableOpacity
-                  key={acc.id}
-                  style={[styles.chip, isSelected && styles.selectedChip]}
-                  onPress={() => setSelectedAccountId(acc.id)}
-                >
-                  <MaterialIcons
-                    name={(acc.icon as any) || 'account-balance-wallet'}
-                    size={14}
-                    color={isSelected ? '#1A1C2E' : Colors.light.textSecondary}
-                  />
-                  <Text style={[styles.chipText, isSelected && styles.selectedChipText]}>
-                    {acc.name}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </Card>
 
         {/* Category Selector */}
         {categories.length > 0 && (
@@ -298,6 +254,7 @@ export default function ManageRecurringModal() {
           onPress={handleSave}
           variant="primary"
           loading={loading}
+          disabled={!activeAccount}
           style={styles.saveBtn}
         />
       </ScrollView>
