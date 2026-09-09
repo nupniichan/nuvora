@@ -108,8 +108,8 @@ export function CategoryBreakdownChart({
 
               <View style={styles.breakdownRight}>
                 <Text style={styles.legendAmount}>{formatMoney(item.amount, currency)}</Text>
-                <View style={[styles.pctBadge, { backgroundColor: Colors.primaryFaded }]}>
-                  <Text style={[styles.pctText, { color: Colors.primaryStrong }]}>{pct}%</Text>
+                <View style={[styles.pctBadge, { backgroundColor: Colors.light.backgroundElement }]}>
+                  <Text style={[styles.pctText, { color: Colors.light.textSecondary }]}>{pct}%</Text>
                 </View>
               </View>
             </TouchableOpacity>
@@ -150,7 +150,7 @@ export function CashflowComparisonChart({
         <View
           style={[
             styles.savingsBadge,
-            { backgroundColor: savingsRate >= 0 ? '#E8F5E9' : '#FFEBEE' },
+            { backgroundColor: savingsRate >= 0 ? Colors.light.backgroundElement : Colors.expenseLight },
           ]}
         >
           <MaterialIcons
@@ -246,11 +246,11 @@ export function SpendingLimitGauge({
   const percent = limitAmount > 0 ? Math.round((spentAmount / limitAmount) * 100) : 0;
   const isOverLimit = spentAmount > limitAmount;
 
-  let statusColor: string = Colors.income; // Green < 80%
+  let statusColor: string = Colors.primaryDark;
   if (percent >= 100) {
-    statusColor = Colors.expense; // Red > 100%
+    statusColor = Colors.expense;
   } else if (percent >= 80) {
-    statusColor = '#F59E0B'; // Yellow/Amber 80-100%
+    statusColor = Colors.warning;
   }
 
   const barWidth = Math.min(100, percent);
@@ -262,13 +262,13 @@ export function SpendingLimitGauge({
           <View
             style={[
               styles.gaugeIconBadge,
-              { backgroundColor: categoryColor || Colors.primaryDark },
+              { backgroundColor: Colors.light.backgroundElement },
             ]}
           >
             <MaterialIcons
               name={(categoryIcon as any) || 'category'}
               size={14}
-              color="#FFFFFF"
+              color={categoryColor || Colors.primaryDark}
             />
           </View>
           <Text style={styles.gaugeName} numberOfLines={1}>

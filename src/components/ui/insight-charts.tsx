@@ -54,7 +54,7 @@ export function DailyExpenseChart({ days, currency }: { days: DailySpendingPoint
 
   return (
     <Card style={styles.card}>
-      <View style={styles.header}>
+      <View style={styles.dailyHeader}>
         <View style={styles.heading}>
           <Text style={styles.title}>{t('charts.dailySpending')}</Text>
           <Text style={styles.hint}>{t('charts.recordedIn', { currency })}</Text>
@@ -69,12 +69,22 @@ export function DailyExpenseChart({ days, currency }: { days: DailySpendingPoint
       </View>
       <View style={styles.dailyTotals}>
         <View style={styles.dailyMetric}>
-          <View style={[styles.dot, { backgroundColor: Colors.expense }]} />
-          <View><Text style={styles.hint}>{t('charts.expense')}</Text><Text style={[styles.dailyTotalValue, { color: Colors.expense }]}>-{formatMoney(expenseTotal, currency)}</Text></View>
+          <View style={styles.dailyMetricLabel}>
+            <View style={[styles.dot, { backgroundColor: Colors.expense }]} />
+            <Text style={styles.hint}>{t('charts.expense')}</Text>
+          </View>
+          <Text style={[styles.dailyTotalValue, { color: Colors.expense }]}>
+            -{formatMoney(expenseTotal, currency, locale)}
+          </Text>
         </View>
         <View style={styles.dailyMetric}>
-          <View style={[styles.dot, { backgroundColor: Colors.income }]} />
-          <View><Text style={styles.hint}>{t('charts.income')}</Text><Text style={[styles.dailyTotalValue, { color: Colors.income }]}>+{formatMoney(incomeTotal, currency)}</Text></View>
+          <View style={styles.dailyMetricLabel}>
+            <View style={[styles.dot, { backgroundColor: Colors.income }]} />
+            <Text style={styles.hint}>{t('charts.income')}</Text>
+          </View>
+          <Text style={[styles.dailyTotalValue, { color: Colors.income }]}>
+            +{formatMoney(incomeTotal, currency, locale)}
+          </Text>
         </View>
       </View>
       <Text style={styles.hint}>{points.length ? `${dateLabel(points[0].date)} – ${dateLabel(points[points.length - 1].date)}` : ''}</Text>
@@ -83,7 +93,7 @@ export function DailyExpenseChart({ days, currency }: { days: DailySpendingPoint
           <View style={styles.axisHeader}><Text style={styles.axisText}>{compactMoney(maximum, currency, locale)}</Text><Text style={styles.axisText}>{currency}</Text></View>
           <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
           <Svg width="100%" height={170} viewBox="0 0 300 158">
-            <Defs><LinearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1"><Stop offset="0" stopColor={Colors.expense} stopOpacity={0.3} /><Stop offset="1" stopColor={Colors.expense} stopOpacity={0.03} /></LinearGradient></Defs>
+            <Defs><LinearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1"><Stop offset="0" stopColor={Colors.expense} stopOpacity={0.12} /><Stop offset="1" stopColor={Colors.expense} stopOpacity={0.01} /></LinearGradient></Defs>
             {[20, 81, 142].map((y) => <Line key={y} x1="10" x2="290" y1={y} y2={y} stroke={Colors.light.border} strokeDasharray="4 5" />)}
             <Path d={`${expenseLine} L${expenseCoordinates[expenseCoordinates.length - 1].x},142 L${expenseCoordinates[0].x},142 Z`} fill={`url(#${gradientId})`} />
             <Path d={expenseLine} fill="none" stroke={Colors.expense} strokeWidth={3} strokeLinejoin="round" />
@@ -137,7 +147,7 @@ export function MonthlyCashflowChart({ months, currency }: { months: MonthlyCash
         <Text style={styles.hint}>{currency}</Text>
       </View>
       <View style={styles.legend}>
-        <View style={styles.legendItem}><View style={[styles.dot, { backgroundColor: Colors.primaryDark }]} /><Text style={styles.hint}>{t('charts.income')}</Text></View>
+        <View style={styles.legendItem}><View style={[styles.dot, { backgroundColor: Colors.income }]} /><Text style={styles.hint}>{t('charts.income')}</Text></View>
         <View style={styles.legendItem}><View style={[styles.dot, { backgroundColor: Colors.expense }]} /><Text style={styles.hint}>{t('charts.expense')}</Text></View>
       </View>
       {maximum === 0 ? <EmptyChart /> : (
@@ -148,7 +158,7 @@ export function MonthlyCashflowChart({ months, currency }: { months: MonthlyCash
             {months.map((point, index) => (
               <TouchableOpacity key={`${point.year}-${point.month}`} accessibilityRole="button" accessibilityLabel={`${monthLabel(point)}, ${t('charts.income')}: ${formatMoney(point.income, currency)}, ${t('charts.expense')}: ${formatMoney(point.expense, currency)}`} accessibilityState={{ selected: index === selection }} style={styles.monthColumn} onPress={() => setSelection(index)} activeOpacity={0.75}>
                 <View style={[styles.monthBars, index === selection && styles.selectedBars]}>
-                  <View style={[styles.monthBar, { height: point.income / maximum * 130, backgroundColor: Colors.primaryDark }]} />
+                  <View style={[styles.monthBar, { height: point.income / maximum * 130, backgroundColor: Colors.income }]} />
                   <View style={[styles.monthBar, { height: point.expense / maximum * 130, backgroundColor: Colors.expense }]} />
                 </View>
                 <Text style={[styles.monthLabel, index === selection && styles.activeMonthLabel]}>{point.month}</Text>
@@ -171,24 +181,26 @@ export function MonthlyCashflowChart({ months, currency }: { months: MonthlyCash
 const styles = StyleSheet.create({
   card: { padding: 18, gap: 12 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 },
+  dailyHeader: { gap: 14 },
   heading: { gap: 4 },
   title: { fontSize: 16, fontWeight: '800', color: Colors.light.text },
   hint: { fontSize: 12, lineHeight: 18, color: Colors.light.textSecondary },
-  dailyTotals: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 22 },
-  dailyMetric: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  dailyTotalValue: { fontSize: 18, fontWeight: '800', fontVariant: ['tabular-nums'] },
+  dailyTotals: { flexDirection: 'row', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 },
+  dailyMetric: { flexGrow: 1, flexBasis: 140, minWidth: 0, alignItems: 'center', gap: 4 },
+  dailyMetricLabel: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  dailyTotalValue: { alignSelf: 'stretch', textAlign: 'center', fontSize: 18, lineHeight: 26, fontWeight: '700', fontVariant: ['tabular-nums'] },
   toggle: { flexDirection: 'row', backgroundColor: Colors.light.backgroundElement, borderRadius: 12, padding: 3 },
-  toggleButton: { minHeight: 38, paddingHorizontal: 12, justifyContent: 'center', borderRadius: 10 },
+  toggleButton: { flex: 1, minWidth: 0, minHeight: 44, paddingHorizontal: 12, paddingVertical: 8, alignItems: 'center', justifyContent: 'center', borderRadius: 10 },
   toggleActive: { backgroundColor: Colors.primary },
   toggleText: { fontSize: 12, fontWeight: '600', color: Colors.light.textSecondary },
   toggleTextActive: { color: Colors.primaryStrong },
   axisHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   axisText: { fontSize: 11, color: Colors.light.textSecondary },
-  detail: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, backgroundColor: Colors.primaryFaded, borderRadius: 14, padding: 4 },
+  detail: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, backgroundColor: Colors.light.backgroundElement, borderRadius: 14, padding: 4 },
   arrow: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   detailText: { alignItems: 'center', gap: 2, flex: 1 },
   selectedValues: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 12 },
-  detailAmount: { fontSize: 15, fontWeight: '700', color: Colors.primaryStrong },
+  detailAmount: { fontSize: 15, fontWeight: '700', color: Colors.light.text },
   empty: { paddingVertical: 28, alignItems: 'center', gap: 14 },
   emptyIcon: { width: 64, height: 64, borderRadius: 22, backgroundColor: Colors.primaryLight, justifyContent: 'center', alignItems: 'center' },
   legend: { flexDirection: 'row', flexWrap: 'wrap', gap: 18 },
@@ -203,7 +215,7 @@ const styles = StyleSheet.create({
   monthBar: { width: '28%', maxWidth: 24, borderTopLeftRadius: 4, borderTopRightRadius: 4 },
   monthLabel: { textAlign: 'center', fontSize: 12, color: Colors.light.textSecondary },
   activeMonthLabel: { color: Colors.primaryStrong, fontWeight: '800' },
-  monthDetails: { backgroundColor: Colors.primaryFaded, borderRadius: 14, padding: 14, gap: 8 },
+  monthDetails: { backgroundColor: Colors.light.backgroundElement, borderRadius: 14, padding: 14, gap: 8 },
   valueRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6 },
-  value: { fontSize: 14, fontWeight: '700', color: Colors.primaryStrong, fontVariant: ['tabular-nums'] },
+  value: { fontSize: 14, fontWeight: '700', color: Colors.light.text, fontVariant: ['tabular-nums'] },
 });
