@@ -3,6 +3,7 @@ import { getDefaultAccount } from '@/features/accounts/account-queries';
 import { createTransaction } from '@/features/transactions/transaction-queries';
 import { completeGoal, createGoal, getGoalById, getGoalFunds } from '@/features/goals/financial-goals';
 import { createEncryptedBackup, restoreFromEncryptedBackup } from '../backup-service';
+import { getMonthlyLimit, saveMonthlyLimit } from '@/features/budgets/monthly-limits';
 
 jest.mock('@/database/database', () => jest.requireActual('@/database/database.web'));
 jest.mock('@/shared/uuid', () => { let nextId = 0; return { generateUUID: () => String(++nextId) }; });
@@ -18,6 +19,20 @@ beforeEach(async () => {
   await closeDatabase();
 });
 afterEach(() => jest.useRealTimers());
+
+it('restores automatic monthly limits, individual overrides and future changes', async () => {
+  await saveMonthlyLimit(2026, 9, 'VND', 100, 'recurring');
+  await saveMonthlyLimit(2026, 10, 'VND', 200, 'month');
+  await saveMonthlyLimit(2026, 11, 'VND', null, 'month');
+  await saveMonthlyLimit(2027, 1, 'VND', 300, 'recurring');
+  const backup = await createEncryptedBackup('test');
+  await closeDatabase();
+  await restoreFromEncryptedBackup(backup, 'test');
+  expect((await getMonthlyLimit(2026, 9, 'VND')).limit).toBe(100);
+  expect((await getMonthlyLimit(2026, 10, 'VND')).limit).toBe(200);
+  expect((await getMonthlyLimit(2026, 11, 'VND')).limit).toBeNull();
+  expect((await getMonthlyLimit(2027, 2, 'VND')).limit).toBe(300);
+});
 
 it('restores completed goals, their expense links and balance without spending again', async () => {
   const account = await getDefaultAccount();
