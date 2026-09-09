@@ -2,6 +2,7 @@ import { getDatabase, withGoalTransaction } from '@/database/database';
 import { runGoalWrite } from '@/database/goal-write';
 import { EntryType, TransactionRow, TransactionType } from '@/database/types';
 import { generateUUID } from '@/shared/uuid';
+import { requireMonthlyLimitApproval } from '@/features/budgets/monthly-limits';
 
 export interface TransactionFilter {
   accountId?: string;
@@ -53,7 +54,11 @@ export async function getTransactionById(id: string): Promise<TransactionRow | n
 /**
  * Creates a transaction and updates involved account balances atomically
  */
-export async function createTransaction(data: {
+export function createTransaction(data: Parameters<typeof createTransactionOnce>[0]): Promise<TransactionRow> {
+  return runGoalWrite(() => createTransactionOnce(data));
+}
+
+async function createTransactionOnce(data: {
   type: EntryType;
   amount: number; // Integer minor units
   currency: string;
@@ -63,15 +68,21 @@ export async function createTransaction(data: {
   occurrenceId?: string;
   note?: string;
   date: string; // ISO date YYYY-MM-DD
+  monthlyLimitApproval?: string;
 }): Promise<TransactionRow> {
   if (data.type !== 'income' && data.type !== 'expense') {
     throw new Error('Transfers are no longer supported.');
   }
   const db = getDatabase();
+  if (data.occurrenceId) {
+    const existing = await db.getFirstAsync<TransactionRow>('SELECT * FROM transactions WHERE occurrence_id = ?;', [data.occurrenceId]);
+    if (existing) return existing;
+  }
   const id = generateUUID();
   const now = new Date().toISOString();
 
   await db.withTransactionAsync(async () => {
+    await requireMonthlyLimitApproval({ ...data, operation: `create:${data.accountId}` }, data.monthlyLimitApproval);
     // Insert transaction
     await db.runAsync(
       `INSERT INTO transactions (id, type, amount, currency, account_id, to_account_id, category_id, recurring_rule_id, occurrence_id, note, date, status, created_at, updated_at)
@@ -103,6 +114,12 @@ export async function createTransaction(data: {
       await db.runAsync(
         'UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?;',
         [data.amount, now, data.accountId]
+      );
+    }
+    if (data.occurrenceId) {
+      await db.runAsync(
+        "UPDATE automation_occurrences SET status = 'confirmed', transaction_id = ?, processed_at = ? WHERE id = ?;",
+        [id, now, data.occurrenceId]
       );
     }
   });
@@ -170,7 +187,11 @@ export async function deleteTransaction(id: string): Promise<void> {
 /**
  * Updates an existing transaction and adjusts account balances accordingly
  */
-export async function updateTransaction(
+export function updateTransaction(id: string, data: Parameters<typeof updateTransactionOnce>[1]): Promise<TransactionRow> {
+  return runGoalWrite(() => updateTransactionOnce(id, data));
+}
+
+async function updateTransactionOnce(
   id: string,
   data: {
     type?: EntryType;
@@ -180,6 +201,7 @@ export async function updateTransaction(
     categoryId?: string | null;
     note?: string | null;
     date?: string;
+    monthlyLimitApproval?: string;
   }
 ): Promise<TransactionRow> {
   if (isGoalCompletionTransaction(id)) throw new Error('goalCompletionLocked');
@@ -194,6 +216,11 @@ export async function updateTransaction(
   const now = new Date().toISOString();
 
   await db.withTransactionAsync(async () => {
+    await requireMonthlyLimitApproval({
+      type: data.type ?? oldTx.type, date: data.date ?? oldTx.date,
+      currency: data.currency ?? oldTx.currency, amount: data.amount ?? oldTx.amount,
+      excludeTransactionId: id, operation: `update:${id}`,
+    }, data.monthlyLimitApproval);
     // 1. Revert previous transaction effects on accounts
     if (oldTx.type === 'income') {
       await db.runAsync('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?;', [

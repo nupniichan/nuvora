@@ -5,6 +5,7 @@ import {
   BudgetRow,
 } from '@/database/types';
 import { generateUUID } from '@/shared/uuid';
+import { getMonthlyLimit } from './monthly-limits';
 
 export const GOAL_COMPLETION_CATEGORY_ID = 'goal_completion';
 
@@ -39,6 +40,7 @@ export interface MonthlySnapshot {
   periodEnd: string;
   currency: string;
   budget: BudgetRow | null;
+  monthlyLimit: number | null;
 
   totalIncome: number;
   totalExpense: number;
@@ -446,6 +448,7 @@ export async function getMonthlySnapshot(
     periodEnd,
     currency,
     budget,
+    monthlyLimit: (await getMonthlyLimit(year, month, currency)).limit,
     totalIncome,
     totalExpense,
     netBalance: totalIncome - totalExpense,

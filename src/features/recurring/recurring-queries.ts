@@ -5,6 +5,7 @@ import {
   RecurringRuleRow,
 } from '@/database/types';
 import { createTransaction } from '@/features/transactions/transaction-queries';
+import { MonthlyLimitExceededError } from '@/features/budgets/monthly-limits';
 import { formatDateISO } from '@/shared/date-utils';
 import { generateUUID } from '@/shared/uuid';
 import { calculateDueOccurrences } from './recurring-engine';
@@ -124,7 +125,7 @@ export async function getPendingOccurrences(): Promise<PendingOccurrenceWithRule
 /**
  * Confirms a pending occurrence and creates the corresponding financial transaction
  */
-export async function confirmOccurrence(occurrenceId: string): Promise<void> {
+export async function confirmOccurrence(occurrenceId: string, monthlyLimitApproval?: string): Promise<void> {
   const db = getDatabase();
   const occurrence = await db.getFirstAsync<AutomationOccurrenceRow>(
     `SELECT * FROM automation_occurrences WHERE id = ? AND status = 'pending';`,
@@ -138,28 +139,18 @@ export async function confirmOccurrence(occurrenceId: string): Promise<void> {
   );
   if (!rule || rule.type === 'transfer') return;
 
-  await db.withTransactionAsync(async () => {
-    // 1. Create financial transaction
-    const tx = await createTransaction({
-      type: rule.type as EntryType,
-      amount: rule.amount,
-      currency: rule.currency,
-      accountId: rule.account_id,
-      categoryId: rule.category_id || undefined,
-      recurringRuleId: rule.id,
-      occurrenceId: occurrence.id,
-      date: occurrence.scheduled_date,
-      note: `Định kỳ: ${rule.name}`,
-    });
-
-    // 2. Update occurrence status
-    const now = new Date().toISOString();
-    await db.runAsync(
-      `UPDATE automation_occurrences
-       SET status = 'confirmed', transaction_id = ?, processed_at = ?
-       WHERE id = ?;`,
-      [tx.id, now, occurrenceId]
-    );
+  // The entry, balance and occurrence status are committed in one transaction.
+  await createTransaction({
+    type: rule.type as EntryType,
+    amount: rule.amount,
+    currency: rule.currency,
+    accountId: rule.account_id,
+    categoryId: rule.category_id || undefined,
+    recurringRuleId: rule.id,
+    occurrenceId: occurrence.id,
+    date: occurrence.scheduled_date,
+    note: `Định kỳ: ${rule.name}`,
+    monthlyLimitApproval,
   });
 }
 
@@ -223,12 +214,14 @@ export async function processRecurringCatchUp(
       if (existing) continue;
 
       const occurrenceId = generateUUID();
-      const now = new Date().toISOString();
-
+      // Create the referenced occurrence first; rejection safely leaves it pending.
+      await db.runAsync(
+        `INSERT INTO automation_occurrences (id, recurring_rule_id, scheduled_date, status)
+         VALUES (?, ?, ?, 'pending');`, [occurrenceId, rule.id, scheduledDate]
+      );
       if (rule.behavior === 'auto_post') {
-        // Auto-post: create confirmed transaction & marked occurrence
-        await db.withTransactionAsync(async () => {
-          const tx = await createTransaction({
+        try {
+          await createTransaction({
             type: rule.type as EntryType,
             amount: rule.amount,
             currency: rule.currency,
@@ -240,20 +233,12 @@ export async function processRecurringCatchUp(
             note: `Tự động định kỳ: ${rule.name}`,
           });
 
-          await db.runAsync(
-            `INSERT INTO automation_occurrences (id, recurring_rule_id, scheduled_date, transaction_id, status, processed_at)
-             VALUES (?, ?, ?, ?, 'confirmed', ?);`,
-            [occurrenceId, rule.id, scheduledDate, tx.id, now]
-          );
-        });
-        processedCount++;
+          processedCount++;
+        } catch (error) {
+          if (!(error instanceof MonthlyLimitExceededError)) throw error;
+          createdCount++;
+        }
       } else {
-        // Require confirmation
-        await db.runAsync(
-          `INSERT INTO automation_occurrences (id, recurring_rule_id, scheduled_date, status)
-           VALUES (?, ?, ?, 'pending');`,
-          [occurrenceId, rule.id, scheduledDate]
-        );
         createdCount++;
       }
     }

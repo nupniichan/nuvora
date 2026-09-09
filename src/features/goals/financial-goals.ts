@@ -13,6 +13,7 @@ import { buildBalanceComparisons } from '@/features/insights/balance-comparison'
 import { getTransactions } from '@/features/transactions/transaction-queries';
 import { formatDateISO } from '@/shared/date-utils';
 import { generateUUID } from '@/shared/uuid';
+import { requireMonthlyLimitApproval } from '@/features/budgets/monthly-limits';
 
 export interface FinancialGoalWithProgress extends FinancialGoalRow {
   currency: string;
@@ -109,11 +110,11 @@ export class GoalActionError extends Error {
 }
 
 /** Post the expense and completion together. Repeated completion never spends twice. */
-export async function completeGoal(id: string, note?: string): Promise<void> {
-  return runGoalWrite(() => completeGoalOnce(id, note));
+export async function completeGoal(id: string, note?: string, monthlyLimitApproval?: string): Promise<void> {
+  return runGoalWrite(() => completeGoalOnce(id, note, monthlyLimitApproval));
 }
 
-async function completeGoalOnce(id: string, note?: string): Promise<void> {
+async function completeGoalOnce(id: string, note?: string, monthlyLimitApproval?: string): Promise<void> {
   const defaultAccount = await getDefaultAccount();
   await withGoalTransaction(async (txn) => {
     const goal = await txn.getFirstAsync<FinancialGoalRow>('SELECT * FROM financial_goals WHERE id = ?;', [id]);
@@ -129,6 +130,7 @@ async function completeGoalOnce(id: string, note?: string): Promise<void> {
     const now = new Date().toISOString();
     const date = formatDateISO(new Date());
     const transactionId = 'goal-completion:' + id;
+    await requireMonthlyLimitApproval({ type: 'expense', date, currency: account.currency, amount: goal.target_amount, operation: transactionId }, monthlyLimitApproval);
     await txn.runAsync(
       "INSERT INTO transactions (id, type, amount, currency, account_id, to_account_id, category_id, recurring_rule_id, occurrence_id, note, date, status, created_at, updated_at) VALUES (?, 'expense', ?, ?, ?, NULL, ?, NULL, NULL, ?, ?, 'confirmed', ?, ?);",
       [transactionId, goal.target_amount, account.currency, account.id, goal.linked_category_id, note || goal.name, date, now, now]
