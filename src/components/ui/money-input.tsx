@@ -72,6 +72,7 @@ const styles = StyleSheet.create({
     height: 52,
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
     borderWidth: 1.5,
     borderColor: Colors.primary,
     borderRadius: 12,
@@ -80,11 +81,13 @@ const styles = StyleSheet.create({
   },
   textInput: {
     flex: 1,
+    minWidth: 0,
     fontSize: 22,
     fontWeight: '700',
     color: Colors.light.text,
   },
   currencyBadge: {
+    flexShrink: 0,
     fontSize: 14,
     fontWeight: '600',
     color: Colors.primaryStrong,
