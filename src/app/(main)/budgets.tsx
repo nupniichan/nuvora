@@ -155,7 +155,7 @@ export default function BudgetsScreen() {
             <Text style={styles.overviewTitle}>{t('budgets.overview')}</Text>
             {snapshot && snapshot.overLimitCount > 0 && (
               <View style={styles.overLimitBadge}>
-                <MaterialIcons name="warning" size={13} color="#C62828" />
+                <MaterialIcons name="warning" size={13} color={Colors.expense} />
                 <Text style={styles.overLimitBadgeText}>
                   {t('budgets.overLimitCount', { count: snapshot.overLimitCount })}
                 </Text>
@@ -210,8 +210,8 @@ export default function BudgetsScreen() {
                         spendVsIncomePercent > 90
                           ? Colors.expense
                           : spendVsIncomePercent > 70
-                          ? Colors.accent
-                          : Colors.income,
+                          ? Colors.warning
+                          : Colors.primaryDark,
                     },
                   ]}
                 />
@@ -283,13 +283,13 @@ export default function BudgetsScreen() {
                   <View
                     style={[
                       styles.catIcon,
-                      { backgroundColor: cat.categoryColor || Colors.income },
+                      { backgroundColor: Colors.light.backgroundElement },
                     ]}
                   >
                     <MaterialIcons
                       name={(cat.categoryIcon as any) || 'account-balance-wallet'}
                       size={18}
-                      color="#FFFFFF"
+                      color={cat.categoryColor || Colors.income}
                     />
                   </View>
 
@@ -335,13 +335,13 @@ export default function BudgetsScreen() {
                     <View
                       style={[
                         styles.catIcon,
-                        { backgroundColor: cat.categoryColor || Colors.primaryDark },
+                        { backgroundColor: Colors.light.backgroundElement },
                       ]}
                     >
                       <MaterialIcons
                         name={(cat.categoryIcon as any) || 'category'}
                         size={18}
-                        color="#FFFFFF"
+                        color={cat.categoryColor || Colors.primaryDark}
                       />
                     </View>
 
@@ -373,8 +373,8 @@ export default function BudgetsScreen() {
                                 backgroundColor: cat.isOverLimit
                                   ? Colors.expense
                                   : percent > 80
-                                  ? Colors.accent
-                                  : Colors.income,
+                                  ? Colors.warning
+                                  : Colors.primaryDark,
                               },
                             ]}
                           />
@@ -424,13 +424,13 @@ export default function BudgetsScreen() {
                     <View
                       style={[
                         styles.goalMiniIcon,
-                        { backgroundColor: goal.color || Colors.primaryDark },
+                        { backgroundColor: Colors.light.backgroundElement },
                       ]}
                     >
                       <MaterialIcons
                         name={(goal.icon as any) || 'flag'}
                         size={16}
-                        color="#FFFFFF"
+                        color={goal.color || Colors.primaryDark}
                       />
                     </View>
                     <Text style={styles.goalMiniName}>{goal.name}</Text>
@@ -445,7 +445,7 @@ export default function BudgetsScreen() {
                           width: `${goal.percentage}%`,
                           backgroundColor: goal.isCompleted
                             ? Colors.income
-                            : goal.color || Colors.primaryDark,
+                            : Colors.primaryDark,
                         },
                       ]}
                     />
@@ -506,7 +506,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: Colors.light.backgroundElement,
     borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -548,7 +548,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#FFEBEE',
+    backgroundColor: Colors.expenseLight,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
@@ -556,7 +556,7 @@ const styles = StyleSheet.create({
   overLimitBadgeText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#C62828',
+    color: Colors.expense,
   },
   metricsRow: {
     gap: 12,

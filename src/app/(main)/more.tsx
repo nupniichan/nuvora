@@ -40,7 +40,6 @@ export default function MoreScreen() {
             <Text style={styles.brandTitle}>{t('settings.personalSpace')}</Text>
             <Text style={styles.brandDescription}>{t('settings.personalSpaceDescription')}</Text>
           </View>
-          <MaterialIcons name="auto-awesome" size={22} color={Colors.primaryStrong} />
         </Card>
 
         {/* Security Info Card */}
@@ -231,7 +230,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 4,
   },
-  brandCard: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: Colors.primary, padding: 20 },
+  brandCard: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: Colors.primaryLight, padding: 20 },
   brandIcon: { width: 48, height: 48, borderRadius: 17, backgroundColor: '#FFFFFF66', alignItems: 'center', justifyContent: 'center' },
   brandInfo: { flex: 1, gap: 4 },
   brandTitle: { fontSize: 17, fontWeight: '800', color: Colors.light.text },

@@ -20,11 +20,11 @@ export function MonthlyLimitCard({ snapshot }: { snapshot: MonthlySnapshot }) {
       <MaterialIcons name="tune" size={22} color={Colors.primaryDark} />
     </TouchableOpacity>
     {limit === null ? <Text style={styles.detail}>{t('monthlyLimit.notSet')}</Text> : <>
-      <Text style={[styles.amount, { color }]}>{formatMoney(spent, currency, locale)} / {formatMoney(limit, currency, locale)}</Text>
+      <Text style={[styles.amount, { color: over ? Colors.expense : Colors.light.text }]}>{formatMoney(spent, currency, locale)} / {formatMoney(limit, currency, locale)}</Text>
       <View accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: 100, now: Math.min(100, Math.round(spent / limit * 100)) }} style={styles.track}>
         <View style={{ height: 7, borderRadius: 8, width: `${Math.min(100, spent / limit * 100)}%`, backgroundColor: color }} />
       </View>
-      <Text style={[styles.detail, { color }]}>{t(over ? 'monthlyLimit.over' : 'monthlyLimit.remaining', { amount: formatMoney(Math.abs(limit - spent), currency, locale) })}</Text>
+      <Text style={[styles.detail, over && { color: Colors.expense }]}>{t(over ? 'monthlyLimit.over' : 'monthlyLimit.remaining', { amount: formatMoney(Math.abs(limit - spent), currency, locale) })}</Text>
     </>}
   </Card>;
 }

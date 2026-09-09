@@ -187,12 +187,7 @@ export default function TransactionsScreen() {
             <TouchableOpacity onPress={() => openEditModal(item)} disabled={item.type === 'transfer' || isGoalCompletionTransaction(item.id)} activeOpacity={0.8}>
               <Card style={styles.txCard}>
                 <View style={styles.txRow}>
-                  <View
-                    style={[
-                      styles.txIconBadge,
-                      cat?.color ? { backgroundColor: cat.color } : undefined,
-                    ]}
-                  >
+                  <View style={styles.txIconBadge}>
                     <MaterialIcons
                       name={
                         (cat?.icon as any) ||
@@ -203,7 +198,7 @@ export default function TransactionsScreen() {
                           : 'swap-horiz')
                       }
                       size={20}
-                      color={cat?.color ? '#FFFFFF' : item.type === 'income' ? Colors.income : item.type === 'expense' ? Colors.expense : Colors.transfer}
+                      color={cat?.color || Colors.light.textSecondary}
                     />
                   </View>
 
@@ -341,8 +336,8 @@ export default function TransactionsScreen() {
                         style={[
                           styles.categoryGridItem,
                           isSelected && {
-                            backgroundColor: catColor,
-                            borderColor: catColor,
+                            backgroundColor: Colors.primaryLight,
+                            borderColor: Colors.primaryDark,
                           },
                         ]}
                         onPress={() => setEditCategoryId(cat.id)}
@@ -350,7 +345,7 @@ export default function TransactionsScreen() {
                         <MaterialIcons
                           name={(cat.icon as any) || 'category'}
                           size={16}
-                          color={isSelected ? '#FFFFFF' : catColor}
+                          color={isSelected ? Colors.primaryStrong : catColor}
                         />
                         <Text
                           style={[
@@ -595,10 +590,10 @@ const styles = StyleSheet.create({
     color: Colors.light.textSecondary,
   },
   activeExpense: {
-    backgroundColor: '#FFEBEE',
+    backgroundColor: Colors.primary,
   },
   activeIncome: {
-    backgroundColor: '#E8F5E9',
+    backgroundColor: Colors.primary,
   },
   activeText: {
     color: Colors.light.text,
@@ -640,7 +635,7 @@ const styles = StyleSheet.create({
     color: Colors.light.text,
   },
   selectedCategoryChipText: {
-    color: '#FFFFFF',
+    color: Colors.primaryStrong,
     fontWeight: '700',
   },
   categoryLabelRow: {

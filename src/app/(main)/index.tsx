@@ -205,14 +205,11 @@ export default function DashboardScreen() {
 
         {/* Total Balance Card */}
         <Card style={styles.balanceCard}>
-          <View pointerEvents="none" style={styles.balanceOrbit} />
-          <View pointerEvents="none" style={styles.balanceOrbitInner} />
           <View style={styles.balanceTop}>
             <View style={styles.balanceHeading}>
               <MaterialIcons name="account-balance-wallet" size={18} color={Colors.primaryStrong} />
               <Text style={styles.balanceLabel}>{t('dashboard.totalBalance')}</Text>
             </View>
-            <MaterialIcons name="auto-awesome" size={24} color={Colors.primaryStrong} />
           </View>
           {balanceComparisons.map((comparison) => {
             const change = comparison[comparisonPeriod];
@@ -276,10 +273,10 @@ export default function DashboardScreen() {
         <View style={styles.shortcuts}>
           {([
             { icon: 'add', label: t('transactions.quickAdd'), route: '/(modal)/add-transaction', color: Colors.primary, ink: Colors.primaryStrong },
-            { icon: 'donut-small', label: t('navigation.plans'), route: '/(main)/budgets', color: Colors.primaryLight, ink: Colors.primaryStrong },
-            { icon: 'tune', label: t('monthlyLimit.shortcut'), route: '/(modal)/manage-budget', color: Colors.primaryLight, ink: Colors.primaryStrong },
-            { icon: 'outlined-flag', label: t('dashboard.goals'), route: '/(modal)/manage-goals', color: Colors.accent, ink: Colors.accentDark },
-            { icon: 'event-repeat', label: t('dashboard.recurringShortcut'), route: '/(modal)/manage-recurring', color: Colors.transferLight, ink: Colors.transfer },
+            { icon: 'donut-small', label: t('navigation.plans'), route: '/(main)/budgets', color: Colors.light.backgroundElement, ink: Colors.light.textSecondary },
+            { icon: 'tune', label: t('monthlyLimit.shortcut'), route: '/(modal)/manage-budget', color: Colors.light.backgroundElement, ink: Colors.light.textSecondary },
+            { icon: 'outlined-flag', label: t('dashboard.goals'), route: '/(modal)/manage-goals', color: Colors.light.backgroundElement, ink: Colors.light.textSecondary },
+            { icon: 'event-repeat', label: t('dashboard.recurringShortcut'), route: '/(modal)/manage-recurring', color: Colors.light.backgroundElement, ink: Colors.light.textSecondary },
           ] as const).map((action) => (
             <TouchableOpacity key={action.route} accessibilityRole="button" style={styles.shortcut} onPress={() => router.push(action.route)} activeOpacity={0.75}>
               <View style={[styles.shortcutIcon, compact && styles.compactShortcutIcon, { backgroundColor: action.color }]}>
@@ -332,7 +329,7 @@ export default function DashboardScreen() {
                     style={[styles.pendingBtn, styles.confirmBtn]}
                     onPress={() => handleConfirmOccurrence(item.id)}
                   >
-                    <MaterialIcons name="check" size={16} color="#FFFFFF" />
+                    <MaterialIcons name="check" size={16} color={Colors.primaryStrong} />
                     <Text style={styles.confirmBtnText}>{t('dashboard.post')}</Text>
                   </TouchableOpacity>
                 </View>
@@ -358,12 +355,12 @@ export default function DashboardScreen() {
 
             <View style={[styles.flowCards, compact && styles.compactFlowCards]}>
               {([
-                { label: t('transactions.income'), amount: snapshot.totalIncome, icon: 'south-west', color: Colors.income, surface: Colors.incomeLight, sign: '+' },
-                { label: t('transactions.expense'), amount: snapshot.totalExpense, icon: 'north-east', color: Colors.expense, surface: Colors.expenseLight, sign: '-' },
+                { label: t('transactions.income'), amount: snapshot.totalIncome, icon: 'south-west', color: Colors.income, sign: '+' },
+                { label: t('transactions.expense'), amount: snapshot.totalExpense, icon: 'north-east', color: Colors.expense, sign: '-' },
               ] as const).map((metric) => (
                 <Card key={metric.label} style={[styles.flowCard, compact && styles.compactFlowCard]}>
                   <View style={styles.flowHeading}>
-                    <View style={[styles.flowIcon, { backgroundColor: metric.surface }]}><MaterialIcons name={metric.icon} size={18} color={metric.color} /></View>
+                    <View style={styles.flowIcon}><MaterialIcons name={metric.icon} size={18} color={Colors.light.textSecondary} /></View>
                     <Text style={styles.flowLabel}>{metric.label}</Text>
                   </View>
                   <Text style={[styles.flowAmount, compact && styles.compactFlowAmount, { color: metric.color }]}>{metric.sign}{formatMoney(metric.amount, snapshot.currency)}</Text>
@@ -379,7 +376,7 @@ export default function DashboardScreen() {
                   <Text style={styles.budgetName}>{t(snapshot.netBalance >= 0 ? 'dashboard.surplus' : 'dashboard.deficit', { amount: formatMoney(Math.abs(snapshot.netBalance), snapshot.currency) })}</Text>
                   {snapshot.overLimitCount > 0 ? (
                     <View style={styles.overLimitBadgeSmall}>
-                      <MaterialIcons name="warning" size={12} color="#C62828" />
+                      <MaterialIcons name="warning" size={12} color={Colors.expense} />
                       <Text style={styles.overLimitBadgeSmallText}>
                         {t('dashboard.overCount', { count: snapshot.overLimitCount })}
                       </Text>
@@ -415,12 +412,12 @@ export default function DashboardScreen() {
         {activeGoals.length === 0 ? (
           <TouchableOpacity accessibilityRole="button" activeOpacity={0.85} onPress={() => router.push('/(modal)/manage-goals')}>
             <Card variant="flat" style={styles.goalPrompt}>
-              <View style={styles.goalPromptIcon}><MaterialIcons name="savings" size={28} color={Colors.accentDark} /></View>
+              <View style={styles.goalPromptIcon}><MaterialIcons name="savings" size={28} color={Colors.primaryStrong} /></View>
               <View style={styles.goalDashInfo}>
                 <Text style={styles.goalPromptTitle}>{t('dashboard.goalPromptTitle')}</Text>
                 <Text style={styles.goalPromptDescription}>{t('dashboard.goalPromptDescription')}</Text>
               </View>
-              <MaterialIcons name="arrow-forward" size={20} color={Colors.accentDark} />
+              <MaterialIcons name="arrow-forward" size={20} color={Colors.primaryStrong} />
             </Card>
           </TouchableOpacity>
         ) : (
@@ -443,10 +440,10 @@ export default function DashboardScreen() {
                     <View
                       style={[
                         styles.goalDashIcon,
-                        { backgroundColor: goal.color || Colors.primaryDark },
+                        { backgroundColor: Colors.light.backgroundElement },
                       ]}
                     >
-                      <MaterialIcons name={(goal.icon as any) || 'flag'} size={16} color="#FFFFFF" />
+                      <MaterialIcons name={(goal.icon as any) || 'flag'} size={16} color={goal.color || Colors.primaryDark} />
                     </View>
                     <View style={styles.goalDashInfo}>
                       <Text style={styles.goalDashName}>{goal.name}</Text>
@@ -457,7 +454,7 @@ export default function DashboardScreen() {
                     <Text style={styles.goalDashPct}>{goal.percentage}%</Text>
                   </View>
                   <View style={styles.progressBarTrack}>
-                    <View style={[styles.progressBarFill, { width: `${Math.max(0, Math.min(100, goal.percentage))}%`, backgroundColor: goal.color || Colors.primaryDark }]} />
+                    <View style={[styles.progressBarFill, { width: `${Math.max(0, Math.min(100, goal.percentage))}%`, backgroundColor: Colors.primaryDark }]} />
                   </View>
                 </Card>
               </TouchableOpacity>
@@ -519,7 +516,7 @@ export default function DashboardScreen() {
             <Card style={styles.txList}>
               {recentTransactions.map((tx) => (
                 <View key={tx.id} style={styles.txItem}>
-                  <View style={[styles.txIconBadge, { backgroundColor: tx.type === 'income' ? Colors.incomeLight : tx.type === 'expense' ? Colors.expenseLight : Colors.transferLight }]}>
+                  <View style={styles.txIconBadge}>
                     <MaterialIcons
                       name={
                         tx.type === 'income'
@@ -529,13 +526,7 @@ export default function DashboardScreen() {
                           : 'swap-horiz'
                       }
                       size={20}
-                      color={
-                        tx.type === 'income'
-                          ? Colors.income
-                          : tx.type === 'expense'
-                          ? Colors.expense
-                          : Colors.transfer
-                      }
+                      color={Colors.light.textSecondary}
                     />
                   </View>
                   <View style={styles.txInfo}>
@@ -613,7 +604,7 @@ const styles = StyleSheet.create({
     gap: 16,
     borderRadius: 28,
     overflow: 'hidden',
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primaryLight,
     borderWidth: 0,
   },
   balanceLabel: {
@@ -656,12 +647,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 6,
-    backgroundColor: '#E0F2FE',
+    backgroundColor: Colors.light.backgroundElement,
   },
   plannedBadgeText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#0284C7',
+    color: Colors.light.textSecondary,
   },
   pendingCard: {
     padding: 14,
@@ -712,18 +703,18 @@ const styles = StyleSheet.create({
     color: Colors.light.textSecondary,
   },
   confirmBtn: {
-    backgroundColor: Colors.income,
+    backgroundColor: Colors.primary,
     flex: 1,
   },
   confirmBtnText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: Colors.primaryStrong,
   },
   budgetCard: {
     padding: 14,
     gap: 10,
-    backgroundColor: Colors.primaryFaded,
+    backgroundColor: Colors.light.surface,
   },
   budgetRow: {
     flexDirection: 'row',
@@ -834,7 +825,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#FFEBEE',
+    backgroundColor: Colors.expenseLight,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
@@ -842,7 +833,7 @@ const styles = StyleSheet.create({
   overLimitBadgeSmallText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#C62828',
+    color: Colors.expense,
   },
   goalDashCard: {
     padding: 16,
@@ -885,8 +876,6 @@ const styles = StyleSheet.create({
   compactFlowCard: { flex: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' },
   balanceTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   balanceHeading: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 },
-  balanceOrbit: { position: 'absolute', width: 240, height: 240, borderRadius: 120, borderWidth: 1, borderColor: '#FFFFFF60', right: -65, top: -80 },
-  balanceOrbitInner: { position: 'absolute', width: 170, height: 170, borderRadius: 85, borderWidth: 32, borderColor: '#FFFFFF24', right: -30, top: -45 },
   balanceCurrencyBlock: { gap: 8 },
   balanceChangeRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   balanceChangeText: { flexShrink: 1, fontSize: 13, lineHeight: 20, fontWeight: '600', color: Colors.primaryStrong },
@@ -904,11 +893,11 @@ const styles = StyleSheet.create({
   flowCards: { flexDirection: 'row', gap: 12, flexWrap: 'wrap' },
   flowCard: { flex: 1, minWidth: 110, padding: 12, gap: 14 },
   flowHeading: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  flowIcon: { width: 30, height: 30, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+  flowIcon: { width: 30, height: 30, borderRadius: 11, backgroundColor: Colors.light.backgroundElement, alignItems: 'center', justifyContent: 'center' },
   flowLabel: { fontSize: 12, fontWeight: '600', color: Colors.light.textSecondary, flexShrink: 1 },
   flowAmount: { fontSize: 19, fontWeight: '800', fontVariant: ['tabular-nums'], letterSpacing: -0.5 },
-  goalPrompt: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 18, backgroundColor: Colors.accentLight, borderWidth: 1, borderColor: Colors.accent },
-  goalPromptIcon: { width: 50, height: 50, borderRadius: 18, backgroundColor: Colors.accent, alignItems: 'center', justifyContent: 'center' },
+  goalPrompt: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 18, backgroundColor: Colors.light.surface, borderWidth: 1, borderColor: Colors.light.border },
+  goalPromptIcon: { width: 50, height: 50, borderRadius: 18, backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
   goalPromptTitle: { fontSize: 15, fontWeight: '700', color: Colors.light.text },
-  goalPromptDescription: { fontSize: 12, lineHeight: 18, color: Colors.accentDark, marginTop: 3 },
+  goalPromptDescription: { fontSize: 12, lineHeight: 18, color: Colors.light.textSecondary, marginTop: 3 },
 });

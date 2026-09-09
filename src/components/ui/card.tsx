@@ -35,13 +35,13 @@ const styles = StyleSheet.create({
   elevated: {
     borderWidth: 1,
     ...Platform.select({
-      web: { boxShadow: '0 4px 16px rgba(69, 69, 128, 0.04)' },
+      web: { boxShadow: '0 2px 8px rgba(39, 40, 51, 0.025)' },
       default: {
-        shadowColor: '#454580',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.07,
-        shadowRadius: 16,
-        elevation: 2,
+        shadowColor: '#272833',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.04,
+        shadowRadius: 8,
+        elevation: 1,
       },
     }),
   },

@@ -72,7 +72,7 @@ export default function MainLayout() {
         style={[styles.fabButton, { borderColor: theme.surface, bottom: bottomInset + 20 }]}
         onPress={() => router.push('/(modal)/add-transaction')}
       >
-        <MaterialIcons name="add" size={30} color={Colors.primary} />
+        <MaterialIcons name="add" size={30} color={Colors.primaryStrong} />
       </TouchableOpacity>
     </View>
   );
@@ -109,17 +109,17 @@ const styles = StyleSheet.create({
     height: 60,
     borderRadius: 30,
     borderWidth: 5,
-    backgroundColor: Colors.primaryStrong,
+    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     ...Platform.select({
       web: {
-        boxShadow: '0 5px 18px rgba(81, 74, 127, 0.28)',
+        boxShadow: '0 3px 10px rgba(69, 69, 128, 0.14)',
       },
       default: {
         shadowColor: Colors.primaryDark,
         shadowOffset: { width: 0, height: 5 },
-        shadowOpacity: 0.28,
+        shadowOpacity: 0.14,
         shadowRadius: 9,
         elevation: 8,
       },

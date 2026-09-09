@@ -373,7 +373,7 @@ export default function AddTransactionModal() {
                 <TouchableOpacity
                   style={[
                     styles.selectedCategoryTile,
-                    { borderColor: selectedCategory.color || Colors.primaryDark },
+                    { borderColor: Colors.primaryDark },
                   ]}
                   onPress={() => setIsCategoryExpanded(!isCategoryExpanded)}
                   activeOpacity={0.8}
@@ -381,13 +381,13 @@ export default function AddTransactionModal() {
                   <View
                     style={[
                       styles.selectedCatIconBadge,
-                      { backgroundColor: selectedCategory.color || Colors.primaryDark },
+                      { backgroundColor: Colors.primaryLight },
                     ]}
                   >
                     <MaterialIcons
                       name={(selectedCategory.icon as any) || 'category'}
                       size={20}
-                      color="#FFFFFF"
+                      color={Colors.primaryStrong}
                     />
                   </View>
 
@@ -552,8 +552,8 @@ export default function AddTransactionModal() {
                             style={[
                               styles.categoryGridItem,
                               isSelected && {
-                                backgroundColor: catColor,
-                                borderColor: catColor,
+                                backgroundColor: Colors.primaryLight,
+                                borderColor: Colors.primaryDark,
                               },
                             ]}
                             onPress={() => {
@@ -564,7 +564,7 @@ export default function AddTransactionModal() {
                             <MaterialIcons
                               name={(cat.icon as any) || 'category'}
                               size={16}
-                              color={isSelected ? '#FFFFFF' : catColor}
+                              color={isSelected ? Colors.primaryStrong : catColor}
                             />
                             <Text
                               style={[
@@ -671,10 +671,10 @@ const styles = StyleSheet.create({
     color: Colors.light.textSecondary,
   },
   activeExpense: {
-    backgroundColor: '#FFEBEE',
+    backgroundColor: Colors.primary,
   },
   activeIncome: {
-    backgroundColor: '#E8F5E9',
+    backgroundColor: Colors.primary,
   },
   activeText: {
     color: Colors.light.text,
@@ -925,7 +925,7 @@ const styles = StyleSheet.create({
     color: Colors.light.text,
   },
   selectedCategoryChipText: {
-    color: '#FFFFFF',
+    color: Colors.primaryStrong,
     fontWeight: '700',
   },
   quickAddCatBox: {

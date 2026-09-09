@@ -8,15 +8,15 @@ import '@/global.css';
 import { Platform } from 'react-native';
 
 export const Colors = {
-  // Lavender family + a complementary butter-yellow accent. Use the pale
-  // brand color for surfaces, and its deep shades for readable text/icons.
+  // Periwinkle is the brand accent. Keep everyday surfaces neutral and
+  // reserve semantic colors for amounts, chart data, and status feedback.
   primary: '#CCCCFF',
-  primaryLight: '#E5E5FF',
+  primaryLight: '#EEEEFF',
   primaryDark: '#6464A8',
   primaryStrong: '#454580',
-  accent: '#EEEEB8',
-  accentLight: '#F8F8E5',
-  accentDark: '#62622D',
+  accent: '#CCCCFF',
+  accentLight: '#F0F0FF',
+  accentDark: '#454580',
   primaryFaded: '#F0F0FF',
   primaryFadedDark: '#282744',
 
@@ -31,14 +31,14 @@ export const Colors = {
   error: '#BB4052',
 
   light: {
-    text: '#272743',
-    textSecondary: '#71718A',
-    background: '#F7F7FC',
-    backgroundElement: '#EEEEF8',
-    backgroundSelected: '#E0E0FA',
+    text: '#272833',
+    textSecondary: '#6F707D',
+    background: '#F8F8FA',
+    backgroundElement: '#F0F0F3',
+    backgroundSelected: '#EEEEFF',
     surface: '#FFFFFF',
-    border: '#DDDDED',
-    elevatedBorder: '#E8E8F2',
+    border: '#E0E0E6',
+    elevatedBorder: '#E8E8ED',
     overlay: 'rgba(32, 32, 51, 0.44)',
   },
   dark: {
