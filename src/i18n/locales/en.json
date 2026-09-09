@@ -419,5 +419,34 @@
     "interfaceLanguage": "Interface language",
     "localFirstTagline": "Private-first personal finance",
     "privacyDescription": "Your financial data is stored directly on your device."
+  },
+  "monthlyLimit": {
+    "confirmTitle": "Monthly spending limit exceeded",
+    "confirmMessage": "The limit for {{month}} is {{limit}}.\nSpent (excluding this entry): {{spent}}.\nAfter saving: {{projected}} — {{exceeded}} over the limit.\n\nDo you confirm saving this expense?",
+    "confirmSave": "I understand, save anyway",
+    "invalidDate": "Enter a valid date in YYYY-MM-DD format.",
+    "invalidAmount": "Enter a positive limit within the supported amount range.",
+    "notSet": "No limit for this month. Tap to set one.",
+    "remaining": "{{amount}} remaining this month",
+    "over": "{{amount}} over the monthly limit",
+    "scope": {
+      "month": "This month only",
+      "recurring": "Repeat from this month",
+      "inherit": "Use automatic limit"
+    },
+    "scopeDescription": {
+      "month": "Override the selected month without changing other months.",
+      "recurring": "Apply from this month until a new automatic limit takes effect. Keep other monthly overrides; turn off the limit below to stop repeating from this month.",
+      "inherit": "Remove this month’s override and use the automatic limit in effect."
+    },
+    "inheritedAmount": "Automatic limit: {{amount}}",
+    "unsavedTitle": "Unsaved changes",
+    "unsavedMessage": "Discard the monthly limit changes and switch months?",
+    "discard": "Discard changes",
+    "categoryShared": "Category limits apply across all months.",
+    "shortcut": "Limits",
+    "invalidMonth": "Select a valid month.",
+    "invalidSavedLimit": "The saved limit could not be read. Please check your limit settings.",
+    "saveError": "Could not save the spending limit. Please try again."
   }
 }

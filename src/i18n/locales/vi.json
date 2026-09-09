@@ -419,5 +419,34 @@
     "interfaceLanguage": "Ngôn ngữ giao diện",
     "localFirstTagline": "Tài chính cá nhân, ưu tiên riêng tư",
     "privacyDescription": "Dữ liệu tài chính được lưu trữ trực tiếp trên thiết bị của bạn."
+  },
+  "monthlyLimit": {
+    "confirmTitle": "Đã vượt hạn mức chi tiêu tháng",
+    "confirmMessage": "Tháng {{month}} có hạn mức {{limit}}.\nĐã chi (chưa tính khoản này): {{spent}}.\nSau khi lưu: {{projected}} — vượt {{exceeded}}.\n\nAnh/chị xác nhận vẫn lưu khoản chi này?",
+    "confirmSave": "Đã hiểu, vẫn lưu",
+    "invalidDate": "Vui lòng nhập ngày hợp lệ theo YYYY-MM-DD.",
+    "invalidAmount": "Hạn mức phải là số tiền lớn hơn 0 và nằm trong phạm vi hỗ trợ.",
+    "notSet": "Chưa đặt hạn mức cho tháng này. Nhấn để thiết lập.",
+    "remaining": "Còn lại {{amount}} trong tháng",
+    "over": "Đã vượt {{amount}} trong tháng",
+    "scope": {
+      "month": "Chỉ tháng này",
+      "recurring": "Tự động từ tháng này",
+      "inherit": "Dùng mức tự động"
+    },
+    "scopeDescription": {
+      "month": "Đặt riêng cho tháng đã chọn, không đổi các tháng khác.",
+      "recurring": "Áp dụng từ tháng đã chọn đến khi có mức tự động mới. Giữ các tháng đã đặt riêng; tắt hạn mức bên dưới để dừng tự động từ tháng này.",
+      "inherit": "Bỏ mức riêng của tháng này và dùng mức tự động đang áp dụng."
+    },
+    "inheritedAmount": "Mức tự động: {{amount}}",
+    "unsavedTitle": "Thay đổi chưa lưu",
+    "unsavedMessage": "Bỏ thay đổi hạn mức đang nhập để chuyển tháng?",
+    "discard": "Bỏ thay đổi",
+    "categoryShared": "Giới hạn danh mục áp dụng chung cho các tháng.",
+    "shortcut": "Hạn mức",
+    "invalidMonth": "Vui lòng chọn tháng hợp lệ.",
+    "invalidSavedLimit": "Không thể đọc hạn mức đã lưu. Vui lòng kiểm tra lại thiết lập hạn mức.",
+    "saveError": "Không thể lưu hạn mức. Vui lòng thử lại."
   }
 }
