@@ -13,6 +13,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Card } from '@/components/ui/card';
+import { MonthlyLimitCard } from '@/components/ui/monthly-limit-card';
+import { getDefaultAccount } from '@/features/accounts/account-queries';
 import { EmptyState } from '@/components/ui/empty-state';
 import { DailyExpenseChart, MonthlyCashflowChart } from '@/components/ui/insight-charts';
 import {
@@ -54,7 +56,8 @@ export default function BudgetsScreen() {
     setSnapshot(null);
     setHistory(null);
     try {
-      const snap = await getMonthlySnapshot(currentYear, currentMonth);
+      const account = await getDefaultAccount();
+      const snap = await getMonthlySnapshot(currentYear, currentMonth, account.currency);
       const [activeGoals, spendingHistory] = await Promise.all([
         getAllGoals('active'), getSpendingHistory(currentYear, currentMonth, snap.currency),
       ]);
@@ -146,6 +149,7 @@ export default function BudgetsScreen() {
         {loadError && <TouchableOpacity accessibilityRole="button" onPress={loadData}><Text style={styles.emptyCategoryText}>{t('charts.loadError')} · {t('common.retry')}</Text></TouchableOpacity>}
         {!loading && !loadError && <>
         {/* Monthly Financial Overview Card */}
+        {snapshot && <MonthlyLimitCard snapshot={snapshot} />}
         <Card style={styles.overviewCard}>
           <View style={styles.overviewHeader}>
             <Text style={styles.overviewTitle}>{t('budgets.overview')}</Text>
@@ -250,7 +254,7 @@ export default function BudgetsScreen() {
 
           <TouchableOpacity
             style={styles.quickBtn}
-            onPress={() => router.push('/(modal)/manage-budget')}
+            onPress={() => router.push({ pathname: '/(modal)/manage-budget', params: { year: currentYear, month: currentMonth } })}
           >
             <MaterialIcons name="tune" size={18} color={Colors.primaryDark} />
             <Text style={styles.quickBtnText}>{t('budgets.manageLimits')}</Text>

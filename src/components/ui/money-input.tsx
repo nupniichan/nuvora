@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Colors } from '@/constants/theme';
@@ -14,6 +15,8 @@ export interface MoneyInputProps {
 }
 
 export function MoneyInput({ label, currency, valueMinor, onChangeMinor, error }: MoneyInputProps) {
+  const { i18n } = useTranslation();
+  const locale = i18n.resolvedLanguage === 'en' ? 'en-US' : 'vi-VN';
   const meta = getCurrencyMetadata(currency);
   const safeMinor = typeof valueMinor === 'number' && !isNaN(valueMinor) ? valueMinor : 0;
 
@@ -48,7 +51,7 @@ export function MoneyInput({ label, currency, valueMinor, onChangeMinor, error }
         <Text style={styles.currencyBadge}>{currency}</Text>
       </View>
       <Text style={styles.formattedPreview}>
-        {formatMoney(valueMinor, currency)}
+        {formatMoney(valueMinor, currency, locale)}
       </Text>
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
     </View>

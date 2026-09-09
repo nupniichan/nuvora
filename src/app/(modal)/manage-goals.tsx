@@ -1,4 +1,5 @@
 import { MaterialIcons } from '@expo/vector-icons';
+import { withMonthlyLimitConfirmation } from '@/features/budgets/confirm-monthly-limit';
 import React, { useCallback, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import {
@@ -146,7 +147,7 @@ export default function ManageGoalsModal() {
     if (completingId) return;
     setCompletingId(goal.id);
     try {
-      await completeGoal(goal.id, t('goals.completionTransaction', { name: goal.name }));
+      await withMonthlyLimitConfirmation((approval) => completeGoal(goal.id, t('goals.completionTransaction', { name: goal.name }), approval), t);
       await loadData();
     } catch (error) {
       alertMessage(t('common.error'), error instanceof GoalActionError ? t('goals.errors.' + error.code) : t('goals.completionError'));

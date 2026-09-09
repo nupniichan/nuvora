@@ -31,6 +31,8 @@ import { formatDateISO } from '@/shared/date-utils';
 import { formatMoney } from '@/shared/money';
 
 import { alertMessage, confirmAction } from '@/shared/dialog';
+import { withMonthlyLimitConfirmation } from '@/features/budgets/confirm-monthly-limit';
+import { isValidTransactionDate } from '@/features/budgets/monthly-limits';
 
 export default function TransactionsScreen() {
   const { t } = useTranslation();
@@ -86,7 +88,7 @@ export default function TransactionsScreen() {
   };
 
   const handleSaveEdit = async () => {
-    if (!editingTx) return;
+    if (!editingTx || saving) return;
     const finalAmount = typeof editAmount === 'number' && !isNaN(editAmount) ? editAmount : 0;
     if (finalAmount <= 0) {
       alertMessage(t('common.notice'), t('transactions.amountRequired'));
@@ -94,13 +96,20 @@ export default function TransactionsScreen() {
     }
     setSaving(true);
     try {
-      await updateTransaction(editingTx.id, {
+      const date = editDate.trim() || formatDateISO(new Date());
+      if (!isValidTransactionDate(date)) {
+        alertMessage(t('common.error'), t('monthlyLimit.invalidDate'));
+        return;
+      }
+      const saved = await withMonthlyLimitConfirmation((monthlyLimitApproval) => updateTransaction(editingTx.id, {
         type: editType,
         amount: finalAmount,
         categoryId: editCategoryId || null,
         note: editNote.trim() || null,
-        date: editDate.trim() || formatDateISO(new Date()),
-      });
+        date,
+        monthlyLimitApproval,
+      }), t);
+      if (!saved) return;
       setEditModalVisible(false);
       await loadData();
     } catch (e: any) {

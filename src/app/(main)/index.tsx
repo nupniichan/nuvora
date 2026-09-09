@@ -1,4 +1,6 @@
 import { MaterialIcons } from '@expo/vector-icons';
+import { withMonthlyLimitConfirmation } from '@/features/budgets/confirm-monthly-limit';
+import { alertMessage } from '@/shared/dialog';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -14,6 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Card } from '@/components/ui/card';
+import { MonthlyLimitCard } from '@/components/ui/monthly-limit-card';
 import { CategoryBreakdownChart } from '@/components/ui/charts';
 import { DailyExpenseChart } from '@/components/ui/insight-charts';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -74,7 +77,7 @@ export default function DashboardScreen() {
   const loadData = useCallback(async () => {
     try {
       setBalanceLoadError(false);
-      await getDefaultAccount();
+      const defaultAccount = await getDefaultAccount();
 
       // 1. Run recurring catch-up reconciliation
       await processRecurringCatchUp();
@@ -89,7 +92,7 @@ export default function DashboardScreen() {
 
       // 4. Load monthly snapshot for current month
       const now = new Date();
-      const snap = await getMonthlySnapshot(now.getFullYear(), now.getMonth() + 1);
+      const snap = await getMonthlySnapshot(now.getFullYear(), now.getMonth() + 1, defaultAccount.currency);
       setSnapshot(snap);
       setHistory(await getSpendingHistory(now.getFullYear(), now.getMonth() + 1, snap.currency));
 
@@ -160,8 +163,12 @@ export default function DashboardScreen() {
   };
 
   const handleConfirmOccurrence = async (id: string) => {
-    await confirmOccurrence(id);
-    await loadData();
+    try {
+      await withMonthlyLimitConfirmation((approval) => confirmOccurrence(id, approval), t);
+      await loadData();
+    } catch {
+      alertMessage(t('common.error'), t('transactions.saveError'));
+    }
   };
 
   const handleSkipOccurrence = async (id: string) => {
@@ -270,11 +277,12 @@ export default function DashboardScreen() {
           {([
             { icon: 'add', label: t('transactions.quickAdd'), route: '/(modal)/add-transaction', color: Colors.primary, ink: Colors.primaryStrong },
             { icon: 'donut-small', label: t('navigation.plans'), route: '/(main)/budgets', color: Colors.primaryLight, ink: Colors.primaryStrong },
+            { icon: 'tune', label: t('monthlyLimit.shortcut'), route: '/(modal)/manage-budget', color: Colors.primaryLight, ink: Colors.primaryStrong },
             { icon: 'outlined-flag', label: t('dashboard.goals'), route: '/(modal)/manage-goals', color: Colors.accent, ink: Colors.accentDark },
             { icon: 'event-repeat', label: t('dashboard.recurringShortcut'), route: '/(modal)/manage-recurring', color: Colors.transferLight, ink: Colors.transfer },
           ] as const).map((action) => (
             <TouchableOpacity key={action.route} accessibilityRole="button" style={styles.shortcut} onPress={() => router.push(action.route)} activeOpacity={0.75}>
-              <View style={[styles.shortcutIcon, { backgroundColor: action.color }]}>
+              <View style={[styles.shortcutIcon, compact && styles.compactShortcutIcon, { backgroundColor: action.color }]}>
                 <MaterialIcons name={action.icon} size={24} color={action.ink} />
               </View>
               <Text style={styles.shortcutLabel}>{action.label}</Text>
@@ -334,6 +342,8 @@ export default function DashboardScreen() {
         )}
 
         {/* Monthly Financial Snapshot Summary */}
+        {snapshot && <MonthlyLimitCard snapshot={snapshot} />}
+
         {snapshot && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
@@ -887,6 +897,7 @@ const styles = StyleSheet.create({
   shortcuts: { flexDirection: 'row', gap: 8 },
   shortcut: { flex: 1, alignItems: 'center', gap: 8 },
   shortcutIcon: { width: 52, height: 52, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
+  compactShortcutIcon: { width: 44, height: 44, borderRadius: 16 },
   shortcutLabel: { fontSize: 12, fontWeight: '600', color: Colors.light.text, textAlign: 'center' },
   sectionHeading: { gap: 3, flex: 1 },
   sectionSubtitle: { fontSize: 12, color: Colors.light.textSecondary, textTransform: 'capitalize' },

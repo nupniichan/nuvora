@@ -1,9 +1,9 @@
 import { MaterialIcons } from '@expo/vector-icons';
+import { useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
-  Alert,
   ScrollView,
   StyleSheet,
   Switch,
@@ -21,8 +21,10 @@ import {
   getActiveBudget,
   getBudgetWithAllocations,
   setCategorySpendingLimit,
-  setMonthlyBudgetTotal,
 } from '@/features/budgets/budget-queries';
+import { getMonthlyLimit, monthKey, MonthlyLimitScope, MonthlyLimitValidationError, saveMonthlyLimit } from '@/features/budgets/monthly-limits';
+import { getDefaultAccount } from '@/features/accounts/account-queries';
+import { alertMessage, confirmAction } from '@/shared/dialog';
 import { getAllCategories } from '@/features/categories/category-queries';
 import { useSafeBack } from '@/hooks/use-safe-back';
 import { formatMoney } from '@/shared/money';
@@ -38,8 +40,23 @@ interface CategoryLimitDraft {
 }
 
 export default function ManageBudgetModal() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = i18n.resolvedLanguage === 'en' ? 'en-US' : 'vi-VN';
   const closeModal = useSafeBack('/(main)/budgets');
+  const params = useLocalSearchParams<{ year?: string; month?: string }>();
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const now = new Date();
+    try { return monthKey(Number(params.year), Number(params.month)); }
+    catch { return monthKey(now.getFullYear(), now.getMonth() + 1); }
+  });
+  const [year, month] = selectedMonth.split('-').map(Number);
+  const [currency, setCurrency] = useState('');
+  const [categoryCurrency, setCategoryCurrency] = useState('VND');
+  const [scope, setScope] = useState<MonthlyLimitScope>('month');
+  const [recurringLimit, setRecurringLimit] = useState<number | null>(null);
+  const [monthLoading, setMonthLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [dirty, setDirty] = useState(false);
 
   const [budgetId, setBudgetId] = useState<string>('');
   const [totalBudgetEnabled, setTotalBudgetEnabled] = useState(false);
@@ -55,6 +72,8 @@ export default function ManageBudgetModal() {
         const year = now.getFullYear();
         const month = now.getMonth() + 1;
         const monthStr = String(month).padStart(2, '0');
+        const account = await getDefaultAccount();
+        setCurrency(account.currency);
 
         let active = await getActiveBudget();
         if (!active) {
@@ -62,15 +81,12 @@ export default function ManageBudgetModal() {
             name: t('budgets.monthlyPlanName', { month, year }),
             period_type: 'monthly',
             start_date: `${year}-${monthStr}-01`,
-            currency: 'VND',
+            currency: account.currency,
           });
         }
 
         setBudgetId(active.id);
-        if (active.total_budget && active.total_budget > 0) {
-          setTotalBudgetEnabled(true);
-          setTotalBudgetAmount(active.total_budget);
-        }
+        setCategoryCurrency(active.currency);
 
         const full = await getBudgetWithAllocations(active.id);
         const limitMap = new Map<string, number>();
@@ -99,6 +115,7 @@ export default function ManageBudgetModal() {
 
         setCategoryLimits(drafts);
       } catch (e) {
+        setLoadError(true);
         console.warn('Lỗi tải hạn mức', e);
       } finally {
         setInitialLoading(false);
@@ -106,6 +123,31 @@ export default function ManageBudgetModal() {
     }
     load();
   }, [t]);
+
+  useEffect(() => {
+    if (!currency) return;
+    let cancelled = false;
+    getMonthlyLimit(year, month, currency).then(result => {
+      if (cancelled) return;
+      setTotalBudgetEnabled(result.limit !== null);
+      setTotalBudgetAmount(result.limit ?? 0);
+      setRecurringLimit(result.recurringLimit);
+      setScope(result.source === 'recurring' ? 'inherit' : 'month');
+      setDirty(false);
+    }).catch(() => { if (!cancelled) setLoadError(true); })
+      .finally(() => { if (!cancelled) setMonthLoading(false); });
+    return () => { cancelled = true; };
+  }, [year, month, currency]);
+
+  const changeMonth = (offset: number) => {
+    const target = new Date(year, month - 1 + offset, 1);
+    const change = () => {
+      setMonthLoading(true);
+      setSelectedMonth(monthKey(target.getFullYear(), target.getMonth() + 1));
+    };
+    if (dirty) confirmAction(t('monthlyLimit.unsavedTitle'), t('monthlyLimit.unsavedMessage'), change, t('monthlyLimit.discard'), t('common.cancel'));
+    else change();
+  };
 
   const handleToggleLimit = (index: number, val: boolean) => {
     setCategoryLimits((prev) => {
@@ -128,15 +170,16 @@ export default function ManageBudgetModal() {
     .reduce((sum, c) => sum + c.limitAmount, 0);
 
   const handleSave = async () => {
-    if (!budgetId) return;
+    if (!budgetId || loading || initialLoading || monthLoading || loadError) return;
+    if (scope !== 'inherit' && totalBudgetEnabled && (!Number.isSafeInteger(totalBudgetAmount) || totalBudgetAmount <= 0)) {
+      alertMessage(t('common.error'), t('monthlyLimit.invalidAmount'));
+      return;
+    }
 
     setLoading(true);
     try {
       // 1. Save total budget limit
-      await setMonthlyBudgetTotal(
-        budgetId,
-        totalBudgetEnabled && totalBudgetAmount > 0 ? totalBudgetAmount : null
-      );
+      await saveMonthlyLimit(year, month, currency, scope !== 'inherit' && totalBudgetEnabled ? totalBudgetAmount : null, scope);
 
       // 2. Save individual category limits
       for (const item of categoryLimits) {
@@ -149,7 +192,7 @@ export default function ManageBudgetModal() {
 
       closeModal();
     } catch (e: any) {
-      Alert.alert(t('common.error'), e.message || t('common.error'));
+      alertMessage(t('common.error'), e instanceof MonthlyLimitValidationError ? t(`monthlyLimit.${e.code}`) : t('monthlyLimit.saveError'));
     } finally {
       setLoading(false);
     }
@@ -165,9 +208,29 @@ export default function ManageBudgetModal() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        {initialLoading ? <ActivityIndicator color={Colors.primaryStrong} /> : null}
+        {initialLoading || monthLoading ? <ActivityIndicator color={Colors.primaryStrong} /> : null}
+        {loadError && <Text style={styles.warningText}>{t('charts.loadError')}</Text>}
         {/* Total Monthly Budget Card */}
         <Card style={styles.sectionCard}>
+          <View style={styles.toggleRow}>
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel={t('charts.previousMonth')} disabled={monthLoading || loading || year <= 1000} onPress={() => changeMonth(-1)} style={styles.closeBtn}>
+              <MaterialIcons name="chevron-left" size={26} color={Colors.primaryDark} />
+            </TouchableOpacity>
+            <Text style={styles.toggleTitle}>{new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' }).format(new Date(year, month - 1, 1))} · {currency}</Text>
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel={t('charts.nextMonth')} disabled={monthLoading || loading || year >= 9999} onPress={() => changeMonth(1)} style={styles.closeBtn}>
+              <MaterialIcons name="chevron-right" size={26} color={Colors.primaryDark} />
+            </TouchableOpacity>
+          </View>
+          {(['month', 'recurring', 'inherit'] as const).map(option => (
+            <TouchableOpacity key={option} accessibilityRole="radio" accessibilityState={{ checked: scope === option }} disabled={monthLoading || loading} onPress={() => { setScope(option); setDirty(true); }} style={styles.toggleRow}>
+              <MaterialIcons name={scope === option ? 'radio-button-checked' : 'radio-button-unchecked'} size={22} color={Colors.primaryDark} />
+              <View style={styles.toggleTextInfo}>
+                <Text style={styles.toggleTitle}>{t(`monthlyLimit.scope.${option}`)}</Text>
+                <Text style={styles.toggleDesc}>{t(`monthlyLimit.scopeDescription.${option}`)}</Text>
+              </View>
+            </TouchableOpacity>
+          ))}
+          {scope === 'inherit' ? <Text style={styles.toggleDesc}>{t('monthlyLimit.inheritedAmount', { amount: recurringLimit === null ? t('budgets.unlimitedSpending') : formatMoney(recurringLimit, currency, locale) })}</Text> : <>
           <View style={styles.toggleRow}>
             <View style={styles.toggleTextInfo}>
               <Text style={styles.toggleTitle}>{t('budgets.totalMonthlyLimit')}</Text>
@@ -175,7 +238,8 @@ export default function ManageBudgetModal() {
             </View>
             <Switch
               value={totalBudgetEnabled}
-              onValueChange={setTotalBudgetEnabled}
+              onValueChange={value => { setTotalBudgetEnabled(value); setDirty(true); }}
+              disabled={monthLoading || loading}
               trackColor={{ false: Colors.light.backgroundElement, true: Colors.primaryDark }}
               thumbColor="#FFFFFF"
             />
@@ -186,31 +250,33 @@ export default function ManageBudgetModal() {
               <MoneyInput
                 label={t('budgets.totalLimitAmount')}
                 valueMinor={totalBudgetAmount}
-                onChangeMinor={setTotalBudgetAmount}
-                currency="VND"
+                onChangeMinor={value => { setTotalBudgetAmount(value); setDirty(true); }}
+                currency={currency || 'VND'}
               />
             </View>
           )}
+          </>}
         </Card>
 
         {/* Category Spending Limits List */}
         <View style={styles.listSection}>
+          <Text style={styles.toggleDesc}>{t('monthlyLimit.categoryShared')}</Text>
           <View style={styles.listHeader}>
             <Text style={styles.listTitle}>{t('budgets.byCategory')}</Text>
             {totalLimits > 0 && (
               <Text style={styles.totalLimitsBadge}>
-                {t('budgets.totalLabel', { amount: formatMoney(totalLimits, 'VND') })}
+                {t('budgets.totalLabel', { amount: formatMoney(totalLimits, categoryCurrency, locale) })}
               </Text>
             )}
           </View>
 
-          {totalBudgetEnabled && totalLimits > totalBudgetAmount && (
+          {categoryCurrency === currency && totalBudgetEnabled && totalLimits > totalBudgetAmount && (
             <View style={styles.warningBanner}>
               <MaterialIcons name="warning" size={16} color="#E65100" />
               <Text style={styles.warningText}>
                 {t('budgets.categoryLimitsExceed', {
-                  categoryTotal: formatMoney(totalLimits, 'VND'),
-                  monthlyTotal: formatMoney(totalBudgetAmount, 'VND'),
+                  categoryTotal: formatMoney(totalLimits, categoryCurrency, locale),
+                  monthlyTotal: formatMoney(totalBudgetAmount, currency, locale),
                 })}
               </Text>
             </View>
@@ -250,7 +316,7 @@ export default function ManageBudgetModal() {
                   <MoneyInput
                     valueMinor={cat.limitAmount}
                     onChangeMinor={(amt) => handleUpdateAmount(idx, amt)}
-                    currency="VND"
+                    currency={categoryCurrency}
                   />
                 </View>
               ) : (
@@ -265,6 +331,7 @@ export default function ManageBudgetModal() {
           variant="primary"
           onPress={handleSave}
           loading={loading}
+          disabled={initialLoading || monthLoading || loadError}
           style={styles.saveBtn}
         />
       </ScrollView>
@@ -305,6 +372,7 @@ const styles = StyleSheet.create({
   },
   toggleRow: {
     flexDirection: 'row',
+    gap: 10,
     justifyContent: 'space-between',
     alignItems: 'center',
   },

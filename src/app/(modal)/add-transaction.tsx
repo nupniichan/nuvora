@@ -28,6 +28,8 @@ import {
 import { seedStarterCategories } from '@/features/categories/starter-templates';
 import { useSafeBack } from '@/hooks/use-safe-back';
 import { createTransaction } from '@/features/transactions/transaction-queries';
+import { withMonthlyLimitConfirmation } from '@/features/budgets/confirm-monthly-limit';
+import { isValidTransactionDate } from '@/features/budgets/monthly-limits';
 import { formatDateISO } from '@/shared/date-utils';
 import { formatMoney } from '@/shared/money';
 
@@ -178,7 +180,7 @@ export default function AddTransactionModal() {
   };
 
   const handleSave = async () => {
-    if (!activeAccount) return;
+    if (!activeAccount || loading) return;
     if (amountMinor <= 0) {
       setError(t('transactions.amountRequired'));
       return;
@@ -186,7 +188,11 @@ export default function AddTransactionModal() {
     setLoading(true);
     setError(null);
     try {
-      await createTransaction({
+      if (!isValidTransactionDate(date)) {
+        setError(t('monthlyLimit.invalidDate'));
+        return;
+      }
+      const saved = await withMonthlyLimitConfirmation((monthlyLimitApproval) => createTransaction({
         type,
         amount: amountMinor,
         currency,
@@ -194,11 +200,13 @@ export default function AddTransactionModal() {
         categoryId: selectedCategoryId || undefined,
         note: note || undefined,
         date,
-      });
+        monthlyLimitApproval,
+      }), t);
 
-      closeModal();
+      if (saved) closeModal();
     } catch (e: any) {
       setError(e.message || t('transactions.saveError'));
+    } finally {
       setLoading(false);
     }
   };
