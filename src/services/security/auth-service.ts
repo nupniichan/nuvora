@@ -1,7 +1,7 @@
-import { Platform } from 'react-native';
+import { AppState, AppStateStatus, Platform } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
 
-import { initDatabase } from '@/database/database';
+import { closeDatabase, initDatabase } from '@/database/database';
 
 import { unwrapDEK } from './key-manager';
 import {
@@ -15,6 +15,17 @@ import {
 
 let activeDekInMemory: string | null = null;
 let isUnlockedState: boolean = false;
+
+// Listen for AppState changes to immediately lock app and purge DEK from RAM when leaving app
+if (typeof AppState?.addEventListener === 'function') {
+  AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
+    if (nextAppState === 'background') {
+      if (isAppUnlocked()) {
+        lockApp();
+      }
+    }
+  });
+}
 
 /**
  * Checks if biometric authentication is available on device
@@ -99,11 +110,12 @@ export async function unlockWithBiometrics(): Promise<boolean> {
 }
 
 /**
- * Locks the app (clears memory DEK)
+ * Locks the app (clears memory DEK and closes DB connection)
  */
 export function lockApp(): void {
   activeDekInMemory = null;
   isUnlockedState = false;
+  void closeDatabase().catch(() => undefined);
 }
 
 /**

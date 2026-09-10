@@ -13,7 +13,7 @@ const KEYS = {
 };
 
 export async function setSecureItem(key: string, value: string): Promise<void> {
-  if (Platform.OS === 'web' || typeof window !== 'undefined') {
+  if (Platform.OS === 'web') {
     try {
       if (typeof window !== 'undefined' && window.localStorage) {
         window.localStorage.setItem(key, value);
@@ -27,7 +27,7 @@ export async function setSecureItem(key: string, value: string): Promise<void> {
 }
 
 export async function getSecureItem(key: string): Promise<string | null> {
-  if (Platform.OS === 'web' || typeof window !== 'undefined') {
+  if (Platform.OS === 'web') {
     try {
       if (typeof window !== 'undefined' && window.localStorage) {
         return window.localStorage.getItem(key);
@@ -39,7 +39,7 @@ export async function getSecureItem(key: string): Promise<string | null> {
 }
 
 export async function deleteSecureItem(key: string): Promise<void> {
-  if (Platform.OS === 'web' || typeof window !== 'undefined') {
+  if (Platform.OS === 'web') {
     try {
       if (typeof window !== 'undefined' && window.localStorage) {
         window.localStorage.removeItem(key);
