@@ -1,4 +1,4 @@
-import { calculateNextOccurrence, getDaysInMonth } from '../date-utils';
+import { calculateNextOccurrence, getDaysInMonth, getTimeOfDay } from '../date-utils';
 
 describe('Date & Recurrence Utilities', () => {
   test('getDaysInMonth', () => {
@@ -24,5 +24,25 @@ describe('Date & Recurrence Utilities', () => {
     // Feb 29, 2024 + 1 year -> 2025 (non-leap). last_day -> Feb 28, 2025.
     const next = calculateNextOccurrence('2024-02-29', 'yearly', 1, 29, 'last_day');
     expect(next).toBe('2025-02-28');
+  });
+
+  test('getTimeOfDay distinguishes daytime and nighttime correctly', () => {
+    const morning = new Date(2025, 0, 1, 8, 30);
+    expect(getTimeOfDay(morning)).toBe('day');
+
+    const noon = new Date(2025, 0, 1, 12, 0);
+    expect(getTimeOfDay(noon)).toBe('day');
+
+    const lateAfternoon = new Date(2025, 0, 1, 17, 59);
+    expect(getTimeOfDay(lateAfternoon)).toBe('day');
+
+    const evening = new Date(2025, 0, 1, 18, 0);
+    expect(getTimeOfDay(evening)).toBe('night');
+
+    const midnight = new Date(2025, 0, 1, 0, 30);
+    expect(getTimeOfDay(midnight)).toBe('night');
+
+    const dawnBeforeSix = new Date(2025, 0, 1, 5, 59);
+    expect(getTimeOfDay(dawnBeforeSix)).toBe('night');
   });
 });

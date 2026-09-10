@@ -100,3 +100,14 @@ export function calculateNextOccurrence(
       return null;
   }
 }
+
+export type TimeOfDay = 'day' | 'night';
+
+/**
+ * Determines whether it is daytime (06:00 - 17:59) or nighttime (18:00 - 05:59)
+ * using the user's device clock and local timezone.
+ */
+export function getTimeOfDay(date: Date = new Date()): TimeOfDay {
+  const hour = date.getHours();
+  return hour >= 6 && hour < 18 ? 'day' : 'night';
+}
