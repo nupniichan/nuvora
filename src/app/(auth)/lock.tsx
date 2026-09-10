@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { LockHeroScenery, LockStatus } from '@/components/scenery';
 import { Colors } from '@/constants/theme';
 import {
   isBiometricsAvailable,
@@ -24,13 +25,18 @@ export default function LockScreen() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [canBiometric, setCanBiometric] = useState(false);
+  const [lockStatus, setLockStatus] = useState<LockStatus>('locked');
+
+  const handleUnlockComplete = useCallback(() => {
+    router.replace('/(main)');
+  }, [router]);
 
   const handleBiometric = useCallback(async () => {
     const success = await unlockWithBiometrics();
     if (success) {
-      router.replace('/(main)');
+      setLockStatus('unlocked');
     }
-  }, [router]);
+  }, []);
 
   useEffect(() => {
     async function checkBio() {
@@ -49,9 +55,13 @@ export default function LockScreen() {
     const success = await unlockWithPassword(password);
     setLoading(false);
     if (success) {
-      router.replace('/(main)');
+      setLockStatus('unlocked');
     } else {
       setError(t('onboarding.passwordMismatch'));
+      setLockStatus('error');
+      setTimeout(() => {
+        setLockStatus('locked');
+      }, 650);
     }
   };
 
@@ -59,9 +69,10 @@ export default function LockScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         <View style={styles.hero}>
-          <View style={styles.iconBadge}>
-            <MaterialIcons name="lock-outline" size={32} color={Colors.primaryDark} />
-          </View>
+          <LockHeroScenery
+            status={lockStatus}
+            onUnlockComplete={handleUnlockComplete}
+          />
           <Text style={styles.title}>Nuvora</Text>
           <Text style={styles.subtitle}>{t('onboarding.lockSubtitle')}</Text>
         </View>

@@ -16,6 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Card } from '@/components/ui/card';
+import { BalanceCardScenery } from '@/components/scenery';
 import { MonthlyLimitCard } from '@/components/ui/monthly-limit-card';
 import { CategoryBreakdownChart } from '@/components/ui/charts';
 import { DailyExpenseChart } from '@/components/ui/insight-charts';
@@ -205,6 +206,7 @@ export default function DashboardScreen() {
 
         {/* Total Balance Card */}
         <Card style={styles.balanceCard}>
+          <BalanceCardScenery />
           <View style={styles.balanceTop}>
             <View style={styles.balanceHeading}>
               <MaterialIcons name="account-balance-wallet" size={18} color={Colors.primaryStrong} />
@@ -600,6 +602,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   balanceCard: {
+    position: 'relative',
     padding: 22,
     gap: 16,
     borderRadius: 28,

@@ -7,14 +7,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { WelcomeHeroScenery } from '@/components/scenery';
 import { Colors } from '@/constants/theme';
-import { AppLanguage, setAppLanguage } from '@/i18n';
+import { AppLanguage, getAppLanguage, setAppLanguage } from '@/i18n';
 
 export default function WelcomeScreen() {
   const { t, i18n } = useTranslation();
   const router = useRouter();
   const [selectedLang, setSelectedLang] = useState<AppLanguage>(
-    i18n.resolvedLanguage === 'en' ? 'en' : 'vi'
+    (i18n.language?.startsWith('en') || getAppLanguage() === 'en') ? 'en' : 'vi'
   );
 
   const handleSelectLanguage = (lang: AppLanguage) => {
@@ -33,12 +34,7 @@ export default function WelcomeScreen() {
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.heroSection}>
-          <View style={styles.illustration}>
-            <View style={styles.orbit} />
-            <View style={[styles.floatIcon, styles.savingsIcon]}><MaterialIcons name="savings" size={25} color={Colors.accentDark} /></View>
-            <View style={[styles.floatIcon, styles.trendIcon]}><MaterialIcons name="trending-up" size={25} color={Colors.primaryStrong} /></View>
-            <View style={styles.spark}><MaterialIcons name="auto-awesome" size={22} color={Colors.primaryDark} /></View>
-          </View>
+          <WelcomeHeroScenery />
           <Text style={styles.title}>{t('onboarding.welcomeTitle')}</Text>
           <Text style={styles.subtitle}>{t('onboarding.welcomeSubtitle')}</Text>
         </View>
