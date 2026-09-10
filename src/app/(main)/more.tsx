@@ -8,17 +8,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Colors, MaxContentWidth } from '@/constants/theme';
-import { setAppLanguage } from '@/i18n';
+import { getAppLanguage, setAppLanguage } from '@/i18n';
 import { lockApp } from '@/services/security/auth-service';
 
 export default function MoreScreen() {
   const { t, i18n } = useTranslation();
   const router = useRouter();
-  const currentLang = i18n.resolvedLanguage === 'en' ? 'en' : 'vi';
+  const currentLang = (i18n.language?.startsWith('en') || getAppLanguage() === 'en') ? 'en' : 'vi';
 
-  const toggleLanguage = () => {
+  const toggleLanguage = async () => {
     const nextLang = currentLang === 'vi' ? 'en' : 'vi';
-    void setAppLanguage(nextLang);
+    await setAppLanguage(nextLang);
   };
 
   const handleLock = () => {

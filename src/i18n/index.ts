@@ -6,7 +6,7 @@ import { StorageKeys, getSecureItem, setSecureItem } from '@/services/security/s
 
 import en from './locales/en.json';
 import vi from './locales/vi.json';
-import { setCurrentLanguage } from './language-state';
+import { getCurrentLanguage, setCurrentLanguage } from './language-state';
 
 const resources = {
   vi: { translation: vi },
@@ -18,15 +18,24 @@ export type AppLanguage = keyof typeof resources;
 const i18n = createInstance();
 let initialization: Promise<typeof i18n> | null = null;
 
-function normalizeLanguage(value: string | null | undefined): AppLanguage {
+export function normalizeLanguage(value: string | null | undefined): AppLanguage {
   return value?.toLowerCase().startsWith('en') ? 'en' : 'vi';
+}
+
+export function getAppLanguage(): AppLanguage {
+  return normalizeLanguage(i18n.language || getCurrentLanguage());
 }
 
 export function initializeI18n(): Promise<typeof i18n> {
   if (initialization) return initialization;
 
   initialization = (async () => {
-    const savedLanguage = await getSecureItem(StorageKeys.LANGUAGE);
+    let savedLanguage: string | null = null;
+    try {
+      savedLanguage = await getSecureItem(StorageKeys.LANGUAGE);
+    } catch {
+      savedLanguage = null;
+    }
     const deviceLanguage = getLocales()[0]?.languageCode;
     const language = normalizeLanguage(savedLanguage ?? deviceLanguage);
     setCurrentLanguage(language);
@@ -46,11 +55,14 @@ export function initializeI18n(): Promise<typeof i18n> {
 
 export async function setAppLanguage(language: AppLanguage): Promise<void> {
   await initializeI18n();
-  setCurrentLanguage(language);
-  await Promise.all([
-    i18n.changeLanguage(language),
-    setSecureItem(StorageKeys.LANGUAGE, language),
-  ]);
+  const normalized = normalizeLanguage(language);
+  setCurrentLanguage(normalized);
+  await i18n.changeLanguage(normalized);
+  try {
+    await setSecureItem(StorageKeys.LANGUAGE, normalized);
+  } catch (err) {
+    console.warn('Failed to persist language setting to secure storage:', err);
+  }
 }
 
 export default i18n;
