@@ -3,7 +3,7 @@ import { SessionGuard } from '@/components/ui/session-guard';
 
 export default function ModalLayout() {
   return (
-    <SessionGuard><Stack screenOptions={{ headerShown: false, presentation: 'modal' }}>
+    <SessionGuard><Stack screenOptions={{ headerShown: false, presentation: 'card' }}>
       <Stack.Screen name="account-security" />
       <Stack.Screen name="add-transaction" />
       <Stack.Screen name="manage-budget" />

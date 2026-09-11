@@ -1,4 +1,25 @@
-import { BackNavigation, goBackOrReplace } from '../navigation';
+import { BackNavigation, getActiveMainTab, goBackOrReplace } from '../navigation';
+
+describe('persistent bottom navigation', () => {
+  it.each([
+    [[], null],
+    [['(auth)', 'lock'], null],
+    [['(auth)', 'welcome'], null],
+    [['(main)'], 'index'],
+    [['(main)', 'index'], 'index'],
+    [['(main)', 'transactions'], 'transactions'],
+    [['(main)', 'budgets'], 'budgets'],
+    [['(main)', 'more'], 'more'],
+    [['(modal)', 'manage-budget'], 'budgets'],
+    [['(modal)', 'manage-goals'], 'budgets'],
+    [['(modal)', 'manage-recurring'], 'budgets'],
+    [['(modal)', 'manage-categories'], 'more'],
+    [['(modal)', 'backup-restore'], 'more'],
+    [['(modal)', 'add-transaction'], 'transactions'],
+  ])('selects the correct tab for %j', (segments, expected) => {
+    expect(getActiveMainTab(segments as string[])).toBe(expected);
+  });
+});
 
 function createNavigation(canGoBack: boolean): BackNavigation {
   return {
