@@ -277,8 +277,8 @@ export default function AddTransactionModal() {
               <Text style={styles.warningSub}>
                 {t('transactions.limitProjection', {
                   category: selectedCategory?.name,
-                  limit: formatMoney(limitWarning.limit, 'VND'),
-                  projected: formatMoney(limitWarning.projectedTotal, 'VND'),
+                  limit: formatMoney(limitWarning.limit, currency),
+                  projected: formatMoney(limitWarning.projectedTotal, currency),
                 })}
               </Text>
             </View>

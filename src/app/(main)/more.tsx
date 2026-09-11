@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { CurrencySwitchCard } from '@/components/ui/currency-switch-card';
 import { Colors, MaxContentWidth } from '@/constants/theme';
 import { getAppLanguage, setAppLanguage } from '@/i18n';
 import { lockApp } from '@/services/security/auth-service';
@@ -41,6 +42,8 @@ export default function MoreScreen() {
             <Text style={styles.brandDescription}>{t('settings.personalSpaceDescription')}</Text>
           </View>
         </Card>
+
+        <CurrencySwitchCard />
 
         {/* Security Info Card */}
         <Card style={styles.sectionCard}>
