@@ -71,26 +71,14 @@ export default function MoreScreen() {
           />
         </Card>
 
-        {/* Customization & Finance Management Card */}
+        {/* Category Management Card */}
         <Card style={styles.sectionCard}>
-          <Text style={styles.sectionHeader}>{t('settings.financeManagement')}</Text>
-          <Text style={styles.sectionDesc}>{t('settings.financeDescription')}</Text>
+          <Text style={styles.sectionHeader}>{t('settings.categoriesManagement')}</Text>
+          <Text style={styles.sectionDesc}>{t('settings.categoriesDescription')}</Text>
           <Button
             title={t('settings.manageCategories')}
             icon={<MaterialIcons name="category" size={18} color={Colors.primaryDark} />}
             onPress={() => router.push('/(modal)/manage-categories' as any)}
-            variant="outline"
-          />
-          <Button
-            title={t('settings.manageGoals')}
-            icon={<MaterialIcons name="flag" size={18} color={Colors.primaryDark} />}
-            onPress={() => router.push('/(modal)/manage-goals' as any)}
-            variant="outline"
-          />
-          <Button
-            title={t('settings.spendingLimits')}
-            icon={<MaterialIcons name="tune" size={18} color={Colors.primaryDark} />}
-            onPress={() => router.push('/(modal)/manage-budget' as any)}
             variant="outline"
           />
         </Card>
@@ -103,18 +91,6 @@ export default function MoreScreen() {
             title={t('settings.openBackup')}
             icon={<MaterialIcons name="backup" size={18} color={Colors.primaryDark} />}
             onPress={() => router.push('/(modal)/backup-restore' as any)}
-            variant="outline"
-          />
-        </Card>
-
-        {/* Recurring Rules Management */}
-        <Card style={styles.sectionCard}>
-          <Text style={styles.sectionHeader}>{t('recurring.title')}</Text>
-          <Text style={styles.sectionDesc}>{t('settings.recurringDescription')}</Text>
-          <Button
-            title={t('recurring.addRule')}
-            icon={<MaterialIcons name="event-repeat" size={18} color={Colors.primaryDark} />}
-            onPress={() => router.push('/(modal)/manage-recurring' as any)}
             variant="outline"
           />
         </Card>
