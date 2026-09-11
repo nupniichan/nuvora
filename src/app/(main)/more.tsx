@@ -45,6 +45,8 @@ export default function MoreScreen() {
         {/* Security Info Card */}
         <Card style={styles.sectionCard}>
           <Text style={styles.sectionHeader}>{t('settings.security')}</Text>
+          <Button title={t('accountSecurity.changePassword')} variant="outline" onPress={() => router.push({ pathname: '/(modal)/account-security', params: { action: 'password' } })} />
+          <Button title={t('accountSecurity.deleteAccount')} variant="destructive" onPress={() => router.push({ pathname: '/(modal)/account-security', params: { action: 'delete' } })} />
           <View style={styles.row}>
             <Text style={styles.rowLabel}>{t('settings.encryption')}</Text>
             <Text style={styles.rowValue}>

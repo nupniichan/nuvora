@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { ColorValue, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { SessionGuard } from '@/components/ui/session-guard';
 import { Colors } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -18,11 +19,11 @@ export default function MainLayout() {
   const tabIcon = (name: React.ComponentProps<typeof MaterialIcons>['name'], color: ColorValue, focused: boolean) => (
     <View style={[styles.tabIcon, focused && styles.activeTabIcon]}>
       <MaterialIcons name={name} size={22} color={color} />
-    </View>
+    </View></SessionGuard>
   );
 
   return (
-    <View style={styles.container}>
+    <SessionGuard><View style={styles.container}>
       <Tabs
         screenOptions={{
           headerShown: false,

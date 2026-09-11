@@ -13,6 +13,7 @@ import { Colors } from '@/constants/theme';
 import {
   isBiometricsAvailable,
   isBiometricsEnabled,
+  lockApp,
   unlockWithBiometrics,
   unlockWithPassword,
 } from '@/services/security/auth-service';
@@ -39,6 +40,7 @@ export default function LockScreen() {
   }, []);
 
   useEffect(() => {
+    lockApp();
     async function checkBio() {
       const avail = (await isBiometricsAvailable()) && (await isBiometricsEnabled());
       setCanBiometric(avail);

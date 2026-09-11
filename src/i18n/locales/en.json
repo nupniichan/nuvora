@@ -1,4 +1,21 @@
 {
+  "accountSecurity": {
+    "changePassword": "Change password",
+    "deleteAccount": "Delete account",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm new password",
+    "changeDescription": "Enter your current password to set a new password of at least 8 characters. Your data will be preserved.",
+    "deleteWarning": "Your account and all Nuvora data on this device will be permanently deleted, including transactions, budgets and goals. Export a backup first if needed. Previously exported backups will not be deleted.",
+    "passwordChanged": "Password changed. Unlock with your new password.",
+    "passwordRequired": "Please enter your current password.",
+    "incorrectPassword": "The current password is incorrect.",
+    "samePassword": "The new password must differ from your current password.",
+    "sessionExpired": "Your session is locked. Unlock again to continue.",
+    "busy": "An account operation is in progress. Please wait.",
+    "failed": "Unable to complete the operation. Please try again.",
+    "retry": "Unable to check your account. Tap to retry"
+  },
   "common": {
     "save": "Save",
     "cancel": "Cancel",
