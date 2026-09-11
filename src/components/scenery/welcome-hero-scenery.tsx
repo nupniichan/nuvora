@@ -42,13 +42,14 @@ export function WelcomeHeroScenery() {
       })
     );
 
-    // Drifting flower petal
+    // Reset only after the petal has fallen outside the clipped frame.
     const petalAnimation = Animated.loop(
       Animated.timing(petalMotion, {
         toValue: 1,
         duration: 4500,
-        easing: Easing.inOut(Easing.sin),
+        easing: Easing.linear,
         useNativeDriver: isNative,
+        isInteraction: false,
       })
     );
 
@@ -83,12 +84,12 @@ export function WelcomeHeroScenery() {
   });
 
   const petalTranslateX = petalMotion.interpolate({
-    inputRange: [0, 1],
-    outputRange: [-20, width * 0.55],
+    inputRange: [0, 0.25, 0.5, 0.75, 1],
+    outputRange: [0, width * 0.18, width * 0.24, width * 0.43, width * 0.55],
   });
   const petalTranslateY = petalMotion.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [20, 10, 45],
+    inputRange: [0, 1],
+    outputRange: [-24, height + 24],
   });
   const petalRotation = petalMotion.interpolate({
     inputRange: [0, 1],
@@ -240,7 +241,7 @@ export function WelcomeHeroScenery() {
         style={[
           styles.petalWrapper,
           {
-            top: height * 0.4,
+            top: 0,
             transform: [
               { translateX: petalTranslateX },
               { translateY: petalTranslateY },
