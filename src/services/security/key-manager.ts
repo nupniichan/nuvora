@@ -12,22 +12,33 @@ export interface SecuritySetupResult {
   saltHex: string;
 }
 
+let initializing = false;
+
 /**
  * Initializes key envelope for the first time during onboarding.
  * Generates a random 256-bit DEK and wraps it using a KEK derived from master password via Argon2id.
  */
 export async function initializeKeyEnvelope(masterPassword: string): Promise<SecuritySetupResult> {
+  if (initializing) throw new Error('Account creation is already in progress.');
+  initializing = true;
+  try {
+    return await createKeyEnvelope(masterPassword);
+  } finally {
+    initializing = false;
+  }
+}
+
+async function createKeyEnvelope(masterPassword: string): Promise<SecuritySetupResult> {
+  if (await isKeyEnvelopeInitialized()) {
+    throw new Error('An account already exists.');
+  }
   const dekHex = generateRandomHex(32); // 256-bit database encryption key
   const saltHex = generateRandomHex(32); // 256-bit random salt for KDF
 
   const kekHex = await deriveKeyArgon2id(masterPassword, saltHex, DEFAULT_KDF_PARAMS);
   const wrapped = await encryptAesGcm(dekHex, kekHex);
 
-  await setSecureItem(StorageKeys.WRAPPED_DEK, wrapped.ciphertextHex);
-  await setSecureItem(StorageKeys.DEK_NONCE, wrapped.nonceHex);
-  await setSecureItem(StorageKeys.DEK_TAG, wrapped.authTagHex);
-  await setSecureItem(StorageKeys.KDF_SALT, saltHex);
-  await setSecureItem(StorageKeys.IS_INITIALIZED, 'true');
+  await setSecureItem(StorageKeys.KEY_ENVELOPE, JSON.stringify({ ...wrapped, saltHex }));
 
   return { dekHex, saltHex };
 }
@@ -37,6 +48,12 @@ export async function initializeKeyEnvelope(masterPassword: string): Promise<Sec
  * Throws an error if the password is wrong or ciphertext has been tampered with.
  */
 export async function unwrapDEK(masterPassword: string): Promise<string> {
+  const envelope = await getSecureItem(StorageKeys.KEY_ENVELOPE);
+  if (envelope) {
+    const { ciphertextHex, nonceHex, authTagHex, saltHex } = JSON.parse(envelope);
+    const kekHex = await deriveKeyArgon2id(masterPassword, saltHex, DEFAULT_KDF_PARAMS);
+    return decryptAesGcm(ciphertextHex, kekHex, nonceHex, authTagHex);
+  }
   const wrappedHex = await getSecureItem(StorageKeys.WRAPPED_DEK);
   const nonceHex = await getSecureItem(StorageKeys.DEK_NONCE);
   const authTagHex = await getSecureItem(StorageKeys.DEK_TAG);
@@ -67,10 +84,8 @@ export async function rewrapDEK(oldPassword: string, newPassword: string): Promi
   const newKekHex = await deriveKeyArgon2id(newPassword, newSaltHex, DEFAULT_KDF_PARAMS);
   const newWrapped = await encryptAesGcm(dekHex, newKekHex);
 
-  await setSecureItem(StorageKeys.WRAPPED_DEK, newWrapped.ciphertextHex);
-  await setSecureItem(StorageKeys.DEK_NONCE, newWrapped.nonceHex);
-  await setSecureItem(StorageKeys.DEK_TAG, newWrapped.authTagHex);
-  await setSecureItem(StorageKeys.KDF_SALT, newSaltHex);
+  // One storage write commits the entire envelope, so failed writes preserve the old password.
+  await setSecureItem(StorageKeys.KEY_ENVELOPE, JSON.stringify({ ...newWrapped, saltHex: newSaltHex }));
 }
 
 /**
@@ -78,5 +93,6 @@ export async function rewrapDEK(oldPassword: string, newPassword: string): Promi
  */
 export async function isKeyEnvelopeInitialized(): Promise<boolean> {
   const initialized = await getSecureItem(StorageKeys.IS_INITIALIZED);
-  return initialized === 'true';
+  return initialized === 'true' || Boolean(await getSecureItem(StorageKeys.KEY_ENVELOPE))
+    || (await getSecureItem(StorageKeys.DELETION_PENDING)) === 'true';
 }

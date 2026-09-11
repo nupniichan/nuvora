@@ -1,4 +1,6 @@
 const KEYS = {
+  KEY_ENVELOPE: 'nuvora_key_envelope',
+  DELETION_PENDING: 'nuvora_deletion_pending',
   WRAPPED_DEK: 'nuvora_wrapped_dek',
   KDF_SALT: 'nuvora_kdf_salt',
   DEK_NONCE: 'nuvora_dek_nonce',

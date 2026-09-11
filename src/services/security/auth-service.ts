@@ -1,9 +1,10 @@
 import { AppState, AppStateStatus, Platform } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
 
-import { closeDatabase, initDatabase } from '@/database/database';
+import { closeDatabase, deleteDatabase, initDatabase } from '@/database/database';
+import { validatePassword } from '@/shared/validators';
 
-import { unwrapDEK } from './key-manager';
+import { rewrapDEK, unwrapDEK } from './key-manager';
 import {
   StorageKeys,
   deleteSecureItem,
@@ -71,6 +72,7 @@ export async function setBiometricsEnabled(enabled: boolean): Promise<void> {
  */
 export async function unlockWithPassword(password: string): Promise<boolean> {
   try {
+    if (await getSecureItem(StorageKeys.DELETION_PENDING) === 'true') return false;
     const dekHex = await unwrapDEK(password);
     activeDekInMemory = dekHex;
     isUnlockedState = true;
@@ -89,6 +91,7 @@ export async function unlockWithPassword(password: string): Promise<boolean> {
  * Attempts biometric unlock
  */
 export async function unlockWithBiometrics(): Promise<boolean> {
+  if (await getSecureItem(StorageKeys.DELETION_PENDING) === 'true') return false;
   const canUseBio = (await isBiometricsAvailable()) && (await isBiometricsEnabled());
   if (!canUseBio) {
     return false;
@@ -130,4 +133,73 @@ export function isAppUnlocked(): boolean {
  */
 export function getActiveDek(): string | null {
   return activeDekInMemory;
+}
+
+let accountOperation = false;
+let deletionOperation: Promise<void> | null = null;
+
+async function verifyCurrentPassword(password: string): Promise<void> {
+  const activeDek = getActiveDek();
+  if (!activeDek || !isAppUnlocked()) throw new Error('accountSecurity.sessionExpired');
+  let dek: string;
+  try {
+    dek = await unwrapDEK(password);
+  } catch {
+    throw new Error('accountSecurity.incorrectPassword');
+  }
+  if (dek !== activeDek || getActiveDek() !== activeDek || !isAppUnlocked()) {
+    throw new Error('accountSecurity.sessionExpired');
+  }
+}
+
+export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
+  if (accountOperation) throw new Error('accountSecurity.busy');
+  const validation = validatePassword(newPassword);
+  if (!validation.isValid) throw new Error(validation.errorKey);
+  if (currentPassword === newPassword) throw new Error('accountSecurity.samePassword');
+  accountOperation = true;
+  try {
+    await verifyCurrentPassword(currentPassword);
+    await rewrapDEK(currentPassword, newPassword);
+  } finally {
+    accountOperation = false;
+  }
+}
+
+/** The durable marker allows an interrupted, already-confirmed deletion to finish on restart. */
+export async function resumeAccountDeletion(): Promise<void> {
+  if (deletionOperation) return deletionOperation;
+  deletionOperation = (async () => {
+    if (await getSecureItem(StorageKeys.DELETION_PENDING) !== 'true') return;
+    activeDekInMemory = null;
+    isUnlockedState = false;
+    await deleteDatabase();
+    for (const key of Object.values(StorageKeys)) {
+      if (key !== StorageKeys.LANGUAGE && key !== StorageKeys.DELETION_PENDING) {
+        await deleteSecureItem(key);
+      }
+    }
+    await deleteSecureItem(StorageKeys.DELETION_PENDING);
+  })();
+  try {
+    await deletionOperation;
+  } finally {
+    deletionOperation = null;
+  }
+}
+
+export async function deleteAccount(password: string): Promise<void> {
+  if (accountOperation) throw new Error('accountSecurity.busy');
+  accountOperation = true;
+  try {
+    if (await getSecureItem(StorageKeys.DELETION_PENDING) === 'true') {
+      await resumeAccountDeletion();
+      return;
+    }
+    await verifyCurrentPassword(password);
+    await setSecureItem(StorageKeys.DELETION_PENDING, 'true');
+    await resumeAccountDeletion();
+  } finally {
+    accountOperation = false;
+  }
 }
