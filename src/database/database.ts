@@ -363,3 +363,16 @@ export async function closeDatabase(): Promise<void> {
     dbInstance = null;
   }
 }
+
+export async function deleteDatabase(): Promise<void> {
+  await closeDatabase();
+  try {
+    await SQLite.deleteDatabaseAsync('nuvora.db');
+  } catch (error) {
+    // A previous attempt may already have deleted the file before secure storage cleanup failed.
+    const failure = error as { code?: string; message?: string };
+    const missing = failure?.code === 'ERR_DATABASE_NOT_FOUND'
+      || (failure?.code === 'E_SQLITE_DELETE_DATABASE' && /Database .+ not found/.test(failure.message ?? ''));
+    if (!missing) throw error;
+  }
+}

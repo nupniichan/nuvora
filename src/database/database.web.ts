@@ -41,12 +41,13 @@ class WebSQLiteDatabase {
     }
   }
 
-  private saveToStorage() {
+  private saveToStorage(tables = this.tables, requirePersist = false) {
     if (!this.persist) return;
     if (typeof window !== 'undefined' && window.localStorage) {
       try {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(this.tables));
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(tables));
       } catch (e) {
+        if (requirePersist) throw e;
         console.warn('Failed to save web database to localStorage', e);
       }
     }
@@ -293,6 +294,10 @@ class WebSQLiteDatabase {
     // Filter conditions
     if (/WHERE/i.test(trimmed)) {
       let pIdx = 0;
+      if (/\bkey\s*=\s*\?/i.test(trimmed)) {
+        const key = params[pIdx++];
+        rows = rows.filter((row) => row.key === key);
+      }
       if (/status\s*=\s*'pending'/i.test(trimmed)) {
         rows = rows.filter((r) => r.status === 'pending');
       }
@@ -398,8 +403,8 @@ class WebSQLiteDatabase {
       txn.persist = false;
       try {
         await cb(txn);
+        this.saveToStorage(txn.tables, true);
         this.tables = txn.tables;
-        this.saveToStorage();
       } finally {
         this.exclusiveActive = false;
       }
@@ -409,7 +414,8 @@ class WebSQLiteDatabase {
   }
 
   async closeAsync(): Promise<void> {
-    // No-op
+    await this.exclusiveQueue;
+    this.persist = false;
   }
 }
 
@@ -434,5 +440,11 @@ export async function withGoalTransaction(task: (txn: WebSQLiteDatabase) => Prom
 }
 
 export async function closeDatabase(): Promise<void> {
+  await dbInstance?.closeAsync();
   dbInstance = null;
+}
+
+export async function deleteDatabase(): Promise<void> {
+  await closeDatabase();
+  window.localStorage.removeItem('nuvora_web_db_tables');
 }
