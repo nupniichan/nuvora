@@ -80,7 +80,7 @@ test('deletion removes local data and biometric keys, then permits a fresh accou
   expect(getActiveDek()).toBeNull();
   expect(await isKeyEnvelopeInitialized()).toBe(false);
   expect(values).toEqual(new Map([[StorageKeys.LANGUAGE, 'en'], ['unrelated-app', 'keep']]));
-  // A stale reference must not resurrect the deleted database in storage.
+
   await oldDb.runAsync('INSERT INTO accounts (id, name) VALUES (?, ?)', ['late', 'Late write']);
   expect(values.has('nuvora_web_db_tables')).toBe(false);
   await initializeKeyEnvelope('fresh-password');

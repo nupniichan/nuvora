@@ -12,9 +12,6 @@ export interface CategoryWithGroup extends CategoryRow {
   group_type: CategoryType;
 }
 
-/**
- * Retrieves all categories, optionally filtered by group type (expense or income)
- */
 export async function getAllCategories(type?: CategoryType): Promise<CategoryWithGroup[]> {
   const db = getDatabase();
   let sql = `
@@ -41,9 +38,6 @@ export async function getAllCategories(type?: CategoryType): Promise<CategoryWit
   }));
 }
 
-/**
- * Retrieves a single category by id
- */
 export async function getCategoryById(id: string): Promise<CategoryWithGroup | null> {
   const db = getDatabase();
   const row = await db.getFirstAsync<CategoryWithGroup>(
@@ -62,9 +56,6 @@ export async function getCategoryById(id: string): Promise<CategoryWithGroup | n
   };
 }
 
-/**
- * Retrieves all category groups
- */
 export async function getAllCategoryGroups(type?: CategoryType): Promise<CategoryGroupRow[]> {
   const db = getDatabase();
   let sql = `SELECT * FROM category_groups`;
@@ -85,9 +76,6 @@ export async function getAllCategoryGroups(type?: CategoryType): Promise<Categor
   }));
 }
 
-/**
- * Creates a new category group
- */
 export async function createCategoryGroup(data: {
   name: string;
   type: CategoryType;
@@ -98,7 +86,6 @@ export async function createCategoryGroup(data: {
   const id = generateUUID();
   const now = new Date().toISOString();
 
-  // Get max sort_order
   const existing = await getAllCategoryGroups(data.type);
   const nextOrder = existing.length > 0 ? Math.max(...existing.map((g) => g.sort_order)) + 1 : 1;
 
@@ -116,9 +103,6 @@ export async function createCategoryGroup(data: {
   return created;
 }
 
-/**
- * Updates an existing category group
- */
 export async function updateCategoryGroup(
   id: string,
   data: {
@@ -155,9 +139,6 @@ export async function updateCategoryGroup(
   await db.runAsync(`UPDATE category_groups SET ${updates.join(', ')} WHERE id = ?;`, params);
 }
 
-/**
- * Creates a new category inside a group
- */
 export async function createCategory(data: {
   groupId: string;
   name: string;
@@ -168,7 +149,6 @@ export async function createCategory(data: {
   const id = generateUUID();
   const now = new Date().toISOString();
 
-  // Get current max sort order in this group
   const existing = await db.getAllAsync<CategoryRow>(
     `SELECT * FROM categories WHERE group_id = ? AND is_archived = 0 ORDER BY sort_order DESC;`,
     [data.groupId]
@@ -189,9 +169,6 @@ export async function createCategory(data: {
   return created;
 }
 
-/**
- * Updates an existing category
- */
 export async function updateCategory(
   id: string,
   data: {
@@ -228,9 +205,6 @@ export async function updateCategory(
   await db.runAsync(`UPDATE categories SET ${updates.join(', ')} WHERE id = ?;`, params);
 }
 
-/**
- * Gets transaction count for a category to determine if safe to delete
- */
 export async function getCategoryTransactionCount(id: string): Promise<number> {
   const db = getDatabase();
   const res = await db.getFirstAsync<{ count: number }>(
@@ -240,58 +214,45 @@ export async function getCategoryTransactionCount(id: string): Promise<number> {
   return res ? Number(res.count) : 0;
 }
 
-/**
- * Archives a category (soft delete)
- */
 export async function archiveCategory(id: string): Promise<void> {
   const db = getDatabase();
   await db.runAsync(`UPDATE categories SET is_archived = 1 WHERE id = ?;`, [id]);
 }
 
-/**
- * Hard deletes a category if no transactions use it
- */
 export async function deleteCategory(id: string): Promise<boolean> {
   const db = getDatabase();
   const count = await getCategoryTransactionCount(id);
   if (count > 0) {
-    // If it has transactions, soft-delete instead
+
     await archiveCategory(id);
     return false;
   }
 
-  // Remove any budget_allocations referencing it
   await db.runAsync(`DELETE FROM budget_allocations WHERE category_id = ?;`, [id]);
   await db.runAsync(`DELETE FROM categories WHERE id = ?;`, [id]);
   return true;
 }
 
-/**
- * Merges a category into another category and removes the source category
- */
 export async function mergeCategoryInto(sourceId: string, targetId: string): Promise<void> {
   const db = getDatabase();
   await db.withTransactionAsync(async () => {
-    // Reassign transactions
+
     await db.runAsync(`UPDATE transactions SET category_id = ? WHERE category_id = ?;`, [
       targetId,
       sourceId,
     ]);
-    // Reassign recurring rules
+
     await db.runAsync(`UPDATE recurring_rules SET category_id = ? WHERE category_id = ?;`, [
       targetId,
       sourceId,
     ]);
-    // Delete budget allocations for source
+
     await db.runAsync(`DELETE FROM budget_allocations WHERE category_id = ?;`, [sourceId]);
-    // Delete source category
+
     await db.runAsync(`DELETE FROM categories WHERE id = ?;`, [sourceId]);
   });
 }
 
-/**
- * Archives a category group and its categories
- */
 export async function archiveCategoryGroup(id: string): Promise<void> {
   const db = getDatabase();
   await db.withTransactionAsync(async () => {

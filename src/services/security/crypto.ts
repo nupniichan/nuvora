@@ -3,10 +3,10 @@ import QuickCrypto from 'react-native-quick-crypto';
 
 export interface KdfParameters {
   algorithm: 'argon2id';
-  memoryKb: number; // e.g. 65536 (64 MB)
-  iterations: number; // e.g. 3
-  parallelism: number; // e.g. 1
-  keyLength: number; // e.g. 32 bytes (256 bits)
+  memoryKb: number;
+  iterations: number;
+  parallelism: number;
+  keyLength: number;
 }
 
 export const DEFAULT_KDF_PARAMS: KdfParameters = {
@@ -17,18 +17,12 @@ export const DEFAULT_KDF_PARAMS: KdfParameters = {
   keyLength: 32,
 };
 
-/**
- * Generates cryptographically secure random bytes as hex string
- */
 export function generateRandomHex(byteCount: number = 32): string {
   const bytes = ExpoCrypto.getRandomBytes(byteCount);
   const byteArray = Array.from(new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength));
   return byteArray.map((b: number) => b.toString(16).padStart(2, '0')).join('');
 }
 
-/**
- * Derives a key from password and salt using Argon2id
- */
 export async function deriveKeyArgon2id(
   passwordStr: string,
   saltHex: string,
@@ -59,14 +53,11 @@ export async function deriveKeyArgon2id(
   });
 }
 
-/**
- * Encrypts plaintext string using AES-256-GCM
- */
 export async function encryptAesGcm(
   plaintext: string,
   keyHex: string
 ): Promise<{ ciphertextHex: string; nonceHex: string; authTagHex: string }> {
-  const nonceBytes = ExpoCrypto.getRandomBytes(12); // 96-bit nonce for GCM
+  const nonceBytes = ExpoCrypto.getRandomBytes(12);
   const nonceArray = Array.from(new Uint8Array(nonceBytes.buffer, nonceBytes.byteOffset, nonceBytes.byteLength));
   const nonceHex = nonceArray.map((b: number) => b.toString(16).padStart(2, '0')).join('');
 
@@ -85,9 +76,6 @@ export async function encryptAesGcm(
   };
 }
 
-/**
- * Decrypts AES-256-GCM ciphertext string
- */
 export async function decryptAesGcm(
   ciphertextHex: string,
   keyHex: string,

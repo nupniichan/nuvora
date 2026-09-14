@@ -3,7 +3,6 @@ import {
   restoreFromEncryptedBackup,
 } from '../backup-service';
 
-// Mock crypto module using Node's standard crypto library for authentic AES-256-GCM tests
 jest.mock('@/services/security/crypto', () => {
   const crypto = jest.requireActual('crypto');
   const { Buffer } = jest.requireActual('buffer');
@@ -45,7 +44,6 @@ jest.mock('@/services/security/crypto', () => {
   };
 });
 
-// Mock sqlite for in-memory testing of backup and restore
 jest.mock('@/database/database', () => {
   let dbData: Record<string, any[]> = {
     app_settings: [{ key: 'language', value: 'vi', updated_at: '2026-01-01' }],
@@ -141,12 +139,11 @@ describe('Encrypted Backup & Recovery Service', () => {
 
     const envelope = JSON.parse(backupJson);
     expect(envelope.version).toBe(1);
-    expect(envelope.saltHex).toHaveLength(64); // 32 bytes hex
-    expect(envelope.nonceHex).toHaveLength(24); // 12 bytes hex
-    expect(envelope.authTagHex).toHaveLength(32); // 16 bytes hex
+    expect(envelope.saltHex).toHaveLength(64);
+    expect(envelope.nonceHex).toHaveLength(24);
+    expect(envelope.authTagHex).toHaveLength(32);
     expect(envelope.ciphertextHex).toBeDefined();
 
-    // Plaintext financial content must not appear in the serialized envelope
     expect(backupJson).not.toContain('Tiền mặt');
     expect(backupJson).not.toContain('Cà phê');
   });
@@ -172,7 +169,6 @@ describe('Encrypted Backup & Recovery Service', () => {
     const backupJson = await createEncryptedBackup(MASTER_PASSWORD);
     const envelope = JSON.parse(backupJson);
 
-    // Flip the first byte so the ciphertext is guaranteed to change.
     const firstByte = Number.parseInt(envelope.ciphertextHex.slice(0, 2), 16) ^ 0xff;
     envelope.ciphertextHex = firstByte.toString(16).padStart(2, '0') + envelope.ciphertextHex.slice(2);
     const tamperedJson = JSON.stringify(envelope);

@@ -10,7 +10,6 @@ export class CurrencyConversionError extends Error {
   }
 }
 
-/** Rate is always VND per one USD; amounts are integer dong or cents. */
 export function convertCurrencyAmount(amount: number, from: SwitchCurrency, rate: number): number {
   if (!Number.isFinite(rate) || rate <= 0) throw new CurrencyConversionError('invalidRate');
   if (from !== 'VND' && from !== 'USD') throw new CurrencyConversionError('unsupportedCurrency');
@@ -29,7 +28,6 @@ export async function getCurrencySwitchState() {
   return { account, rate: saved?.value ?? '' };
 }
 
-/** Convert the ledger and its settings atomically on the unlocked database connection. */
 export async function switchCurrency(from: SwitchCurrency, rate: number): Promise<void> {
   convertCurrencyAmount(0, from, rate);
   const to = from === 'VND' ? 'USD' : 'VND';
@@ -55,7 +53,7 @@ export async function switchCurrency(from: SwitchCurrency, rate: number): Promis
       const budgetIds = new Set(sourceBudgets.map(row => row.id));
       const limitPrefix = `monthly-spending-limit:${from}:`;
       const limits = settings.filter(row => row.key.startsWith(limitPrefix));
-      // Two independent schedules cannot be merged without changing their meaning.
+
       if (limits.length && settings.some(row => row.key.startsWith(`monthly-spending-limit:${to}:`))) {
         throw new CurrencyConversionError('limitConflict');
       }
@@ -69,7 +67,7 @@ export async function switchCurrency(from: SwitchCurrency, rate: number): Promis
           oldEffect += sign * tx.amount;
           newEffect += sign * converted.get(tx.id)!;
         }
-        // Convert the opening balance separately so rounding cannot invent ledger funds.
+
         const balance = convert(account.balance - oldEffect) + newEffect;
         if (!Number.isSafeInteger(balance)) throw new CurrencyConversionError('invalidAmount');
         await db.runAsync('UPDATE accounts SET balance = ?, currency = ?, updated_at = ? WHERE id = ?;',
@@ -92,7 +90,7 @@ export async function switchCurrency(from: SwitchCurrency, rate: number): Promis
           await db.runAsync('UPDATE budget_allocations SET amount = ? WHERE id = ?;', [convert(allocation.amount), allocation.id]);
         }
       }
-      // Goals currently use the default account's currency, including legacy unlinked goals.
+
       for (const goal of goals) {
         await db.runAsync('UPDATE financial_goals SET target_amount = ?, current_amount = ?, updated_at = ? WHERE id = ?;',
           [convert(goal.target_amount), convert(goal.current_amount), now, goal.id]);

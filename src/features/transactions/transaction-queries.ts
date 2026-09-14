@@ -1,6 +1,6 @@
 import { getDatabase, withGoalTransaction } from '@/database/database';
 import { runGoalWrite } from '@/database/goal-write';
-import { EntryType, TransactionRow, TransactionType } from '@/database/types';
+import { TransactionRow, TransactionType } from '@/database/types';
 import { generateUUID } from '@/shared/uuid';
 import { requireMonthlyLimitApproval } from '@/features/budgets/monthly-limits';
 
@@ -51,23 +51,20 @@ export async function getTransactionById(id: string): Promise<TransactionRow | n
   return await db.getFirstAsync<TransactionRow>('SELECT * FROM transactions WHERE id = ?;', [id]);
 }
 
-/**
- * Creates a transaction and updates involved account balances atomically
- */
 export function createTransaction(data: Parameters<typeof createTransactionOnce>[0]): Promise<TransactionRow> {
   return runGoalWrite(() => createTransactionOnce(data));
 }
 
 async function createTransactionOnce(data: {
-  type: EntryType;
-  amount: number; // Integer minor units
+  type: TransactionType;
+  amount: number;
   currency: string;
   accountId: string;
   categoryId?: string;
   recurringRuleId?: string;
   occurrenceId?: string;
   note?: string;
-  date: string; // ISO date YYYY-MM-DD
+  date: string;
   monthlyLimitApproval?: string;
 }): Promise<TransactionRow> {
   if (data.type !== 'income' && data.type !== 'expense') {
@@ -83,7 +80,7 @@ async function createTransactionOnce(data: {
 
   await db.withTransactionAsync(async () => {
     await requireMonthlyLimitApproval({ ...data, operation: `create:${data.accountId}` }, data.monthlyLimitApproval);
-    // Insert transaction
+
     await db.runAsync(
       `INSERT INTO transactions (id, type, amount, currency, account_id, to_account_id, category_id, recurring_rule_id, occurrence_id, note, date, status, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmed', ?, ?);`,
@@ -104,7 +101,6 @@ async function createTransactionOnce(data: {
       ]
     );
 
-    // Update account balances
     if (data.type === 'income') {
       await db.runAsync(
         'UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?;',
@@ -131,9 +127,6 @@ async function createTransactionOnce(data: {
   return created;
 }
 
-/**
- * Deletes a transaction and reverses balance changes atomically
- */
 export function isGoalCompletionTransaction(id: string): boolean {
   return id.startsWith('goal-completion:');
 }
@@ -184,9 +177,6 @@ export async function deleteTransaction(id: string): Promise<void> {
   });
 }
 
-/**
- * Updates an existing transaction and adjusts account balances accordingly
- */
 export function updateTransaction(id: string, data: Parameters<typeof updateTransactionOnce>[1]): Promise<TransactionRow> {
   return runGoalWrite(() => updateTransactionOnce(id, data));
 }
@@ -194,7 +184,7 @@ export function updateTransaction(id: string, data: Parameters<typeof updateTran
 async function updateTransactionOnce(
   id: string,
   data: {
-    type?: EntryType;
+    type?: TransactionType;
     amount?: number;
     currency?: string;
     accountId?: string;
@@ -221,7 +211,7 @@ async function updateTransactionOnce(
       currency: data.currency ?? oldTx.currency, amount: data.amount ?? oldTx.amount,
       excludeTransactionId: id, operation: `update:${id}`,
     }, data.monthlyLimitApproval);
-    // 1. Revert previous transaction effects on accounts
+
     if (oldTx.type === 'income') {
       await db.runAsync('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?;', [
         oldTx.amount,
@@ -236,7 +226,6 @@ async function updateTransactionOnce(
       ]);
     }
 
-    // 2. Prepare new transaction values
     const newType = data.type !== undefined ? data.type : oldTx.type;
     const newAmount = data.amount !== undefined ? data.amount : oldTx.amount;
     const newCurrency = data.currency !== undefined ? data.currency : oldTx.currency;
@@ -245,7 +234,6 @@ async function updateTransactionOnce(
     const newNote = data.note !== undefined ? data.note : oldTx.note;
     const newDate = data.date !== undefined ? data.date : oldTx.date;
 
-    // 3. Apply new transaction effects on accounts
     if (newType === 'income') {
       await db.runAsync('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?;', [
         newAmount,
@@ -260,7 +248,6 @@ async function updateTransactionOnce(
       ]);
     }
 
-    // 4. Update transaction record
     await db.runAsync(
       `UPDATE transactions
        SET type = ?, amount = ?, currency = ?, account_id = ?, to_account_id = ?,

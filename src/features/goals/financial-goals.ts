@@ -27,9 +27,6 @@ export interface FinancialGoalWithProgress extends FinancialGoalRow {
   linkedAccountName?: string | null;
 }
 
-/**
- * Calculates derived progress metrics for a goal
- */
 export function calculateGoalMetrics(goal: FinancialGoalRow): {
   canComplete: boolean;
   percentage: number;
@@ -82,7 +79,6 @@ export async function getGoalFunds(): Promise<GoalFunds> {
   return { accountId: account.id, currency: account.currency, balance };
 }
 
-/** Active goals reflect the same available balance; funds are spent only on completion. */
 export async function getAllGoals(status?: GoalStatus): Promise<FinancialGoalWithProgress[]> {
   const db = getDatabase();
   const [rows, funds] = await Promise.all([
@@ -109,7 +105,6 @@ export class GoalActionError extends Error {
   }
 }
 
-/** Post the expense and completion together. Repeated completion never spends twice. */
 export async function completeGoal(id: string, note?: string, monthlyLimitApproval?: string): Promise<void> {
   return runGoalWrite(() => completeGoalOnce(id, note, monthlyLimitApproval));
 }
@@ -144,9 +139,6 @@ async function completeGoalOnce(id: string, note?: string, monthlyLimitApproval?
   });
 }
 
-/**
- * Creates a new financial goal
- */
 export async function createGoal(data: {
   name: string;
   type: GoalType;
@@ -194,9 +186,6 @@ export async function createGoal(data: {
   return created;
 }
 
-/**
- * Updates a financial goal
- */
 export async function updateGoal(
   id: string,
   data: {
@@ -263,9 +252,6 @@ export async function updateGoal(
   });
 }
 
-/**
- * Gets contribution history for a goal
- */
 export async function getGoalContributions(goalId: string): Promise<GoalContributionRow[]> {
   const db = getDatabase();
   return await db.getAllAsync<GoalContributionRow>(
@@ -274,9 +260,6 @@ export async function getGoalContributions(goalId: string): Promise<GoalContribu
   );
 }
 
-/**
- * Deletes an unfinished goal and its contributions
- */
 export async function deleteGoal(id: string): Promise<void> {
   return runGoalWrite(() => withGoalTransaction(async (txn) => {
     const goal = await txn.getFirstAsync<FinancialGoalRow>('SELECT * FROM financial_goals WHERE id = ?;', [id]);

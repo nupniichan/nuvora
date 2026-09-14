@@ -54,7 +54,6 @@ function RenderComponent() {
   return null;
 }
 
-// Simple runner for custom hook
 function renderHook() {
   const effectCleanups: (() => void)[] = [];
   const refMap = new Map<number, any>();
@@ -108,7 +107,6 @@ describe('useAutoLock hook', () => {
     mockIsUnlocked = true;
     expect(appStateChangeHandlers.length).toBeGreaterThan(0);
 
-    // Trigger transition to background
     await appStateChangeHandlers[0]('background');
 
     expect(mockLockApp).toHaveBeenCalled();
@@ -127,12 +125,11 @@ describe('useAutoLock hook', () => {
   });
 
   test('redirects to lock screen upon becoming active if locked and not in auth group', async () => {
-    // First enter background
+
     mockIsUnlocked = true;
     await appStateChangeHandlers[0]('background');
     mockReplace.mockClear();
 
-    // Now return to active while app is locked and user is on (main)
     mockIsUnlocked = false;
     mockSegments = ['(main)'];
     hookHarness.rerender();
@@ -142,12 +139,11 @@ describe('useAutoLock hook', () => {
   });
 
   test('does not redirect upon becoming active if user is already on auth screen', async () => {
-    // First enter background
+
     mockIsUnlocked = true;
     await appStateChangeHandlers[0]('background');
     mockReplace.mockClear();
 
-    // Now return to active while user is on (auth) screen
     mockIsUnlocked = false;
     mockSegments = ['(auth)'];
     hookHarness.rerender();

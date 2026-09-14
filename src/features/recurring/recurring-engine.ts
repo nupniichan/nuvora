@@ -1,16 +1,9 @@
 import { formatYMD, getDaysInMonth, parseISODate } from '@/shared/date-utils';
 
-/**
- * Checks if a given year is a leap year
- */
 export function isLeapYear(year: number): boolean {
   return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
 }
 
-/**
- * Calculates due occurrence dates for a recurring rule between fromDate and toDate (inclusive).
- * Uses pure YYYY-MM-DD string comparisons and calendar math to eliminate timezone drift.
- */
 export function calculateDueOccurrences(
   rule: {
     frequency: 'daily' | 'weekly' | 'monthly' | 'yearly';
@@ -49,7 +42,7 @@ export function calculateDueOccurrences(
     const targetDay = rule.day_of_month ?? startD;
 
     let curYear = startY;
-    let curMonth = startM; // 1-indexed
+    let curMonth = startM;
 
     while (true) {
       const maxDays = getDaysInMonth(curYear, curMonth);
@@ -72,7 +65,6 @@ export function calculateDueOccurrences(
         }
       }
 
-      // Advance by interval months
       curMonth += interval;
       while (curMonth > 12) {
         curMonth -= 12;

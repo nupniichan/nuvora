@@ -17,7 +17,6 @@ import {
 let activeDekInMemory: string | null = null;
 let isUnlockedState: boolean = false;
 
-// Listen for AppState changes to immediately lock app and purge DEK from RAM when leaving app
 if (typeof AppState?.addEventListener === 'function') {
   AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
     if (nextAppState === 'background') {
@@ -28,9 +27,6 @@ if (typeof AppState?.addEventListener === 'function') {
   });
 }
 
-/**
- * Checks if biometric authentication is available on device
- */
 export async function isBiometricsAvailable(): Promise<boolean> {
   if (Platform.OS === 'web') {
     return false;
@@ -44,17 +40,11 @@ export async function isBiometricsAvailable(): Promise<boolean> {
   }
 }
 
-/**
- * Checks if biometric unlock is enabled in app settings
- */
 export async function isBiometricsEnabled(): Promise<boolean> {
   const enabled = await getSecureItem(StorageKeys.BIOMETRIC_ENABLED);
   return enabled === 'true';
 }
 
-/**
- * Sets biometric unlock state
- */
 export async function setBiometricsEnabled(enabled: boolean): Promise<void> {
   if (enabled) {
     if (!activeDekInMemory) {
@@ -67,9 +57,6 @@ export async function setBiometricsEnabled(enabled: boolean): Promise<void> {
   await setSecureItem(StorageKeys.BIOMETRIC_ENABLED, enabled ? 'true' : 'false');
 }
 
-/**
- * Unlocks the app session with master password
- */
 export async function unlockWithPassword(password: string): Promise<boolean> {
   try {
     if (await getSecureItem(StorageKeys.DELETION_PENDING) === 'true') return false;
@@ -77,7 +64,6 @@ export async function unlockWithPassword(password: string): Promise<boolean> {
     activeDekInMemory = dekHex;
     isUnlockedState = true;
 
-    // Initialize/open DB with DEK
     await initDatabase(dekHex);
     return true;
   } catch {
@@ -87,9 +73,6 @@ export async function unlockWithPassword(password: string): Promise<boolean> {
   }
 }
 
-/**
- * Attempts biometric unlock
- */
 export async function unlockWithBiometrics(): Promise<boolean> {
   if (await getSecureItem(StorageKeys.DELETION_PENDING) === 'true') return false;
   const canUseBio = (await isBiometricsAvailable()) && (await isBiometricsEnabled());
@@ -112,25 +95,16 @@ export async function unlockWithBiometrics(): Promise<boolean> {
   }
 }
 
-/**
- * Locks the app (clears memory DEK and closes DB connection)
- */
 export function lockApp(): void {
   activeDekInMemory = null;
   isUnlockedState = false;
   void closeDatabase().catch(() => undefined);
 }
 
-/**
- * Returns whether app is currently unlocked
- */
 export function isAppUnlocked(): boolean {
   return isUnlockedState && activeDekInMemory !== null;
 }
 
-/**
- * Returns active DEK from memory if unlocked
- */
 export function getActiveDek(): string | null {
   return activeDekInMemory;
 }
@@ -166,7 +140,6 @@ export async function changePassword(currentPassword: string, newPassword: strin
   }
 }
 
-/** The durable marker allows an interrupted, already-confirmed deletion to finish on restart. */
 export async function resumeAccountDeletion(): Promise<void> {
   if (deletionOperation) return deletionOperation;
   deletionOperation = (async () => {

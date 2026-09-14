@@ -15,7 +15,7 @@ export interface CategoryIncomeSummary {
   categoryIcon: string | null;
   categoryColor: string | null;
   groupName: string;
-  totalAmount: number; // Integer minor units
+  totalAmount: number;
   transactionCount: number;
 }
 
@@ -25,11 +25,11 @@ export interface CategoryExpenseSummary {
   categoryIcon: string | null;
   categoryColor: string | null;
   groupName: string;
-  totalAmount: number; // Integer minor units
+  totalAmount: number;
   transactionCount: number;
-  spendingLimit: number | null; // Integer minor units (null = no limit)
+  spendingLimit: number | null;
   remainingAmount: number | null;
-  percentUsed: number | null; // 0 - 100+
+  percentUsed: number | null;
   isOverLimit: boolean;
 }
 
@@ -44,7 +44,7 @@ export interface MonthlySnapshot {
 
   totalIncome: number;
   totalExpense: number;
-  netBalance: number; // totalIncome - totalExpense
+  netBalance: number;
 
   incomeCategories: CategoryIncomeSummary[];
   expenseCategories: CategoryExpenseSummary[];
@@ -64,9 +64,6 @@ export interface BudgetWithAllocations extends BudgetRow {
   })[];
 }
 
-/**
- * Retrieves the currently active budget or latest budget
- */
 export async function getActiveBudget(): Promise<BudgetRow | null> {
   const db = getDatabase();
   const row = await db.getFirstAsync<BudgetRow>(
@@ -75,9 +72,6 @@ export async function getActiveBudget(): Promise<BudgetRow | null> {
   return row ?? null;
 }
 
-/**
- * Retrieves or creates a budget for a specified month
- */
 export async function getOrCreateActiveBudget(
   year: number,
   month: number,
@@ -98,9 +92,6 @@ export async function getOrCreateActiveBudget(
   });
 }
 
-/**
- * Creates a new budget
- */
 export async function createBudget(data: {
   name: string;
   period_type: BudgetPeriodType;
@@ -112,7 +103,6 @@ export async function createBudget(data: {
   const now = new Date().toISOString();
   const id = generateUUID();
 
-  // Deactivate old budgets
   await db.runAsync(`UPDATE budgets SET is_active = 0;`);
 
   await db.runAsync(
@@ -126,9 +116,6 @@ export async function createBudget(data: {
   return created;
 }
 
-/**
- * Sets or updates total monthly budget limit
- */
 export async function setMonthlyBudgetTotal(budgetId: string, total: number | null): Promise<void> {
   const db = getDatabase();
   const now = new Date().toISOString();
@@ -138,9 +125,6 @@ export async function setMonthlyBudgetTotal(budgetId: string, total: number | nu
   );
 }
 
-/**
- * Sets spending limit for a specific category
- */
 export async function setCategorySpendingLimit(
   budgetId: string,
   categoryId: string,
@@ -149,7 +133,7 @@ export async function setCategorySpendingLimit(
   const db = getDatabase();
 
   if (limitAmount === null || limitAmount <= 0) {
-    // Remove limit
+
     await db.runAsync(
       `DELETE FROM budget_allocations WHERE budget_id = ? AND category_id = ?;`,
       [budgetId, categoryId]
@@ -157,7 +141,6 @@ export async function setCategorySpendingLimit(
     return;
   }
 
-  // Check if exists
   const existing = await db.getFirstAsync<BudgetAllocationRow>(
     `SELECT * FROM budget_allocations WHERE budget_id = ? AND category_id = ?;`,
     [budgetId, categoryId]
@@ -178,9 +161,6 @@ export async function setCategorySpendingLimit(
   }
 }
 
-/**
- * Retrieves a budget along with all its category allocations (spending limits)
- */
 export async function getBudgetWithAllocations(
   budgetId: string
 ): Promise<BudgetWithAllocations | null> {
@@ -212,9 +192,6 @@ export async function getBudgetWithAllocations(
   };
 }
 
-/**
- * Computes a comprehensive monthly snapshot (income vs expense breakdown, limits, net balance)
- */
 export async function getMonthlySnapshot(
   year: number,
   month: number,
@@ -230,7 +207,6 @@ export async function getMonthlySnapshot(
   const budget = await getOrCreateActiveBudget(year, month, overrideCurrency || 'VND');
   const currency = overrideCurrency || budget.currency || 'VND';
 
-  // 1. Get spending limits for active budget
   const limits = await db.getAllAsync<BudgetAllocationRow>(
     `SELECT * FROM budget_allocations WHERE budget_id = ?;`,
     [budget.id]
@@ -242,7 +218,6 @@ export async function getMonthlySnapshot(
     }
   }
 
-  // 2. Query actual transactions for the month
   const txRows = await db.getAllAsync<any>(
     `SELECT t.id, t.type, t.amount, t.category_id, t.currency, t.status,
             c.name as category_name, c.icon as category_icon, c.color as category_color,
@@ -268,7 +243,6 @@ export async function getMonthlySnapshot(
     if (row.currency !== currency || row.status !== 'confirmed') continue;
     const amount = Number(row.amount) || 0;
 
-    // Resolve category details if not populated by JOIN
     let catName = row.category_name;
     let catIcon = row.category_icon;
     let catColor = row.category_color;
@@ -344,7 +318,6 @@ export async function getMonthlySnapshot(
     }
   }
 
-  // Also include categories that have a spending limit even if spent = 0
   for (const catId of limitMap.keys()) {
     if (!expenseMap.has(catId)) {
       const cat = await db.getFirstAsync<any>(
@@ -371,7 +344,6 @@ export async function getMonthlySnapshot(
     (a, b) => b.totalAmount - a.totalAmount
   );
 
-  // If there is uncategorized income, display it as a dedicated category item
   if (uncategorizedIncome > 0) {
     incomeCategories.push({
       categoryId: 'uncategorized_income',
@@ -417,7 +389,6 @@ export async function getMonthlySnapshot(
       };
     });
 
-  // If there is uncategorized expense, display it as a dedicated category item
   if (uncategorizedExpense > 0) {
     expenseCategories.push({
       categoryId: 'uncategorized_expense',
@@ -435,7 +406,7 @@ export async function getMonthlySnapshot(
   }
 
   expenseCategories.sort((a, b) => {
-    // Prioritize overspent first, then highest spent
+
     if (a.isOverLimit && !b.isOverLimit) return -1;
     if (!a.isOverLimit && b.isOverLimit) return 1;
     return b.totalAmount - a.totalAmount;
@@ -461,9 +432,6 @@ export async function getMonthlySnapshot(
   };
 }
 
-/**
- * Checks if a proposed transaction would exceed the category spending limit
- */
 export async function checkSpendingLimit(
   categoryId: string,
   year: number,

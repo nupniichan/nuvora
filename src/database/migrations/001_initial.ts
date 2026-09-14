@@ -124,7 +124,6 @@ export const MIGRATION_001_INITIAL = {
       created_at TEXT NOT NULL
     );`,
 
-    // Indices for performance
     `CREATE INDEX IF NOT EXISTS idx_transactions_account ON transactions(account_id);`,
     `CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions(date);`,
     `CREATE INDEX IF NOT EXISTS idx_transactions_category ON transactions(category_id);`,

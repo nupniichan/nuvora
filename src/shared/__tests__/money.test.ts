@@ -40,20 +40,20 @@ describe('Money Utilities', () => {
   });
 
   test('allocateMoney preserves exact total sum using Largest Remainder Method', () => {
-    // 100 units allocated in ratios 1:1:1 (33.333... each)
+
     const total = 100;
     const weights = [1, 1, 1];
     const allocations = allocateMoney(total, weights);
 
     expect(allocations.reduce((sum, val) => sum + val, 0)).toBe(total);
-    // Should be [34, 33, 33] or similar distributing the 1 remainder
+
     expect(allocations).toEqual([34, 33, 33]);
   });
 
   test('allocateMoney for percentage weights', () => {
 
     const total = 100000;
-    const weights = [50, 30, 20]; // 50%, 30%, 20%
+    const weights = [50, 30, 20];
     const allocations = allocateMoney(total, weights);
 
     expect(allocations.reduce((sum, val) => sum + val, 0)).toBe(total);

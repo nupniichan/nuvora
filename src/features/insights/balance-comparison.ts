@@ -23,7 +23,6 @@ function validDate(value: string): boolean {
   return month >= 1 && month <= 12 && day >= 1 && day <= getDaysInMonth(year, month);
 }
 
-/** Reconstruct closing balances from the current ledger, including opening balances. */
 export function buildBalanceComparisons(
   accounts: AccountRow[],
   transactions: TransactionRow[],
@@ -54,7 +53,7 @@ export function buildBalanceComparisons(
       if (tx.type === 'transfer' && tx.to_account_id === account.id) effect += tx.amount;
       if (!effect) continue;
       if (tx.date < knownSince) knownSince = tx.date;
-      // Confirmed future-dated entries already affect stored account balances.
+
       if (tx.date > today) balance -= effect;
       if (tx.date > monthEnd) month -= effect;
       if (tx.date > yearEnd) year -= effect;

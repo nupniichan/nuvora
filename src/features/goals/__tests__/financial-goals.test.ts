@@ -70,7 +70,7 @@ describe('Financial Goals Metrics', () => {
       color: '#EF5350',
       target_amount: 10000000,
       current_amount: 5000000,
-      target_date: '2020-01-01', // Past date
+      target_date: '2020-01-01',
       linked_category_id: null,
       linked_account_id: null,
       notes: null,

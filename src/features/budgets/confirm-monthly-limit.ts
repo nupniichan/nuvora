@@ -4,7 +4,6 @@ import { formatMoney } from '@/shared/money';
 import { getCurrentLanguage } from '@/i18n/language-state';
 import { MonthlyLimitExceededError, MonthlyLimitValidationError } from './monthly-limits';
 
-/** Retry only after explicit consent; cancellation leaves the editor and database intact. */
 export async function withMonthlyLimitConfirmation(task: (approval?: string) => Promise<unknown>, t: TFunction): Promise<boolean> {
   let approval: string | undefined;
   for (;;) {

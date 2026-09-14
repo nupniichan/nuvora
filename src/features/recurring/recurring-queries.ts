@@ -3,6 +3,7 @@ import {
   AutomationOccurrenceRow,
   EntryType,
   RecurringRuleRow,
+  TransactionType,
 } from '@/database/types';
 import { createTransaction } from '@/features/transactions/transaction-queries';
 import { MonthlyLimitExceededError } from '@/features/budgets/monthly-limits';
@@ -26,9 +27,6 @@ export interface PendingOccurrenceWithRule extends AutomationOccurrenceRow {
   category_name: string | null;
 }
 
-/**
- * Retrieves all recurring rules
- */
 export async function getAllRecurringRules(): Promise<RecurringRuleWithDetails[]> {
   const db = getDatabase();
   const rules = await db.getAllAsync<RecurringRuleWithDetails>(
@@ -41,12 +39,9 @@ export async function getAllRecurringRules(): Promise<RecurringRuleWithDetails[]
   return rules.filter((rule) => rule.type !== 'transfer');
 }
 
-/**
- * Creates a new recurring rule
- */
 export async function createRecurringRule(data: {
   name: string;
-  type: EntryType;
+  type: TransactionType;
   amount: number;
   currency: string;
   accountId: string;
@@ -103,9 +98,6 @@ export async function createRecurringRule(data: {
   return created;
 }
 
-/**
- * Retrieves all pending occurrences needing user confirmation
- */
 export async function getPendingOccurrences(): Promise<PendingOccurrenceWithRule[]> {
   const db = getDatabase();
   const occurrences = await db.getAllAsync<PendingOccurrenceWithRule>(
@@ -122,9 +114,6 @@ export async function getPendingOccurrences(): Promise<PendingOccurrenceWithRule
   return occurrences.filter((occurrence) => occurrence.rule_type !== 'transfer');
 }
 
-/**
- * Confirms a pending occurrence and creates the corresponding financial transaction
- */
 export async function confirmOccurrence(occurrenceId: string, monthlyLimitApproval?: string): Promise<void> {
   const db = getDatabase();
   const occurrence = await db.getFirstAsync<AutomationOccurrenceRow>(
@@ -139,7 +128,6 @@ export async function confirmOccurrence(occurrenceId: string, monthlyLimitApprov
   );
   if (!rule || rule.type === 'transfer') return;
 
-  // The entry, balance and occurrence status are committed in one transaction.
   await createTransaction({
     type: rule.type as EntryType,
     amount: rule.amount,
@@ -154,9 +142,6 @@ export async function confirmOccurrence(occurrenceId: string, monthlyLimitApprov
   });
 }
 
-/**
- * Skips a pending occurrence without posting a financial transaction
- */
 export async function skipOccurrence(occurrenceId: string): Promise<void> {
   const db = getDatabase();
   const now = new Date().toISOString();
@@ -166,10 +151,6 @@ export async function skipOccurrence(occurrenceId: string): Promise<void> {
   );
 }
 
-/**
- * Reconciles due occurrences for all active rules up to asOfDate (default: today).
- * Idempotent: duplicates are prevented by (recurring_rule_id, scheduled_date) unique constraint.
- */
 export async function processRecurringCatchUp(
   asOfDate?: string
 ): Promise<{ processed: number; created: number }> {
@@ -206,7 +187,7 @@ export async function processRecurringCatchUp(
     );
 
     for (const scheduledDate of dueDates) {
-      // Check if already processed
+
       const existing = await db.getFirstAsync<AutomationOccurrenceRow>(
         `SELECT id FROM automation_occurrences WHERE recurring_rule_id = ? AND scheduled_date = ?;`,
         [rule.id, scheduledDate]
@@ -214,7 +195,7 @@ export async function processRecurringCatchUp(
       if (existing) continue;
 
       const occurrenceId = generateUUID();
-      // Create the referenced occurrence first; rejection safely leaves it pending.
+
       await db.runAsync(
         `INSERT INTO automation_occurrences (id, recurring_rule_id, scheduled_date, status)
          VALUES (?, ?, ?, 'pending');`, [occurrenceId, rule.id, scheduledDate]
@@ -243,7 +224,6 @@ export async function processRecurringCatchUp(
       }
     }
 
-    // Update last_processed_date for the rule
     await db.runAsync(
       `UPDATE recurring_rules SET last_processed_date = ?, updated_at = ? WHERE id = ?;`,
       [today, new Date().toISOString(), rule.id]

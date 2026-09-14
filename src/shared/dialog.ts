@@ -1,10 +1,5 @@
 import { Alert, Platform } from 'react-native';
 
-/**
- * Cross-platform confirmation dialog helper.
- * On Web: uses window.confirm (or fallback).
- * On Native (Android/iOS): uses native Alert.alert with cancel/confirm buttons.
- */
 export function confirmAction(
   title: string,
   message: string,
@@ -37,9 +32,6 @@ export function confirmAction(
   ]);
 }
 
-/**
- * Cross-platform alert message helper.
- */
 export function alertMessage(title: string, message: string): void {
   if (Platform.OS === 'web') {
     if (typeof window !== 'undefined') {

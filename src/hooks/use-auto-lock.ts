@@ -5,10 +5,6 @@ import { useRouter, useSegments } from 'expo-router';
 import { isAppUnlocked, lockApp } from '@/services/security/auth-service';
 import { isKeyEnvelopeInitialized } from '@/services/security/key-manager';
 
-/**
- * Hook that listens for AppState changes to automatically lock the app,
- * clear cryptographic keys from RAM, and redirect to the lock screen when user leaves the app.
- */
 export function useAutoLock(): void {
   const router = useRouter();
   const segments = useSegments();
@@ -28,7 +24,6 @@ export function useAutoLock(): void {
       const prevAppState = appStateRef.current;
       appStateRef.current = nextAppState;
 
-      // 1. User leaving the app into background
       if (nextAppState === 'background') {
         if (isAppUnlocked()) {
           lockApp();
@@ -38,13 +33,12 @@ export function useAutoLock(): void {
             }
             router.replace('/(auth)/lock');
           } catch {
-            // Navigation might not be ready or handled gracefully
+
           }
         }
         return;
       }
 
-      // 2. User returning to foreground
       if (
         prevAppState === 'background' &&
         nextAppState === 'active'
@@ -61,7 +55,7 @@ export function useAutoLock(): void {
             }
           }
         } catch {
-          // Ignore init check errors during fast transitions
+
         }
       }
     });

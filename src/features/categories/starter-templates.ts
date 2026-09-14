@@ -117,9 +117,6 @@ export function localizeStarterCategoryName(name: string, lang: 'vi' | 'en'): st
   return name;
 }
 
-/**
- * Seeds a single starter category group template into the active database
- */
 export async function seedSingleGroupTemplate(
   db: any,
   group: StarterGroupTemplate,
@@ -129,7 +126,6 @@ export async function seedSingleGroupTemplate(
   const groupId = generateUUID();
   const groupName = lang === 'vi' ? group.nameVi : group.nameEn;
 
-  // Get max sort order
   let maxSort = 1;
   try {
     const existing = await db.getAllAsync(`SELECT sort_order FROM category_groups WHERE type = ?;`, [group.type]);
@@ -159,9 +155,6 @@ export async function seedSingleGroupTemplate(
   return groupId;
 }
 
-/**
- * Seeds starter category templates into the active SQLite database
- */
 export async function seedStarterCategories(db: any, lang: 'vi' | 'en' = 'vi'): Promise<void> {
   const now = new Date().toISOString();
 

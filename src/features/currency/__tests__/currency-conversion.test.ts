@@ -53,7 +53,7 @@ it('converts every financial table, settings and completed goals in both directi
   expect(await getDefaultAccount()).toMatchObject({ currency: 'VND', balance: 2000000 });
   expect(await getGoalById(goal.id)).toMatchObject({ target_amount: 500000 });
   expect((await getMonthlyLimit(2026, 9, 'VND')).limit).toBe(1000000);
-  // Undoing completion after conversion still restores exactly the spent amount.
+
   await deleteTransaction('goal-completion:' + goal.id);
   expect(await getDefaultAccount()).toMatchObject({ balance: 2500000 });
 });

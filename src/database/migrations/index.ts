@@ -12,11 +12,8 @@ export const ALL_MIGRATIONS: Migration[] = [
   MIGRATION_002_GOALS_AND_LIMITS,
 ];
 
-/**
- * Runs pending migrations on SQLite database instance
- */
 export async function runMigrations(db: any): Promise<void> {
-  // Ensure schema_migrations table exists
+
   await db.execAsync(`
     CREATE TABLE IF NOT EXISTS schema_migrations (
       version INTEGER PRIMARY KEY,

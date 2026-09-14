@@ -2,7 +2,6 @@ import { getDatabase } from './database';
 
 const pendingWrites = new WeakMap<object, Promise<void>>();
 
-/** Serialize spending and goal undo, including their fresh balance and limit reads. */
 export function runGoalWrite<T>(task: () => Promise<T>): Promise<T> {
   const db = getDatabase();
   const previous = pendingWrites.get(db) ?? Promise.resolve();

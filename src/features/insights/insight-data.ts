@@ -21,7 +21,6 @@ export interface SpendingHistory {
   months: MonthlyCashflowPoint[];
 }
 
-/** Aggregate integer minor units; never combine currencies or count transfers twice. */
 export function buildSpendingHistory(
   transactions: Pick<TransactionRow, 'date' | 'amount' | 'type' | 'currency' | 'status'>[],
   year: number,

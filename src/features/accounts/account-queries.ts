@@ -26,10 +26,8 @@ export async function getAccountById(id: string): Promise<AccountRow | null> {
   return row ? localizeDefaultAccount(row) : null;
 }
 
-// Share initialization across screens, but always reload balances on later calls.
 const pendingDefaults = new WeakMap<object, Promise<AccountRow>>();
 
-/** Return the one account used for all new entries. Legacy accounts stay intact. */
 export function getDefaultAccount(): Promise<AccountRow> {
   const db = getDatabase();
   const pending = pendingDefaults.get(db);

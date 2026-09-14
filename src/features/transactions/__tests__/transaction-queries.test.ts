@@ -10,7 +10,6 @@ jest.mock('@/shared/uuid', () => {
   return { generateUUID: () => String(++nextId) };
 });
 
-// Old databases can contain multiple accounts even though new installs use one.
 async function seedLegacyAccount(data: { name: string; type: string; currency: string; initialBalance: number }): Promise<AccountRow> {
   const id = generateUUID();
   await getDatabase().runAsync('INSERT INTO accounts (id, name, type, currency, balance, sort_order, is_archived) VALUES (?, ?, ?, ?, ?, 1, 0);',
@@ -52,13 +51,13 @@ it('keeps an existing entry on its original account when edited without a picker
 it('rejects new transfers and converting an entry to a transfer without changing balances', async () => {
   const account = await getDefaultAccount();
   await expect(createTransaction({
-    // @ts-expect-error Verify that older callers cannot bypass the removed feature.
+
     type: 'transfer', amount: 50000, currency: 'VND', accountId: account.id, date: '2026-09-08',
   })).rejects.toThrow('Transfers are no longer supported');
   expect(await getTransactions()).toHaveLength(0);
   expect((await getAccountById(account.id))?.balance).toBe(0);
   const tx = await createTransaction({ type: 'income', amount: 50000, currency: 'VND', accountId: account.id, date: '2026-09-08' });
-  // @ts-expect-error Verify runtime protection as well as the public type.
+
   await expect(updateTransaction(tx.id, { type: 'transfer' })).rejects.toThrow('Transfers are no longer supported');
   expect((await getAccountById(account.id))?.balance).toBe(50000);
 });

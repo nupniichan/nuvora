@@ -54,7 +54,7 @@ class WebSQLiteDatabase {
   }
 
   async execAsync(sql: string): Promise<void> {
-    // DDL or PRAGMA statements are no-ops in web mock
+
     return;
   }
 
@@ -63,7 +63,6 @@ class WebSQLiteDatabase {
     const trimmed = sql.trim();
     let changes = 0;
 
-    // INSERT / INSERT OR REPLACE
     if (/^INSERT/i.test(trimmed)) {
       const match = trimmed.match(/INSERT(?:\s+OR\s+REPLACE)?\s+INTO\s+([a-zA-Z0-9_]+)\s*\(([^)]+)\)\s*VALUES\s*\(([^)]+)\)/i);
       if (match) {
@@ -94,7 +93,6 @@ class WebSQLiteDatabase {
           }
         }
 
-        // Primary key check (id or key)
         const primaryKey = row.id ? 'id' : row.key ? 'key' : null;
         if (primaryKey) {
           const existingIdx = this.tables[tableName].findIndex((r) => r[primaryKey] === row[primaryKey]);
@@ -111,7 +109,7 @@ class WebSQLiteDatabase {
         this.saveToStorage();
       }
     }
-    // UPDATE
+
     else if (/^UPDATE/i.test(trimmed)) {
       const updateMatch = trimmed
         .replace(/;$/, '')
@@ -189,7 +187,7 @@ class WebSQLiteDatabase {
         }
       }
     }
-    // DELETE
+
     else if (/^DELETE/i.test(trimmed)) {
       const deleteMatch = trimmed.match(/DELETE\s+FROM\s+([a-zA-Z0-9_]+)(?:\s+WHERE\s+([a-zA-Z0-9_.]+)\s*=\s*\?)?/i);
       if (deleteMatch) {
@@ -218,7 +216,6 @@ class WebSQLiteDatabase {
     const tableName = fromMatch[1].toLowerCase();
     let rows: any[] = [...(this.tables[tableName] || [])];
 
-    // Check for JOIN with categories
     if (/JOIN\s+categories/i.test(trimmed)) {
       const categories = this.tables.categories || [];
       const groups = this.tables.category_groups || [];
@@ -237,7 +234,6 @@ class WebSQLiteDatabase {
       });
     }
 
-    // Check for direct JOIN with category_groups (e.g. from categories table)
     if (/JOIN\s+category_groups/i.test(trimmed) && !/JOIN\s+categories/i.test(trimmed)) {
       const groups = this.tables.category_groups || [];
       rows = rows
@@ -253,7 +249,6 @@ class WebSQLiteDatabase {
         .filter(Boolean);
     }
 
-    // Check for recurring_rules joins
     if (tableName === 'recurring_rules' && /JOIN\s+accounts/i.test(trimmed)) {
       const accounts = this.tables.accounts || [];
       const categories = this.tables.categories || [];
@@ -268,7 +263,6 @@ class WebSQLiteDatabase {
       });
     }
 
-    // Check for automation_occurrences joins
     if (tableName === 'automation_occurrences' && /JOIN\s+recurring_rules/i.test(trimmed)) {
       const rules = this.tables.recurring_rules || [];
       const accounts = this.tables.accounts || [];
@@ -291,7 +285,6 @@ class WebSQLiteDatabase {
       });
     }
 
-    // Filter conditions
     if (/WHERE/i.test(trimmed)) {
       let pIdx = 0;
       if (/\bkey\s*=\s*\?/i.test(trimmed)) {
@@ -349,7 +342,6 @@ class WebSQLiteDatabase {
       }
     }
 
-    // Check for GROUP BY category_id and SUM(amount)
     if (/GROUP\s+BY\s+category_id/i.test(trimmed)) {
       const groupMap = new Map<string, number>();
       for (const row of rows) {
@@ -365,7 +357,6 @@ class WebSQLiteDatabase {
       return aggregated as unknown as T[];
     }
 
-    // Order By
     if (/ORDER\s+BY/i.test(trimmed)) {
       if (/sort_order\s+ASC,\s*(?:c\.)?name\s+ASC/i.test(trimmed)) {
         rows.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || (a.name || a.category_name || '').localeCompare(b.name || b.category_name || ''));
@@ -376,7 +367,6 @@ class WebSQLiteDatabase {
       }
     }
 
-    // Limit
     const limitMatch = trimmed.match(/LIMIT\s+(\d+)/i);
     if (limitMatch) {
       const limit = parseInt(limitMatch[1], 10);

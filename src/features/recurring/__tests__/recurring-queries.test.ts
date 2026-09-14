@@ -30,7 +30,7 @@ it('ignores legacy transfer rules while continuing normal recurring entries', as
 it('rejects new recurring transfers', async () => {
   const account = await getDefaultAccount();
   await expect(createRecurringRule({
-    // @ts-expect-error Older callers must also be rejected at runtime.
+
     type: 'transfer', name: 'Removed', amount: 10000, currency: 'VND', accountId: account.id, frequency: 'daily', startDate: '2026-09-08',
   })).rejects.toThrow('Transfers are no longer supported');
 });

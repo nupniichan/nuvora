@@ -25,8 +25,7 @@ describe('Recurring Engine Edge Cases & Invariants', () => {
   });
 
   it('handles day 31 in shorter months with last_day behavior', () => {
-    // Starting on Jan 31, 2026 (non-leap year)
-    // Jan has 31, Feb has 28, March has 31, April has 30
+
     const dates = calculateDueOccurrences(
       {
         frequency: 'monthly',
@@ -41,14 +40,14 @@ describe('Recurring Engine Edge Cases & Invariants', () => {
 
     expect(dates).toEqual([
       '2026-01-31',
-      '2026-02-28', // Last day of Feb non-leap
+      '2026-02-28',
       '2026-03-31',
-      '2026-04-30', // Last day of April
+      '2026-04-30',
     ]);
   });
 
   it('handles day 31 in leap year February correctly', () => {
-    // 2024 is a leap year (Feb has 29 days)
+
     const dates = calculateDueOccurrences(
       {
         frequency: 'monthly',
@@ -77,7 +76,6 @@ describe('Recurring Engine Edge Cases & Invariants', () => {
       '2026-04-30'
     );
 
-    // Feb (28) and April (30) are skipped
     expect(dates).toEqual(['2026-01-31', '2026-03-31']);
   });
 

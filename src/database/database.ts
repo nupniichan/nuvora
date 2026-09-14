@@ -6,9 +6,6 @@ import { runMigrations } from './migrations';
 
 let dbInstance: SQLite.SQLiteDatabase | any = null;
 
-/**
- * Creates an in-memory mock SQLite object for Web browser preview mode
- */
 function createWebDbMock(): any {
   const STORAGE_KEY = 'nuvora_web_db_tables';
   let tables: Record<string, any[]> = {
@@ -40,7 +37,6 @@ function createWebDbMock(): any {
     } catch {}
   };
 
-  // Auto seed starter categories if none exist
   if (!tables.categories || tables.categories.length === 0) {
     const now = new Date().toISOString();
     let gSort = 1;
@@ -76,7 +72,6 @@ function createWebDbMock(): any {
     save();
   }
 
-  // Auto seed default account if none exists
   if (!tables.accounts || tables.accounts.length === 0) {
     tables.accounts = [
       {
@@ -127,7 +122,7 @@ function createWebDbMock(): any {
           const wherePart = uMatch[3] ? uMatch[3].trim() : '';
 
           if (tables[tName]) {
-            // Count ? in sets
+
             let setParamCount = 0;
             for (const s of sets) {
               const qCount = (s.match(/\?/g) || []).length;
@@ -204,7 +199,6 @@ function createWebDbMock(): any {
       const tName = fromMatch[1].toLowerCase();
       let rows = [...(tables[tName] || [])];
 
-      // Check for JOIN with categories
       if (/JOIN\s+categories/i.test(sql)) {
         const categories = tables.categories || [];
         const groups = tables.category_groups || [];
@@ -223,7 +217,6 @@ function createWebDbMock(): any {
         });
       }
 
-      // Check for direct JOIN with category_groups
       if (/JOIN\s+category_groups/i.test(sql) && !/JOIN\s+categories/i.test(sql)) {
         const groups = tables.category_groups || [];
         rows = rows
@@ -293,25 +286,20 @@ function createWebDbMock(): any {
   };
 }
 
-/**
- * Initializes and opens the SQLite database with SQLCipher DEK key
- */
 export async function initDatabase(dekKeyHex?: string): Promise<SQLite.SQLiteDatabase> {
   if (dbInstance) {
     return dbInstance;
   }
 
-  // On Web, return a safe mock to prevent native worker crash in browser preview
   if (Platform.OS === 'web') {
     dbInstance = createWebDbMock();
     return dbInstance;
   }
 
-  // Open native SQLite database file on Android / iOS
   const db = await SQLite.openDatabaseAsync('nuvora.db');
 
   if (dekKeyHex) {
-    // PRAGMA key for SQLCipher encryption at rest
+
     await db.execAsync(`PRAGMA key = '${dekKeyHex}';`);
     const cipherVersion = await db.getFirstAsync<{ cipher_version: string }>(
       'PRAGMA cipher_version;'
@@ -322,19 +310,14 @@ export async function initDatabase(dekKeyHex?: string): Promise<SQLite.SQLiteDat
     }
   }
 
-  // Enable foreign keys
   await db.execAsync('PRAGMA foreign_keys = ON;');
 
-  // Run migrations
   await runMigrations(db);
 
   dbInstance = db;
   return dbInstance;
 }
 
-/**
- * Returns current active DB instance
- */
 export function getDatabase(): SQLite.SQLiteDatabase {
   if (!dbInstance) {
     if (Platform.OS === 'web') {
@@ -346,15 +329,11 @@ export function getDatabase(): SQLite.SQLiteDatabase {
   return dbInstance;
 }
 
-/** Keep the transaction on the existing SQLCipher-unlocked connection. */
 export async function withGoalTransaction(task: (txn: SQLite.SQLiteDatabase) => Promise<void>): Promise<void> {
   const db = getDatabase();
   await db.withTransactionAsync(() => task(db));
 }
 
-/**
- * Closes the database instance (useful during reset/restore)
- */
 export async function closeDatabase(): Promise<void> {
   if (dbInstance) {
     if (Platform.OS !== 'web' && typeof dbInstance.closeAsync === 'function') {
@@ -369,7 +348,7 @@ export async function deleteDatabase(): Promise<void> {
   try {
     await SQLite.deleteDatabaseAsync('nuvora.db');
   } catch (error) {
-    // A previous attempt may already have deleted the file before secure storage cleanup failed.
+
     const failure = error as { code?: string; message?: string };
     const missing = failure?.code === 'ERR_DATABASE_NOT_FOUND'
       || (failure?.code === 'E_SQLITE_DELETE_DATABASE' && /Database .+ not found/.test(failure.message ?? ''));

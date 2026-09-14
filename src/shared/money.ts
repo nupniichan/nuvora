@@ -1,13 +1,10 @@
 import { getCurrencyMetadata } from './currency-config';
 
 export interface Money {
-  amount: number; // Integer minor units (e.g., 10000 VND = 10000, $10.50 USD = 1050)
+  amount: number;
   currency: string;
 }
 
-/**
- * Converts a major unit decimal (e.g. 10.50) to integer minor units (e.g. 1050 for USD, 10500 for VND)
- */
 export function toMinorUnits(majorAmount: number, currencyCode: string): number {
   if (typeof majorAmount !== 'number' || isNaN(majorAmount)) return 0;
   const meta = getCurrencyMetadata(currencyCode);
@@ -15,9 +12,6 @@ export function toMinorUnits(majorAmount: number, currencyCode: string): number 
   return Math.round(majorAmount * factor);
 }
 
-/**
- * Converts integer minor units (e.g. 1050) to major unit decimal (e.g. 10.50)
- */
 export function toMajorUnits(minorAmount: number, currencyCode: string): number {
   if (typeof minorAmount !== 'number' || isNaN(minorAmount)) return 0;
   const meta = getCurrencyMetadata(currencyCode);
@@ -25,9 +19,6 @@ export function toMajorUnits(minorAmount: number, currencyCode: string): number 
   return minorAmount / factor;
 }
 
-/**
- * Formats minor units into human readable money string (e.g., "100.000 ₫" or "$10.50")
- */
 export function formatMoney(minorAmount: number, currencyCode: string, locale?: string): string {
   const safeMinor = typeof minorAmount === 'number' && !isNaN(minorAmount) ? minorAmount : 0;
   const meta = getCurrencyMetadata(currencyCode);
@@ -51,9 +42,6 @@ export function formatMoney(minorAmount: number, currencyCode: string, locale?: 
   }
 }
 
-/**
- * Adds two Money objects (must have same currency)
- */
 export function addMoney(a: Money, b: Money): Money {
   if (a.currency !== b.currency) {
     throw new Error(`Cannot add different currencies: ${a.currency} vs ${b.currency}`);
@@ -61,9 +49,6 @@ export function addMoney(a: Money, b: Money): Money {
   return { amount: a.amount + b.amount, currency: a.currency };
 }
 
-/**
- * Subtracts b from a (must have same currency)
- */
 export function subtractMoney(a: Money, b: Money): Money {
   if (a.currency !== b.currency) {
     throw new Error(`Cannot subtract different currencies: ${a.currency} vs ${b.currency}`);
@@ -71,30 +56,24 @@ export function subtractMoney(a: Money, b: Money): Money {
   return { amount: a.amount - b.amount, currency: a.currency };
 }
 
-/**
- * Distributes an exact integer minor amount among a set of weights (ratios or percentages)
- * using the Largest Remainder Method (Hamilton Method).
- * Guarantees that sum(result) === totalAmount exactly.
- */
 export function allocateMoney(totalAmount: number, weights: number[]): number[] {
   if (weights.length === 0) return [];
-  const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+  const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
   if (totalWeight <= 0) {
     return weights.map(() => 0);
   }
 
-  const exactAllocations = weights.map((w) => (totalAmount * w) / totalWeight);
-  const integerAllocations = exactAllocations.map((a) => Math.floor(a));
-  const allocatedSum = integerAllocations.reduce((sum, a) => sum + a, 0);
+  const exactAllocations = weights.map((weight) => (totalAmount * weight) / totalWeight);
+  const integerAllocations = exactAllocations.map((allocation) => Math.floor(allocation));
+  const allocatedSum = integerAllocations.reduce((sum, allocation) => sum + allocation, 0);
 
   let remainder = totalAmount - allocatedSum;
 
-  const fractionalParts = exactAllocations.map((exact, idx) => ({
-    index: idx,
-    fraction: exact - integerAllocations[idx],
+  const fractionalParts = exactAllocations.map((exact, index) => ({
+    index,
+    fraction: exact - integerAllocations[index],
   }));
 
-  // Sort by fraction descending
   fractionalParts.sort((a, b) => b.fraction - a.fraction);
 
   const result = [...integerAllocations];

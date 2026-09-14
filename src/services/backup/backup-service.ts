@@ -42,9 +42,6 @@ export interface RestoreResult {
   recurringRulesRestored: number;
 }
 
-/**
- * Creates an encrypted, portable backup envelope from the local database
- */
 export async function createEncryptedBackup(password: string): Promise<string> {
   if (!password) {
     throw new Error('Mật khẩu bảo vệ sao lưu không được để trống.');
@@ -52,7 +49,6 @@ export async function createEncryptedBackup(password: string): Promise<string> {
 
   const db = getDatabase();
 
-  // 1. Snapshot local database tables
   const [
     appSettings,
     accounts,
@@ -95,11 +91,9 @@ export async function createEncryptedBackup(password: string): Promise<string> {
 
   const payloadStr = JSON.stringify(payload);
 
-  // 2. Derive unique KEK for this backup
   const saltHex = generateRandomHex(32);
   const kekHex = await deriveKeyArgon2id(password, saltHex, DEFAULT_KDF_PARAMS);
 
-  // 3. Encrypt payload with AES-256-GCM
   const { ciphertextHex, nonceHex, authTagHex } = await encryptAesGcm(payloadStr, kekHex);
 
   const envelope: BackupEnvelope = {
@@ -117,9 +111,6 @@ export async function createEncryptedBackup(password: string): Promise<string> {
   return JSON.stringify(envelope, null, 2);
 }
 
-/**
- * Validates, decrypts, and atomically restores database from an encrypted backup envelope
- */
 export async function restoreFromEncryptedBackup(
   backupJsonStr: string,
   password: string
@@ -143,10 +134,8 @@ export async function restoreFromEncryptedBackup(
     throw new Error('Dữ liệu xác thực bản sao lưu không hợp lệ hoặc bị thiếu.');
   }
 
-  // Derive recovery key
   const kekHex = await deriveKeyArgon2id(password, envelope.saltHex, envelope.kdfParams || DEFAULT_KDF_PARAMS);
 
-  // Decrypt and authenticate
   let payloadStr: string;
   try {
     payloadStr = await decryptAesGcm(envelope.ciphertextHex, kekHex, envelope.nonceHex, envelope.authTagHex);
@@ -163,9 +152,8 @@ export async function restoreFromEncryptedBackup(
 
   const db = getDatabase();
 
-  // Atomic restoration
   await db.withTransactionAsync(async () => {
-    // Clear existing data safely in dependency order
+
     await db.runAsync('DELETE FROM goal_contributions;');
     await db.runAsync('DELETE FROM financial_goals;');
     await db.runAsync('DELETE FROM audit_logs;');
@@ -179,7 +167,6 @@ export async function restoreFromEncryptedBackup(
     await db.runAsync('DELETE FROM accounts;');
     await db.runAsync('DELETE FROM app_settings;');
 
-    // Insert restored data
     for (const s of payload.app_settings || []) {
       await db.runAsync(
         'INSERT OR REPLACE INTO app_settings (key, value, updated_at) VALUES (?, ?, ?);',

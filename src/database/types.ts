@@ -11,11 +11,11 @@ export interface AccountRow {
   name: string;
   type: AccountType;
   currency: string;
-  balance: number; // Integer minor units
+  balance: number;
   icon: string | null;
   color: string | null;
   sort_order: number;
-  is_archived: number; // 0 or 1
+  is_archived: number;
   created_at: string;
   updated_at: string;
 }
@@ -45,14 +45,14 @@ export interface CategoryRow {
 }
 
 export type EntryType = 'income' | 'expense';
-// Keep transfer records readable in existing databases and backups.
+
 export type TransactionType = EntryType | 'transfer';
 export type TransactionStatus = 'confirmed' | 'planned';
 
 export interface TransactionRow {
   id: string;
   type: TransactionType;
-  amount: number; // Integer minor units
+  amount: number;
   currency: string;
   account_id: string;
   to_account_id: string | null;
@@ -60,7 +60,7 @@ export interface TransactionRow {
   recurring_rule_id: string | null;
   occurrence_id: string | null;
   note: string | null;
-  date: string; // ISO date string
+  date: string;
   status: TransactionStatus;
   created_at: string;
   updated_at: string;
@@ -74,7 +74,7 @@ export interface BudgetRow {
   period_type: BudgetPeriodType;
   start_date: string;
   currency: string;
-  total_budget?: number | null; // Total monthly limit if set
+  total_budget?: number | null;
   is_active: number;
   created_at: string;
   updated_at: string;
@@ -87,8 +87,8 @@ export interface BudgetAllocationRow {
   budget_id: string;
   category_id: string;
   rule_type: AllocationRuleType;
-  amount: number | null; // Integer minor units (used as spending limit)
-  percentage: number | null; // 0-100 for percentage
+  amount: number | null;
+  percentage: number | null;
   sort_order: number;
 }
 
@@ -101,9 +101,9 @@ export interface FinancialGoalRow {
   type: GoalType;
   icon: string | null;
   color: string | null;
-  target_amount: number; // Integer minor units
-  current_amount: number; // Integer minor units
-  target_date: string | null; // ISO date YYYY-MM-DD
+  target_amount: number;
+  current_amount: number;
+  target_date: string | null;
   linked_category_id: string | null;
   linked_account_id: string | null;
   notes: string | null;
@@ -115,10 +115,10 @@ export interface FinancialGoalRow {
 export interface GoalContributionRow {
   id: string;
   goal_id: string;
-  amount: number; // Integer minor units
+  amount: number;
   transaction_id: string | null;
   note: string | null;
-  date: string; // ISO date YYYY-MM-DD
+  date: string;
   created_at: string;
 }
 

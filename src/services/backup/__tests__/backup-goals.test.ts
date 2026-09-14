@@ -7,7 +7,7 @@ import { getMonthlyLimit, saveMonthlyLimit } from '@/features/budgets/monthly-li
 
 jest.mock('@/database/database', () => jest.requireActual('@/database/database.web'));
 jest.mock('@/shared/uuid', () => { let nextId = 0; return { generateUUID: () => String(++nextId) }; });
-// Payload round-trip test; cryptographic authentication is covered by backup-service.test.ts.
+
 jest.mock('@/services/security/crypto', () => ({
   DEFAULT_KDF_PARAMS: {}, generateRandomHex: () => '00', deriveKeyArgon2id: async () => 'key',
   encryptAesGcm: async (plaintext: string) => ({ ciphertextHex: plaintext, nonceHex: 'nonce', authTagHex: 'tag' }),

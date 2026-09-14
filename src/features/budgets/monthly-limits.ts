@@ -23,7 +23,6 @@ export function isValidTransactionDate(date: string): boolean {
   return year >= 1000 && month >= 1 && month <= 12 && day >= 1 && day <= new Date(year, month, 0).getDate();
 }
 
-/** Rules take effect from a month; explicit monthly overrides always take priority. */
 export async function getMonthlyLimit(year: number, month: number, currency: string) {
   const key = monthKey(year, month);
   const db = getDatabase();
@@ -42,14 +41,12 @@ export async function getMonthlyLimit(year: number, month: number, currency: str
   if (override) return { limit: readAmount(override), recurringLimit, source: 'month' as const };
   if (recurring) return { limit: recurringLimit, recurringLimit, source: 'recurring' as const };
 
-  // Preserve an existing total in its original month, without copying it to other months.
   const budgets = await db.getAllAsync<BudgetRow>('SELECT * FROM budgets;');
   const legacy = budgets.filter(row => row.currency === currency && row.start_date.slice(0, 7) === key && row.total_budget != null)
     .sort((a, b) => b.updated_at.localeCompare(a.updated_at))[0];
   return { limit: legacy?.total_budget && legacy.total_budget > 0 ? legacy.total_budget : null, recurringLimit, source: legacy ? 'month' as const : 'none' as const };
 }
 
-/** Stored with app settings so existing encrypted backups include the complete schedule. */
 export async function saveMonthlyLimit(year: number, month: number, currency: string, limit: number | null, scope: MonthlyLimitScope): Promise<void> {
   const key = monthKey(year, month);
   if (limit !== null && (!Number.isSafeInteger(limit) || limit <= 0)) throw new MonthlyLimitValidationError('invalidAmount');
@@ -62,7 +59,7 @@ export async function saveMonthlyLimit(year: number, month: number, currency: st
     }
     if (scope !== 'month') {
       await db.runAsync('DELETE FROM app_settings WHERE key = ?;', [`${base}month:${key}`]);
-      // Removing an override must not resurrect the pre-feature value.
+
       const budgets = await db.getAllAsync<BudgetRow>('SELECT * FROM budgets;');
       for (const budget of budgets.filter(row => row.currency === currency && row.start_date.slice(0, 7) === key)) {
         await db.runAsync('UPDATE budgets SET total_budget = ?, updated_at = ? WHERE id = ?;', [null, new Date().toISOString(), budget.id]);
@@ -101,7 +98,6 @@ export class MonthlyLimitExceededError extends Error {
   }
 }
 
-/** Throw before any writes. Approval is valid only for the exact expense and fresh totals. */
 export async function requireMonthlyLimitApproval(data: { type: string; date: string; currency: string; amount: number; excludeTransactionId?: string; operation: string }, approval?: string): Promise<void> {
   if (!isValidTransactionDate(data.date)) throw new MonthlyLimitValidationError('invalidDate');
   if (!Number.isSafeInteger(data.amount) || data.amount <= 0) throw new MonthlyLimitValidationError('invalidAmount');

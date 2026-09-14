@@ -6,7 +6,6 @@ import {
   setCategorySpendingLimit,
 } from '../budget-queries';
 
-// Mock sqlite for in-memory testing of budget queries
 jest.mock('@/database/database', () => {
   const budgetsMap = new Map<string, any>();
   const allocationsMap = new Map<string, any>();
@@ -188,9 +187,8 @@ describe('Budget Queries & Spending Limits', () => {
       currency: 'VND',
     });
 
-    // Set limit for cat_food to 2,000,000
     await setCategorySpendingLimit(budget.id, 'cat_food', 2000000);
-    // Set limit for cat_rent to 5,000,000
+
     await setCategorySpendingLimit(budget.id, 'cat_rent', 5000000);
 
     let full = await getBudgetWithAllocations(budget.id);
@@ -199,13 +197,11 @@ describe('Budget Queries & Spending Limits', () => {
     const foodAlloc = full?.allocations.find((a: any) => a.category_id === 'cat_food');
     expect(foodAlloc?.amount).toBe(2000000);
 
-    // Update food limit to 2,500,000
     await setCategorySpendingLimit(budget.id, 'cat_food', 2500000);
     full = await getBudgetWithAllocations(budget.id);
     const updatedFood = full?.allocations.find((a: any) => a.category_id === 'cat_food');
     expect(updatedFood?.amount).toBe(2500000);
 
-    // Remove limit (set to null)
     await setCategorySpendingLimit(budget.id, 'cat_rent', null);
     full = await getBudgetWithAllocations(budget.id);
     expect(full?.allocations.length).toBe(1);
@@ -222,9 +218,8 @@ describe('Budget Queries & Spending Limits', () => {
       currency: 'VND',
     });
 
-    await setCategorySpendingLimit(budget.id, 'cat_food', 2000000); // Limit 2M
+    await setCategorySpendingLimit(budget.id, 'cat_food', 2000000);
 
-    // Seed 1.5M expense
     mockDb.__seedTransaction({
       id: 'tx1',
       category_id: 'cat_food',
@@ -233,7 +228,6 @@ describe('Budget Queries & Spending Limits', () => {
       date: '2026-09-05',
     });
 
-    // Proposing 300,000 more (Total = 1.8M <= 2M -> not over limit)
     const check1 = await checkSpendingLimit('cat_food', 2026, 9, 300000);
     expect(check1.hasLimit).toBe(true);
     expect(check1.limit).toBe(2000000);
@@ -242,7 +236,6 @@ describe('Budget Queries & Spending Limits', () => {
     expect(check1.isOverLimit).toBe(false);
     expect(check1.percentUsed).toBe(90);
 
-    // Proposing 800,000 more (Total = 2.3M > 2M -> OVER LIMIT)
     const check2 = await checkSpendingLimit('cat_food', 2026, 9, 800000);
     expect(check2.isOverLimit).toBe(true);
     expect(check2.projectedTotal).toBe(2300000);
