@@ -13,7 +13,7 @@ import {
 import { Colors } from '@/constants/theme';
 
 export const POPULAR_ICONS = [
-  // Money & Wealth
+
   'payments',
   'account-balance-wallet',
   'savings',
@@ -27,7 +27,6 @@ export const POPULAR_ICONS = [
   'redeem',
   'card-giftcard',
 
-  // Bills & Utilities
   'flash-on',
   'water-drop',
   'wifi',
@@ -37,7 +36,6 @@ export const POPULAR_ICONS = [
   'router',
   'tv',
 
-  // Living & Housing
   'home',
   'vpn-key',
   'apartment',
@@ -45,7 +43,6 @@ export const POPULAR_ICONS = [
   'chair',
   'kitchen',
 
-  // Food & Dining
   'restaurant',
   'local-cafe',
   'local-dining',
@@ -54,7 +51,6 @@ export const POPULAR_ICONS = [
   'liquor',
   'bakery-dining',
 
-  // Transportation
   'directions-car',
   'two-wheeler',
   'local-gas-station',
@@ -63,14 +59,12 @@ export const POPULAR_ICONS = [
   'directions-bus',
   'local-taxi',
 
-  // Shopping
   'shopping-cart',
   'shopping-bag',
   'local-mall',
   'storefront',
   'checkroom',
 
-  // Investment & Growth
   'trending-up',
   'show-chart',
   'insights',
@@ -79,28 +73,24 @@ export const POPULAR_ICONS = [
   'bar-chart',
   'query-stats',
 
-  // Health & Sports
   'fitness-center',
   'medical-services',
   'health-and-safety',
   'sports-soccer',
   'pool',
 
-  // Education & Work
   'school',
   'menu-book',
   'laptop',
   'work',
   'business-center',
 
-  // Fun & Entertainment
   'sports-esports',
   'movie',
   'music-note',
   'camera-alt',
   'flight-takeoff',
 
-  // Debt & Safety
   'gavel',
   'shield',
   'lock',

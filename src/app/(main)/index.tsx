@@ -1,8 +1,8 @@
-import { MaterialIcons } from '@expo/vector-icons';
 import { withMonthlyLimitConfirmation } from '@/features/budgets/confirm-monthly-limit';
 import { alertMessage } from '@/shared/dialog';
+import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import React, { useCallback, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   RefreshControl,
@@ -15,36 +15,36 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Card } from '@/components/ui/card';
 import { BalanceCardScenery } from '@/components/scenery';
-import { MonthlyLimitCard } from '@/components/ui/monthly-limit-card';
+import { Card } from '@/components/ui/card';
 import { CategoryBreakdownChart } from '@/components/ui/charts';
-import { DailyExpenseChart } from '@/components/ui/insight-charts';
 import { EmptyState } from '@/components/ui/empty-state';
+import { DailyExpenseChart } from '@/components/ui/insight-charts';
+import { MonthlyLimitCard } from '@/components/ui/monthly-limit-card';
 import { Colors, MaxContentWidth } from '@/constants/theme';
 import { TransactionRow } from '@/database/types';
 import { getAllAccounts, getDefaultAccount } from '@/features/accounts/account-queries';
 import {
-  GOAL_COMPLETION_CATEGORY_ID,
   getMonthlySnapshot,
+  GOAL_COMPLETION_CATEGORY_ID,
   MonthlySnapshot,
 } from '@/features/budgets/budget-queries';
 import {
   FinancialGoalWithProgress,
   getAllGoals,
 } from '@/features/goals/financial-goals';
+import { BalanceComparison, BalanceComparisonPeriod, buildBalanceComparisons } from '@/features/insights/balance-comparison';
+import { getSpendingHistory, SpendingHistory } from '@/features/insights/insight-data';
 import { calculateDueOccurrences } from '@/features/recurring/recurring-engine';
 import {
-  PendingOccurrenceWithRule,
   confirmOccurrence,
   getAllRecurringRules,
   getPendingOccurrences,
+  PendingOccurrenceWithRule,
   processRecurringCatchUp,
   skipOccurrence,
 } from '@/features/recurring/recurring-queries';
 import { getTransactions } from '@/features/transactions/transaction-queries';
-import { getSpendingHistory, SpendingHistory } from '@/features/insights/insight-data';
-import { BalanceComparison, BalanceComparisonPeriod, buildBalanceComparisons } from '@/features/insights/balance-comparison';
 import { formatDateISO } from '@/shared/date-utils';
 import { formatMoney } from '@/shared/money';
 
@@ -80,32 +80,24 @@ export default function DashboardScreen() {
       setBalanceLoadError(false);
       const defaultAccount = await getDefaultAccount();
 
-      // 1. Run recurring catch-up reconciliation
       await processRecurringCatchUp();
 
-      // 2. Load accounts
-      const accs = await getAllAccounts();
+      const accounts = await getAllAccounts();
+      const transactions = await getTransactions();
+      setRecentTransactions(transactions.filter((tx) => tx.status === 'confirmed').slice(0, 5));
+      setBalanceComparisons(buildBalanceComparisons(accounts, transactions));
 
-      // 3. Load recent confirmed transactions
-      const txs = await getTransactions();
-      setRecentTransactions(txs.filter((tx) => tx.status === 'confirmed').slice(0, 5));
-      setBalanceComparisons(buildBalanceComparisons(accs, txs));
-
-      // 4. Load monthly snapshot for current month
       const now = new Date();
-      const snap = await getMonthlySnapshot(now.getFullYear(), now.getMonth() + 1, defaultAccount.currency);
-      setSnapshot(snap);
-      setHistory(await getSpendingHistory(now.getFullYear(), now.getMonth() + 1, snap.currency));
+      const monthlySnapshot = await getMonthlySnapshot(now.getFullYear(), now.getMonth() + 1, defaultAccount.currency);
+      setSnapshot(monthlySnapshot);
+      setHistory(await getSpendingHistory(now.getFullYear(), now.getMonth() + 1, monthlySnapshot.currency));
 
-      // 5. Load active financial goals
-      const g = await getAllGoals('active');
-      setActiveGoals(g.slice(0, 2));
+      const goals = await getAllGoals('active');
+      setActiveGoals(goals.slice(0, 2));
 
-      // 6. Load pending occurrences
       const pending = await getPendingOccurrences();
       setPendingOccurrences(pending);
 
-      // 6. Calculate upcoming forecast (next 30 days)
       const allRules = await getAllRecurringRules();
       const today = new Date();
       const tomorrow = new Date(today);
@@ -132,28 +124,28 @@ export default function DashboardScreen() {
           fromStr,
           toStr
         );
-        for (const d of dueDates) {
+        for (const dueDate of dueDates) {
           forecastList.push({
             ruleId: rule.id,
             ruleName: rule.name,
             type: rule.type,
             amount: rule.amount,
             currency: rule.currency,
-            date: d,
+            date: dueDate,
           });
         }
       }
       forecastList.sort((a, b) => a.date.localeCompare(b.date));
       setUpcomingForecast(forecastList.slice(0, 5));
-    } catch (e) {
+    } catch (error) {
       setBalanceLoadError(true);
-      console.error('Failed to load dashboard data', e);
+      console.error('Failed to load dashboard data', error);
     }
   }, []);
 
   useFocusEffect(
     useCallback(() => {
-      loadData();
+      void loadData();
     }, [loadData])
   );
 
@@ -204,7 +196,6 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Total Balance Card */}
         <Card style={styles.balanceCard}>
           <BalanceCardScenery />
           <View style={styles.balanceTop}>
@@ -289,7 +280,6 @@ export default function DashboardScreen() {
           ))}
         </View>
 
-        {/* Pending Confirmations Card (Phase 1C) */}
         {pendingOccurrences.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
@@ -340,7 +330,6 @@ export default function DashboardScreen() {
           </View>
         )}
 
-        {/* Monthly Financial Snapshot Summary */}
         {snapshot && <MonthlyLimitCard snapshot={snapshot} />}
 
         {snapshot && (
@@ -387,7 +376,6 @@ export default function DashboardScreen() {
                     <Text style={[styles.budgetPct, styles.incomeText]}>{t('dashboard.balanced')}</Text>
                   )}
                 </View>
-
               </Card>
             </TouchableOpacity>
 
@@ -398,19 +386,18 @@ export default function DashboardScreen() {
                 title={t('dashboard.monthlyBreakdown')}
                 totalAmount={snapshot.totalExpense}
                 currency={snapshot.currency}
-                items={(snapshot.expenseCategories || []).map((cat) => ({
-                  id: cat.categoryId,
-                  name: cat.categoryId === GOAL_COMPLETION_CATEGORY_ID ? t('charts.goalCompletion') : cat.categoryName,
-                  amount: cat.totalAmount,
-                  color: cat.categoryColor,
-                  icon: cat.categoryIcon,
+                items={(snapshot.expenseCategories || []).map((category) => ({
+                  id: category.categoryId,
+                  name: category.categoryId === GOAL_COMPLETION_CATEGORY_ID ? t('charts.goalCompletion') : category.categoryName,
+                  amount: category.totalAmount,
+                  color: category.categoryColor,
+                  icon: category.categoryIcon,
                 }))}
               />
             )}
           </View>
         )}
 
-        {/* Financial Goals Widget */}
         {activeGoals.length === 0 ? (
           <TouchableOpacity accessibilityRole="button" activeOpacity={0.85} onPress={() => router.push('/(modal)/manage-goals')}>
             <Card variant="flat" style={styles.goalPrompt}>
@@ -464,7 +451,6 @@ export default function DashboardScreen() {
           </View>
         )}
 
-        {/* Upcoming Forecast (Phase 1E Calendar & Forecast) */}
         {upcomingForecast.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
@@ -475,12 +461,12 @@ export default function DashboardScreen() {
             </View>
 
             <Card style={styles.forecastCard}>
-              {upcomingForecast.map((item, idx) => (
+              {upcomingForecast.map((item, index) => (
                 <View
                   key={`${item.ruleId}_${item.date}`}
                   style={[
                     styles.forecastItem,
-                    idx < upcomingForecast.length - 1 && styles.forecastBorder,
+                    index < upcomingForecast.length - 1 && styles.forecastBorder,
                   ]}
                 >
                   <View style={styles.forecastDateBox}>
@@ -505,7 +491,6 @@ export default function DashboardScreen() {
           </View>
         )}
 
-        {/* Recent Transactions Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>{t('dashboard.recentTransactions')}</Text>
@@ -516,37 +501,37 @@ export default function DashboardScreen() {
 
           {recentTransactions.length > 0 ? (
             <Card style={styles.txList}>
-              {recentTransactions.map((tx) => (
-                <View key={tx.id} style={styles.txItem}>
+              {recentTransactions.map((transaction) => (
+                <View key={transaction.id} style={styles.txItem}>
                   <View style={styles.txIconBadge}>
                     <MaterialIcons
                       name={
-                        tx.type === 'income'
+                        transaction.type === 'income'
                           ? 'trending-up'
-                          : tx.type === 'expense'
-                          ? 'trending-down'
-                          : 'swap-horiz'
+                          : transaction.type === 'expense'
+                            ? 'trending-down'
+                            : 'swap-horiz'
                       }
                       size={20}
                       color={Colors.light.textSecondary}
                     />
                   </View>
                   <View style={styles.txInfo}>
-                    <Text style={styles.txNote} numberOfLines={1}>{tx.note || t(`transactions.${tx.type}`)}</Text>
-                    <Text style={styles.txDate}>{tx.date}</Text>
+                    <Text style={styles.txNote} numberOfLines={1}>{transaction.note || t(`transactions.${transaction.type}`)}</Text>
+                    <Text style={styles.txDate}>{transaction.date}</Text>
                   </View>
                   <Text
                     style={[
                       styles.txAmount,
-                      tx.type === 'income'
+                      transaction.type === 'income'
                         ? styles.incomeText
-                        : tx.type === 'expense'
-                        ? styles.expenseText
-                        : styles.transferText,
+                        : transaction.type === 'expense'
+                          ? styles.expenseText
+                          : styles.transferText,
                     ]}
                   >
-                    {tx.type === 'income' ? '+' : tx.type === 'expense' ? '-' : ''}
-                    {formatMoney(tx.amount, tx.currency)}
+                    {transaction.type === 'income' ? '+' : transaction.type === 'expense' ? '-' : ''}
+                    {formatMoney(transaction.amount, transaction.currency)}
                   </Text>
                 </View>
               ))}
@@ -871,7 +856,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '800',
     color: Colors.primaryDark,
-  },
+  }, // idk what tf is ts
   brandInfo: { flex: 1 },
   compactBalanceAmount: { fontSize: 28 },
   compactFlowAmount: { fontSize: 16 },

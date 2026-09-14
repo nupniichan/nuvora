@@ -5,7 +5,6 @@ import { SessionGuard } from '@/components/ui/session-guard';
 export default function MainLayout() {
   const { t } = useTranslation();
 
-  // The root layout owns the bar so it stays visible on detail screens too.
   return (
     <SessionGuard><Tabs screenOptions={{ headerShown: false }} tabBar={() => null}>
       <Tabs.Screen name="index" options={{ title: t('dashboard.title') }} />

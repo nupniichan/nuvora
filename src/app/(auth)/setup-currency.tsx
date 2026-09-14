@@ -44,23 +44,23 @@ export default function SetupCurrencyScreen() {
         </View>
 
         <ScrollView contentContainerStyle={styles.currencyList}>
-          {Object.values(CURRENCIES).map((curr) => {
-            const isSelected = selectedCurrency === curr.code;
+          {Object.values(CURRENCIES).map((currencyItem) => {
+            const isSelected = selectedCurrency === currencyItem.code;
             return (
               <TouchableOpacity
-                key={curr.code}
-                onPress={() => setSelectedCurrency(curr.code)}
+                key={currencyItem.code}
+                onPress={() => setSelectedCurrency(currencyItem.code)}
                 activeOpacity={0.8}
               >
                 <Card
                   style={[styles.card, isSelected && styles.selectedCard]}
                 >
                   <View style={styles.badge}>
-                    <Text style={styles.symbol}>{curr.symbol}</Text>
+                    <Text style={styles.symbol}>{currencyItem.symbol}</Text>
                   </View>
                   <View style={styles.info}>
-                    <Text style={styles.code}>{curr.code}</Text>
-                    <Text style={styles.name}>{curr.name}</Text>
+                    <Text style={styles.code}>{currencyItem.code}</Text>
+                    <Text style={styles.name}>{currencyItem.name}</Text>
                   </View>
                   {isSelected ? (
                     <MaterialIcons name="check" size={20} color={Colors.primaryStrong} />
@@ -143,11 +143,6 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 13,
     color: Colors.light.textSecondary,
-  },
-  checkmark: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: Colors.primaryStrong,
   },
   footer: {
     padding: 24,

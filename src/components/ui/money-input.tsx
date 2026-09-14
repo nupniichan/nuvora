@@ -25,7 +25,7 @@ export function MoneyInput({ label, currency, valueMinor, onChangeMinor, error }
   ;
 
   const handleChangeText = (text: string) => {
-    // Keep only numbers and decimal separator
+
     const cleanText = text.replace(/[^0-9.]/g, '');
     const num = parseFloat(cleanText);
     if (!isNaN(num) && num >= 0) {

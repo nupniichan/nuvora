@@ -36,7 +36,7 @@ interface CategoryLimitDraft {
   categoryColor: string | null;
   groupName: string;
   isEnabled: boolean;
-  limitAmount: number; // Integer minor units
+  limitAmount: number;
 }
 
 export default function ManageBudgetModal() {
@@ -69,18 +69,18 @@ export default function ManageBudgetModal() {
     async function load() {
       try {
         const now = new Date();
-        const year = now.getFullYear();
-        const month = now.getMonth() + 1;
-        const monthStr = String(month).padStart(2, '0');
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth() + 1;
+        const monthStr = String(currentMonth).padStart(2, '0');
         const account = await getDefaultAccount();
         setCurrency(account.currency);
 
         let active = await getActiveBudget();
         if (!active) {
           active = await createBudget({
-            name: t('budgets.monthlyPlanName', { month, year }),
+            name: t('budgets.monthlyPlanName', { month: currentMonth, year: currentYear }),
             period_type: 'monthly',
-            start_date: `${year}-${monthStr}-01`,
+            start_date: `${currentYear}-${monthStr}-01`,
             currency: account.currency,
           });
         }
@@ -91,37 +91,36 @@ export default function ManageBudgetModal() {
         const full = await getBudgetWithAllocations(active.id);
         const limitMap = new Map<string, number>();
         if (full) {
-          full.allocations.forEach((a) => {
-            if (a.amount && a.amount > 0) {
-              limitMap.set(a.category_id, a.amount);
+          full.allocations.forEach((allocation) => {
+            if (allocation.amount && allocation.amount > 0) {
+              limitMap.set(allocation.category_id, allocation.amount);
             }
           });
         }
 
-        // Load all expense categories
-        const allCats = await getAllCategories('expense');
-        const drafts: CategoryLimitDraft[] = allCats.map((cat) => {
-          const existingLimit = limitMap.get(cat.id);
+        const allExpenseCategories = await getAllCategories('expense');
+        const drafts: CategoryLimitDraft[] = allExpenseCategories.map((category) => {
+          const existingLimit = limitMap.get(category.id);
           return {
-            categoryId: cat.id,
-            categoryName: cat.name,
-            categoryIcon: cat.icon,
-            categoryColor: cat.color,
-            groupName: cat.group_name,
+            categoryId: category.id,
+            categoryName: category.name,
+            categoryIcon: category.icon,
+            categoryColor: category.color,
+            groupName: category.group_name,
             isEnabled: !!existingLimit,
             limitAmount: existingLimit || 1000000,
           };
         });
 
         setCategoryLimits(drafts);
-      } catch (e) {
+      } catch (error) {
         setLoadError(true);
-        console.warn('Lỗi tải hạn mức', e);
+        console.warn('Lỗi tải hạn mức', error);
       } finally {
         setInitialLoading(false);
       }
     }
-    load();
+    void load();
   }, [t]);
 
   useEffect(() => {
@@ -149,25 +148,25 @@ export default function ManageBudgetModal() {
     else change();
   };
 
-  const handleToggleLimit = (index: number, val: boolean) => {
+  const handleToggleLimit = (index: number, isEnabled: boolean) => {
     setCategoryLimits((prev) => {
       const next = [...prev];
-      next[index] = { ...next[index], isEnabled: val };
+      next[index] = { ...next[index], isEnabled };
       return next;
     });
   };
 
-  const handleUpdateAmount = (index: number, amt: number) => {
+  const handleUpdateAmount = (index: number, amountMinor: number) => {
     setCategoryLimits((prev) => {
       const next = [...prev];
-      next[index] = { ...next[index], limitAmount: amt };
+      next[index] = { ...next[index], limitAmount: amountMinor };
       return next;
     });
   };
 
   const totalLimits = categoryLimits
-    .filter((c) => c.isEnabled)
-    .reduce((sum, c) => sum + c.limitAmount, 0);
+    .filter((categoryLimit) => categoryLimit.isEnabled)
+    .reduce((sum, categoryLimit) => sum + categoryLimit.limitAmount, 0);
 
   const handleSave = async () => {
     if (!budgetId || loading || initialLoading || monthLoading || loadError) return;
@@ -178,10 +177,8 @@ export default function ManageBudgetModal() {
 
     setLoading(true);
     try {
-      // 1. Save total budget limit
       await saveMonthlyLimit(year, month, currency, scope !== 'inherit' && totalBudgetEnabled ? totalBudgetAmount : null, scope);
 
-      // 2. Save individual category limits
       for (const item of categoryLimits) {
         await setCategorySpendingLimit(
           budgetId,
@@ -191,8 +188,8 @@ export default function ManageBudgetModal() {
       }
 
       closeModal();
-    } catch (e: any) {
-      alertMessage(t('common.error'), e instanceof MonthlyLimitValidationError ? t(`monthlyLimit.${e.code}`) : t('monthlyLimit.saveError'));
+    } catch (saveError: any) {
+      alertMessage(t('common.error'), saveError instanceof MonthlyLimitValidationError ? t(`monthlyLimit.${saveError.code}`) : t('monthlyLimit.saveError'));
     } finally {
       setLoading(false);
     }
@@ -210,7 +207,6 @@ export default function ManageBudgetModal() {
       <ScrollView contentContainerStyle={styles.content}>
         {initialLoading || monthLoading ? <ActivityIndicator color={Colors.primaryStrong} /> : null}
         {loadError && <Text style={styles.warningText}>{t('charts.loadError')}</Text>}
-        {/* Total Monthly Budget Card */}
         <Card style={styles.sectionCard}>
           <View style={styles.toggleRow}>
             <TouchableOpacity accessibilityRole="button" accessibilityLabel={t('charts.previousMonth')} disabled={monthLoading || loading || year <= 1000} onPress={() => changeMonth(-1)} style={styles.closeBtn}>
@@ -258,7 +254,6 @@ export default function ManageBudgetModal() {
           </>}
         </Card>
 
-        {/* Category Spending Limits List */}
         <View style={styles.listSection}>
           <Text style={styles.toggleDesc}>{t('monthlyLimit.categoryShared')}</Text>
           <View style={styles.listHeader}>
@@ -282,40 +277,40 @@ export default function ManageBudgetModal() {
             </View>
           )}
 
-          {categoryLimits.map((cat, idx) => (
-            <Card key={cat.categoryId} style={styles.catCard}>
+          {categoryLimits.map((categoryLimitItem, index) => (
+            <Card key={categoryLimitItem.categoryId} style={styles.catCard}>
               <View style={styles.catCardHeader}>
                 <View
                   style={[
                     styles.catIconBadge,
-                    { backgroundColor: cat.categoryColor || Colors.primaryDark },
+                    { backgroundColor: categoryLimitItem.categoryColor || Colors.primaryDark },
                   ]}
                 >
                   <MaterialIcons
-                    name={(cat.categoryIcon as any) || 'category'}
+                    name={(categoryLimitItem.categoryIcon as any) || 'category'}
                     size={18}
                     color="#FFFFFF"
                   />
                 </View>
 
                 <View style={styles.catNameContainer}>
-                  <Text style={styles.catName}>{cat.categoryName}</Text>
-                  <Text style={styles.catGroup}>{cat.groupName}</Text>
+                  <Text style={styles.catName}>{categoryLimitItem.categoryName}</Text>
+                  <Text style={styles.catGroup}>{categoryLimitItem.groupName}</Text>
                 </View>
 
                 <Switch
-                  value={cat.isEnabled}
-                  onValueChange={(val) => handleToggleLimit(idx, val)}
+                  value={categoryLimitItem.isEnabled}
+                  onValueChange={(val) => handleToggleLimit(index, val)}
                   trackColor={{ false: Colors.light.backgroundElement, true: Colors.primaryDark }}
                   thumbColor="#FFFFFF"
                 />
               </View>
 
-              {cat.isEnabled ? (
+              {categoryLimitItem.isEnabled ? (
                 <View style={styles.catInputContainer}>
                   <MoneyInput
-                    valueMinor={cat.limitAmount}
-                    onChangeMinor={(amt) => handleUpdateAmount(idx, amt)}
+                    valueMinor={categoryLimitItem.limitAmount}
+                    onChangeMinor={(amt) => handleUpdateAmount(index, amt)}
                     currency={categoryCurrency}
                   />
                 </View>

@@ -64,7 +64,7 @@ export default function BudgetsScreen() {
       if (request !== requestId.current) return;
       setSnapshot(snap);
       setHistory(spendingHistory);
-      setGoals(activeGoals.slice(0, 3)); // Top 3 goals
+      setGoals(activeGoals.slice(0, 3));
     } catch (e) {
       if (request !== requestId.current) return;
       setLoadError(true);
@@ -104,11 +104,9 @@ export default function BudgetsScreen() {
   const netBalance = snapshot?.netBalance ?? 0;
   const currency = snapshot?.currency ?? 'VND';
 
-  // Overall spending percentage compared to income
   const spendVsIncomePercent =
     totalIncome > 0 ? Math.min(100, Math.round((totalExpense / totalIncome) * 100)) : 0;
 
-  // Prepare breakdown items for chart
   const expenseChartItems = (snapshot?.expenseCategories || []).map((cat) => ({
     id: cat.categoryId,
     name: cat.categoryId === GOAL_COMPLETION_CATEGORY_ID ? t('charts.goalCompletion') : cat.categoryName,
@@ -123,7 +121,7 @@ export default function BudgetsScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-      {/* Header */}
+      {}
       <View style={styles.header}>
         <View style={styles.titleRow}>
           <View>
@@ -132,7 +130,7 @@ export default function BudgetsScreen() {
           </View>
         </View>
 
-        {/* Month Navigator */}
+        {}
         <View style={styles.monthNav}>
           <TouchableOpacity accessibilityRole="button" accessibilityLabel={t('charts.previousMonth')} onPress={handlePrevMonth} style={styles.navArrowBtn}>
             <MaterialIcons name="chevron-left" size={24} color={Colors.light.text} />
@@ -148,7 +146,7 @@ export default function BudgetsScreen() {
         {loading ? <ActivityIndicator color={Colors.primaryStrong} /> : null}
         {loadError && <TouchableOpacity accessibilityRole="button" onPress={loadData}><Text style={styles.emptyCategoryText}>{t('charts.loadError')} · {t('common.retry')}</Text></TouchableOpacity>}
         {!loading && !loadError && <>
-        {/* Monthly Financial Overview Card */}
+        {}
         {snapshot && <MonthlyLimitCard snapshot={snapshot} />}
         <Card style={styles.overviewCard}>
           <View style={styles.overviewHeader}>
@@ -163,7 +161,7 @@ export default function BudgetsScreen() {
             )}
           </View>
 
-          {/* Key Metrics Row */}
+          {}
           <View style={styles.metricsRow}>
             <View style={styles.metricItem}>
               <Text style={styles.metricLabel}>{t('budgets.totalIncome')}</Text>
@@ -193,7 +191,7 @@ export default function BudgetsScreen() {
             </View>
           </View>
 
-          {/* Progress Bar of Spend vs Income */}
+          {}
           {totalIncome > 0 && (
             <View style={styles.overviewProgressSection}>
               <View style={styles.progressHeaderRow}>
@@ -220,7 +218,6 @@ export default function BudgetsScreen() {
           )}
         </Card>
 
-        {/* Cashflow Comparison Chart */}
         <CashflowComparisonChart
           totalIncome={totalIncome}
           totalExpense={totalExpense}
@@ -233,7 +230,6 @@ export default function BudgetsScreen() {
           <DailyExpenseChart key={`days-${currentYear}-${currentMonth}`} days={history.days} currency={history.currency} />
         </>}
 
-        {/* Category Expense Breakdown Chart */}
         <CategoryBreakdownChart
           title={t('budgets.breakdownTitle')}
           totalAmount={totalExpense}
@@ -242,7 +238,6 @@ export default function BudgetsScreen() {
           emptyMessage={t('budgets.noExpenseThisMonth')}
         />
 
-        {/* Quick Actions Bar */}
         <View style={styles.quickBar}>
           <TouchableOpacity
             style={[styles.quickBtn, styles.primaryQuickBtn]}
@@ -261,7 +256,6 @@ export default function BudgetsScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Section 1: Income Breakdown */}
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
             <Text style={styles.sectionTitle}>{t('budgets.incomeSection')}</Text>
@@ -309,7 +303,6 @@ export default function BudgetsScreen() {
           )}
         </View>
 
-        {/* Section 2: Expense Breakdown & Spending Limits */}
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
             <Text style={styles.sectionTitle}>{t('budgets.expenseSection')}</Text>
@@ -362,7 +355,6 @@ export default function BudgetsScreen() {
                         </Text>
                       </View>
 
-                      {/* Limit Progress Bar */}
                       {hasLimit && (
                         <View style={styles.catProgressTrack}>
                           <View
@@ -401,7 +393,6 @@ export default function BudgetsScreen() {
           )}
         </View>
 
-        {/* Section 3: Financial Goals Progress */}
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
             <Text style={styles.sectionTitle}>{t('budgets.goalsSection')}</Text>

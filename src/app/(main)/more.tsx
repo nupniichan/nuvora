@@ -45,7 +45,7 @@ export default function MoreScreen() {
 
         <CurrencySwitchCard />
 
-        {/* Security Info Card */}
+        {}
         <Card style={styles.sectionCard}>
           <Text style={styles.sectionHeader}>{t('settings.security')}</Text>
           <Button title={t('accountSecurity.changePassword')} variant="outline" onPress={() => router.push({ pathname: '/(modal)/account-security', params: { action: 'password' } })} />
@@ -71,7 +71,7 @@ export default function MoreScreen() {
           />
         </Card>
 
-        {/* Category Management Card */}
+        {}
         <Card style={styles.sectionCard}>
           <Text style={styles.sectionHeader}>{t('settings.categoriesManagement')}</Text>
           <Text style={styles.sectionDesc}>{t('settings.categoriesDescription')}</Text>
@@ -83,7 +83,7 @@ export default function MoreScreen() {
           />
         </Card>
 
-        {/* Backup & Restore Card */}
+        {}
         <Card style={styles.sectionCard}>
           <Text style={styles.sectionHeader}>{t('settings.backupRestore')}</Text>
           <Text style={styles.sectionDesc}>{t('settings.backupDescription')}</Text>
@@ -95,7 +95,7 @@ export default function MoreScreen() {
           />
         </Card>
 
-        {/* Preferences Card */}
+        {}
         <Card style={styles.sectionCard}>
           <Text style={styles.sectionHeader}>{t('settings.language')}</Text>
           <TouchableOpacity style={styles.row} onPress={toggleLanguage}>
@@ -109,7 +109,7 @@ export default function MoreScreen() {
           </TouchableOpacity>
         </Card>
 
-        {/* About App */}
+        {}
         <Card variant="flat" style={styles.aboutCard}>
           <Text style={styles.appTitle}>Nuvora</Text>
           <Text style={styles.appVersion}>1.0.0 · {t('settings.localFirstTagline')}</Text>

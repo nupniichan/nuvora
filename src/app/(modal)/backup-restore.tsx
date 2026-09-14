@@ -120,7 +120,6 @@ export default function BackupRestoreModal() {
         </TouchableOpacity>
       </View>
 
-      {/* Mode Segment */}
       <View style={styles.tabContainer}>
         <TouchableOpacity
           style={[styles.tabBtn, activeTab === 'backup' && styles.activeTabBtn]}

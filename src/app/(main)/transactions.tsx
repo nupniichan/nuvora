@@ -42,9 +42,8 @@ export default function TransactionsScreen() {
   const [filterType, setFilterType] = useState<EntryType | 'all'>('all');
   const [categories, setCategories] = useState<CategoryWithGroup[]>([]);
 
-  // Edit modal state
   const [editModalVisible, setEditModalVisible] = useState(false);
-  const [editingTx, setEditingTx] = useState<TransactionRow | null>(null);
+  const [editingTransaction, setEditingTransaction] = useState<TransactionRow | null>(null);
   const [editType, setEditType] = useState<EntryType>('expense');
   const [editAmount, setEditAmount] = useState<number>(0);
   const [editCategoryId, setEditCategoryId] = useState<string | null>(null);
@@ -54,41 +53,41 @@ export default function TransactionsScreen() {
 
   const loadData = useCallback(async () => {
     const filter = filterType === 'all' ? {} : { type: filterType };
-    const [txs, cats] = await Promise.all([
+    const [fetchedTransactions, fetchedCategories] = await Promise.all([
       getTransactions(filter),
       getAllCategories(),
     ]);
-    setTransactions(txs);
-    setCategories(cats);
+    setTransactions(fetchedTransactions);
+    setCategories(fetchedCategories);
   }, [filterType]);
 
   useFocusEffect(
     useCallback(() => {
-      loadData();
+      void loadData();
     }, [loadData])
   );
 
-  const openEditModal = (tx: TransactionRow) => {
-    if (tx.type === 'transfer' || isGoalCompletionTransaction(tx.id)) return;
-    setEditingTx(tx);
-    setEditType(tx.type);
-    setEditAmount(typeof tx.amount === 'number' && !isNaN(tx.amount) ? tx.amount : 0);
-    setEditCategoryId(tx.category_id || null);
-    setEditNote(tx.note || '');
-    setEditDate(tx.date || formatDateISO(new Date()));
+  const openEditModal = (transaction: TransactionRow) => {
+    if (transaction.type === 'transfer' || isGoalCompletionTransaction(transaction.id)) return;
+    setEditingTransaction(transaction);
+    setEditType(transaction.type);
+    setEditAmount(typeof transaction.amount === 'number' && !isNaN(transaction.amount) ? transaction.amount : 0);
+    setEditCategoryId(transaction.category_id || null);
+    setEditNote(transaction.note || '');
+    setEditDate(transaction.date || formatDateISO(new Date()));
     setEditModalVisible(true);
   };
 
   const handleTypeChange = (newType: EntryType) => {
     setEditType(newType);
-    const validCats = categories.filter((c) => c.group_type === newType);
-    if (!validCats.some((c) => c.id === editCategoryId)) {
-      setEditCategoryId(validCats[0]?.id ?? null);
+    const validCategories = categories.filter((category) => category.group_type === newType);
+    if (!validCategories.some((category) => category.id === editCategoryId)) {
+      setEditCategoryId(validCategories[0]?.id ?? null);
     }
   };
 
   const handleSaveEdit = async () => {
-    if (!editingTx || saving) return;
+    if (!editingTransaction || saving) return;
     const finalAmount = typeof editAmount === 'number' && !isNaN(editAmount) ? editAmount : 0;
     if (finalAmount <= 0) {
       alertMessage(t('common.notice'), t('transactions.amountRequired'));
@@ -101,7 +100,7 @@ export default function TransactionsScreen() {
         alertMessage(t('common.error'), t('monthlyLimit.invalidDate'));
         return;
       }
-      const saved = await withMonthlyLimitConfirmation((monthlyLimitApproval) => updateTransaction(editingTx.id, {
+      const saved = await withMonthlyLimitConfirmation((monthlyLimitApproval) => updateTransaction(editingTransaction.id, {
         type: editType,
         amount: finalAmount,
         categoryId: editCategoryId || null,
@@ -112,8 +111,8 @@ export default function TransactionsScreen() {
       if (!saved) return;
       setEditModalVisible(false);
       await loadData();
-    } catch (e: any) {
-      alertMessage(t('common.error'), e.message === 'goalCompletionLocked' ? t('transactions.goalCompletionLocked') : e.message || t('transactions.updateError'));
+    } catch (error: any) {
+      alertMessage(t('common.error'), error.message === 'goalCompletionLocked' ? t('transactions.goalCompletionLocked') : error.message || t('transactions.updateError'));
     } finally {
       setSaving(false);
     }
@@ -181,7 +180,7 @@ export default function TransactionsScreen() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
         renderItem={({ item }) => {
-          const cat = categories.find((c) => c.id === item.category_id);
+          const category = categories.find((c) => c.id === item.category_id);
 
           return (
             <TouchableOpacity onPress={() => openEditModal(item)} disabled={item.type === 'transfer' || isGoalCompletionTransaction(item.id)} activeOpacity={0.8}>
@@ -190,7 +189,7 @@ export default function TransactionsScreen() {
                   <View style={styles.txIconBadge}>
                     <MaterialIcons
                       name={
-                        (cat?.icon as any) ||
+                        (category?.icon as any) ||
                         (item.type === 'income'
                           ? 'trending-up'
                           : item.type === 'expense'
@@ -198,16 +197,16 @@ export default function TransactionsScreen() {
                           : 'swap-horiz')
                       }
                       size={20}
-                      color={cat?.color || Colors.light.textSecondary}
+                      color={category?.color || Colors.light.textSecondary}
                     />
                   </View>
 
                   <View style={styles.txInfo}>
                     <Text style={styles.txNote} numberOfLines={1}>
-                      {item.note || cat?.name || t(`transactions.${item.type}`)}
+                      {item.note || category?.name || t(`transactions.${item.type}`)}
                     </Text>
                     <Text style={styles.txDate} numberOfLines={2}>
-                      {cat?.name ? `${cat.name} • ` : ''}{item.date}
+                      {category?.name ? `${category.name} • ` : ''}{item.date}
                     </Text>
                   </View>
                 </View>
@@ -256,7 +255,6 @@ export default function TransactionsScreen() {
         }
       />
 
-      {/* Edit Transaction Modal */}
       <Modal
         visible={editModalVisible}
         animationType="slide"
@@ -272,7 +270,6 @@ export default function TransactionsScreen() {
           </View>
 
           <ScrollView contentContainerStyle={styles.modalContent}>
-            {/* Type selector */}
             <View style={styles.segmentRow}>
               <TouchableOpacity
                 style={[styles.segmentBtn, editType === 'expense' && styles.activeExpense]}
@@ -293,15 +290,13 @@ export default function TransactionsScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Amount */}
             <MoneyInput
               label={t('transactions.amount')}
-              currency={editingTx?.currency || 'VND'}
+              currency={editingTransaction?.currency || 'VND'}
               valueMinor={editAmount}
               onChangeMinor={setEditAmount}
             />
 
-            {/* Date */}
             <View style={styles.formGroup}>
               <Text style={styles.formLabel}>{t('transactions.dateFormat')}</Text>
               <TextInput
@@ -313,7 +308,6 @@ export default function TransactionsScreen() {
               />
             </View>
 
-            {/* Category for income/expense */}
             <View style={styles.formGroup}>
               <View style={styles.categoryLabelRow}>
                 <Text style={styles.formLabel}>{t('transactions.category')}</Text>
@@ -326,13 +320,13 @@ export default function TransactionsScreen() {
 
               <View style={styles.categoryGrid}>
                 {categories
-                  .filter((c) => c.group_type === editType)
-                  .map((cat) => {
-                    const isSelected = cat.id === editCategoryId;
-                    const catColor = cat.color || Colors.primaryDark;
+                  .filter((category) => category.group_type === editType)
+                  .map((category) => {
+                    const isSelected = category.id === editCategoryId;
+                    const catColor = category.color || Colors.primaryDark;
                     return (
                       <TouchableOpacity
-                        key={cat.id}
+                        key={category.id}
                         style={[
                           styles.categoryGridItem,
                           isSelected && {
@@ -340,10 +334,10 @@ export default function TransactionsScreen() {
                             borderColor: Colors.primaryDark,
                           },
                         ]}
-                        onPress={() => setEditCategoryId(cat.id)}
+                        onPress={() => setEditCategoryId(category.id)}
                       >
                         <MaterialIcons
-                          name={(cat.icon as any) || 'category'}
+                          name={(category.icon as any) || 'category'}
                           size={16}
                           color={isSelected ? Colors.primaryStrong : catColor}
                         />
@@ -354,7 +348,7 @@ export default function TransactionsScreen() {
                           ]}
                           numberOfLines={1}
                         >
-                          {cat.name}
+                          {category.name}
                         </Text>
                       </TouchableOpacity>
                     );
@@ -362,7 +356,6 @@ export default function TransactionsScreen() {
               </View>
             </View>
 
-            {/* Note */}
             <View style={styles.formGroup}>
               <Text style={styles.formLabel}>{t('transactions.note')}</Text>
               <TextInput
@@ -379,7 +372,7 @@ export default function TransactionsScreen() {
             <Button
               title={t('transactions.deleteThis')}
               variant="outline"
-              onPress={() => editingTx && handleDelete(editingTx.id)}
+              onPress={() => editingTransaction && handleDelete(editingTransaction.id)}
               style={styles.deleteTxBtn}
             />
             <Button
@@ -538,15 +531,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  txFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, borderTopWidth: 1, borderTopColor: Colors.light.backgroundElement, paddingTop: 4 },
-  emptyCard: {
-    padding: 32,
+  txFooter: {
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-  },
-  emptyText: {
-    fontSize: 14,
-    color: Colors.light.textSecondary,
+    justifyContent: 'space-between',
+    gap: 8,
+    borderTopWidth: 1,
+    borderTopColor: Colors.light.backgroundElement,
+    paddingTop: 4,
   },
   modalRoot: {
     flex: 1,
@@ -617,22 +609,6 @@ const styles = StyleSheet.create({
     color: Colors.light.text,
     borderWidth: 1,
     borderColor: Colors.light.border,
-  },
-  categoryChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    backgroundColor: Colors.light.backgroundElement,
-    borderWidth: 1,
-    borderColor: 'transparent',
-  },
-  categoryChipText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.light.text,
   },
   selectedCategoryChipText: {
     color: Colors.primaryStrong,

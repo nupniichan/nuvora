@@ -8,9 +8,6 @@ import { Card } from '@/components/ui/card';
 import { Colors } from '@/constants/theme';
 import { formatMoney } from '@/shared/money';
 
-// -------------------------------------------------------------
-// 1. Interactive Category Donut Chart
-// -------------------------------------------------------------
 export interface CategoryBreakdownItem {
   id: string;
   name: string;
@@ -41,7 +38,6 @@ export function CategoryBreakdownChart({
   const resolvedEmptyMessage = emptyMessage ?? t('charts.noDistribution');
   const safeTotal = totalAmount > 0 ? totalAmount : items.reduce((s, i) => s + (i.amount || 0), 0);
 
-  // Filter items with positive amount and calculate percentage
   const activeItems = items
     .filter((i) => i.amount > 0)
     .sort((a, b) => b.amount - a.amount);
@@ -87,7 +83,6 @@ export function CategoryBreakdownChart({
       </View>
       <Text style={styles.chartSubtitle}>{t('charts.tapCategory')}</Text>
 
-      {/* Legend & Breakdown list */}
       <View style={styles.breakdownList}>
         {activeItems.map((item) => {
           const pct = Math.round((item.amount / safeTotal) * 100);
@@ -120,9 +115,6 @@ export function CategoryBreakdownChart({
   );
 }
 
-// -------------------------------------------------------------
-// 2. Cashflow Comparison Chart (Income vs Expense vs Net)
-// -------------------------------------------------------------
 export interface CashflowComparisonChartProps {
   totalIncome: number;
   totalExpense: number;
@@ -169,7 +161,6 @@ export function CashflowComparisonChart({
         </View>
       </View>
 
-      {/* Income Bar */}
       <View style={styles.cashflowBarGroup}>
         <View style={styles.cashflowBarLabelRow}>
           <Text style={styles.cashflowBarLabel}>{t('charts.income')}</Text>
@@ -187,7 +178,6 @@ export function CashflowComparisonChart({
         </View>
       </View>
 
-      {/* Expense Bar */}
       <View style={styles.cashflowBarGroup}>
         <View style={styles.cashflowBarLabelRow}>
           <Text style={styles.cashflowBarLabel}>{t('charts.expense')}</Text>
@@ -205,7 +195,6 @@ export function CashflowComparisonChart({
         </View>
       </View>
 
-      {/* Net Balance Footer */}
       <View style={styles.cashflowFooter}>
         <Text style={styles.netLabel}>{t('charts.net')}:</Text>
         <Text
@@ -222,9 +211,6 @@ export function CashflowComparisonChart({
   );
 }
 
-// -------------------------------------------------------------
-// 3. Spending Limit Progress Gauge
-// -------------------------------------------------------------
 export interface SpendingLimitGaugeProps {
   categoryName: string;
   categoryIcon?: string | null;
@@ -281,7 +267,6 @@ export function SpendingLimitGauge({
         </Text>
       </View>
 
-      {/* Progress Bar */}
       <View style={styles.gaugeTrack}>
         <View
           style={[

@@ -52,7 +52,6 @@ export default function ManageGoalsModal() {
 
   const [goals, setGoals] = useState<FinancialGoalWithProgress[]>([]);
 
-  // Goal Form State
   const [createModalVisible, setCreateModalVisible] = useState(false);
   const [editingGoal, setEditingGoal] = useState<FinancialGoalWithProgress | null>(null);
   const [goalName, setGoalName] = useState('');
@@ -247,7 +246,6 @@ export default function ManageGoalsModal() {
                   ) : null}
                 </View>
 
-                {/* Progress Bar */}
                 <View style={styles.progressContainer}>
                   <View
                     style={[
@@ -262,7 +260,6 @@ export default function ManageGoalsModal() {
                   />
                 </View>
 
-                {/* Stats Row */}
                 <View style={styles.statsRow}>
                   <View>
                     <Text style={styles.statLabel}>{t(isCompleted ? 'goals.amountUsed' : 'goals.availableBalance')}</Text>
@@ -316,7 +313,6 @@ export default function ManageGoalsModal() {
         )}
       </ScrollView>
 
-      {/* Goal Create / Edit Modal */}
       <Modal
         visible={createModalVisible}
         animationType="slide"
@@ -334,7 +330,7 @@ export default function ManageGoalsModal() {
           </View>
 
           <ScrollView contentContainerStyle={styles.modalContent}>
-            {/* Goal Name */}
+
             <View style={styles.formGroup}>
               <Text style={styles.formLabel}>{t('goals.name')}</Text>
               <TextInput
@@ -346,7 +342,6 @@ export default function ManageGoalsModal() {
               />
             </View>
 
-            {/* Goal Type Chips */}
             <View style={styles.formGroup}>
               <Text style={styles.formLabel}>{t('goals.type')}</Text>
               <View style={styles.typeRow}>
@@ -375,7 +370,6 @@ export default function ManageGoalsModal() {
               </View>
             </View>
 
-            {/* Target Amount */}
             <MoneyInput
               label={t('goals.targetAmount')}
               valueMinor={targetAmount}
@@ -391,7 +385,6 @@ export default function ManageGoalsModal() {
               <Text style={styles.balanceHelp}>{t('goals.balanceHelp')}</Text>
             </View>
 
-            {/* Target Date */}
             <View style={styles.formGroup}>
               <Text style={styles.formLabel}>{t('goals.targetDate')}</Text>
               <TextInput
@@ -403,7 +396,6 @@ export default function ManageGoalsModal() {
               />
             </View>
 
-            {/* Color & Icon */}
             <ColorPicker
               label={t('goals.pickColor')}
               selectedColor={goalColor}

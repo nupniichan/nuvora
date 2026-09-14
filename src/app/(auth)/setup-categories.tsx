@@ -37,8 +37,8 @@ export default function SetupCategoriesScreen() {
       });
 
       router.replace('/(main)');
-    } catch (e: any) {
-      setError(e.message || 'Setup failed');
+    } catch (err: any) {
+      setError(err.message || 'Setup failed');
       setLoading(false);
     }
   };
@@ -162,9 +162,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  icon: {
-    fontSize: 24,
-  },
   info: {
     flex: 1,
     gap: 4,
@@ -178,11 +175,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.light.textSecondary,
     lineHeight: 16,
-  },
-  checkmark: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: Colors.primaryStrong,
   },
   errorText: {
     fontSize: 13,

@@ -25,11 +25,11 @@ export default function SetupBiometricScreen() {
   const [loading, setLoading] = useState<boolean>(false);
 
   useEffect(() => {
-    async function checkBio() {
-      const isAvail = await isBiometricsAvailable();
-      setAvailable(isAvail);
+    async function checkBiometricsSupport() {
+      const isSupported = await isBiometricsAvailable();
+      setAvailable(isSupported);
     }
-    checkBio();
+    void checkBiometricsSupport();
   }, []);
 
   const handleChoice = async (enable: boolean) => {
@@ -44,8 +44,8 @@ export default function SetupBiometricScreen() {
       });
 
       router.replace('/(main)');
-    } catch (e) {
-      console.error('Failed onboarding completion', e);
+    } catch (error) {
+      console.error('Failed onboarding completion', error);
       setLoading(false);
     }
   };
@@ -124,9 +124,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primaryFaded,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  icon: {
-    fontSize: 40,
   },
   infoText: {
     fontSize: 14,

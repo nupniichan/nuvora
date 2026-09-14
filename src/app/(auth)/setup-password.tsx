@@ -116,9 +116,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primaryFaded,
     borderRadius: 12,
   },
-  noticeIcon: {
-    fontSize: 20,
-  },
   noticeText: {
     flex: 1,
     fontSize: 13,

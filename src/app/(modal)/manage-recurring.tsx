@@ -32,7 +32,7 @@ export default function ManageRecurringModal() {
   const [categories, setCategories] = useState<CategoryWithGroup[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
 
-  const [frequency, setFrequency] = useState<'monthly' | 'weekly' | 'daily' | 'yearly'>('monthly');
+  const [frequency, setFrequency] = useState<'monthly' | 'weekly' | 'daily'>('monthly');
   const [dayOfMonth, setDayOfMonth] = useState<number>(new Date().getDate());
   const [behavior, setBehavior] = useState<'confirm' | 'auto_post'>('confirm');
   const [loading, setLoading] = useState(false);
@@ -40,10 +40,10 @@ export default function ManageRecurringModal() {
 
   useEffect(() => {
     async function loadData() {
-      const cats = await getAllCategories(type);
-      setCategories(cats);
-      if (cats.length > 0) {
-        setSelectedCategoryId(cats[0].id);
+      const availableCategories = await getAllCategories(type);
+      setCategories(availableCategories);
+      if (availableCategories.length > 0) {
+        setSelectedCategoryId(availableCategories[0].id);
       }
     }
     void loadData().catch(() => setError(t('recurring.saveError')));
@@ -83,12 +83,11 @@ export default function ManageRecurringModal() {
         behavior,
       });
 
-      // Run catch up immediately so any due occurrence is populated
       await processRecurringCatchUp();
 
       closeModal();
-    } catch (e: any) {
-      setError(e.message || t('recurring.saveError'));
+    } catch (saveError: any) {
+      setError(saveError.message || t('recurring.saveError'));
       setLoading(false);
     }
   };
@@ -109,7 +108,6 @@ export default function ManageRecurringModal() {
           </Card>
         )}
 
-        {/* Rule Name */}
         <Input
           label={t('recurring.ruleName')}
           placeholder={t('recurring.ruleNamePlaceholder')}
@@ -117,7 +115,6 @@ export default function ManageRecurringModal() {
           onChangeText={setName}
         />
 
-        {/* Type Segment */}
         <View style={styles.segmentRow}>
           <TouchableOpacity
             style={[styles.segmentBtn, type === 'expense' && styles.activeExpense]}
@@ -138,7 +135,6 @@ export default function ManageRecurringModal() {
           </TouchableOpacity>
         </View>
 
-        {/* Amount */}
         <MoneyInput
           label={t('transactions.amount')}
           currency={currency}
@@ -146,26 +142,25 @@ export default function ManageRecurringModal() {
           onChangeMinor={setAmountMinor}
         />
 
-        {/* Category Selector */}
         {categories.length > 0 && (
           <Card style={styles.fieldCard}>
             <Text style={styles.fieldLabel}>{t('transactions.category')}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipList}>
-              {categories.map((cat) => {
-                const isSelected = cat.id === selectedCategoryId;
+              {categories.map((categoryItem) => {
+                const isSelected = categoryItem.id === selectedCategoryId;
                 return (
                   <TouchableOpacity
-                    key={cat.id}
+                    key={categoryItem.id}
                     style={[styles.chip, isSelected && styles.selectedChip]}
-                    onPress={() => setSelectedCategoryId(cat.id)}
+                    onPress={() => setSelectedCategoryId(categoryItem.id)}
                   >
                     <MaterialIcons
-                      name={(cat.icon as any) || 'category'}
+                      name={(categoryItem.icon as any) || 'category'}
                       size={14}
                       color={isSelected ? '#1A1C2E' : Colors.light.textSecondary}
                     />
                     <Text style={[styles.chipText, isSelected && styles.selectedChipText]}>
-                      {cat.name}
+                      {categoryItem.name}
                     </Text>
                   </TouchableOpacity>
                 );
@@ -174,18 +169,17 @@ export default function ManageRecurringModal() {
           </Card>
         )}
 
-        {/* Frequency Row */}
         <Card style={styles.fieldCard}>
           <Text style={styles.fieldLabel}>{t('recurring.frequency')}</Text>
           <View style={styles.freqRow}>
-            {(['monthly', 'weekly', 'daily'] as const).map((f) => (
+            {(['monthly', 'weekly', 'daily'] as const).map((freqOption) => (
               <TouchableOpacity
-                key={f}
-                style={[styles.freqBtn, frequency === f && styles.activeFreqBtn]}
-                onPress={() => setFrequency(f)}
+                key={freqOption}
+                style={[styles.freqBtn, frequency === freqOption && styles.activeFreqBtn]}
+                onPress={() => setFrequency(freqOption)}
               >
-                <Text style={[styles.freqText, frequency === f && styles.activeFreqText]}>
-                  {t(`recurring.${f}`)}
+                <Text style={[styles.freqText, frequency === freqOption && styles.activeFreqText]}>
+                  {t(`recurring.${freqOption}`)}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -215,7 +209,6 @@ export default function ManageRecurringModal() {
           )}
         </Card>
 
-        {/* Execution Mode */}
         <Card style={styles.fieldCard}>
           <Text style={styles.fieldLabel}>{t('recurring.postingMode')}</Text>
           <View style={styles.behaviorRow}>

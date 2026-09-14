@@ -163,9 +163,6 @@ const styles = StyleSheet.create({
     borderColor: Colors.primaryStrong,
     backgroundColor: Colors.primaryFaded,
   },
-  flag: {
-    fontSize: 20,
-  },
   langText: {
     fontSize: 15,
     fontWeight: '600',
@@ -184,10 +181,4 @@ const styles = StyleSheet.create({
   fullButton: {
     width: '100%',
   },
-  illustration: { width: 230, height: 180, alignItems: 'center', justifyContent: 'center' },
-  orbit: { position: 'absolute', width: 210, height: 150, borderRadius: 100, borderWidth: 1, borderColor: Colors.primaryLight, transform: [{ rotate: '-25deg' }] },
-  floatIcon: { position: 'absolute', width: 54, height: 54, borderRadius: 19, alignItems: 'center', justifyContent: 'center', borderWidth: 4, borderColor: Colors.light.background },
-  savingsIcon: { right: 0, top: 12, backgroundColor: Colors.accent, transform: [{ rotate: '12deg' }] },
-  trendIcon: { left: 0, bottom: 12, backgroundColor: Colors.primaryLight, transform: [{ rotate: '-12deg' }] },
-  spark: { position: 'absolute', right: 22, bottom: 15 },
 });

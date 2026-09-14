@@ -41,14 +41,14 @@ export default function LockScreen() {
 
   useEffect(() => {
     lockApp();
-    async function checkBio() {
-      const avail = (await isBiometricsAvailable()) && (await isBiometricsEnabled());
-      setCanBiometric(avail);
-      if (avail) {
+    async function checkBiometrics() {
+      const isAvailable = (await isBiometricsAvailable()) && (await isBiometricsEnabled());
+      setCanBiometric(isAvailable);
+      if (isAvailable) {
         handleBiometric();
       }
     }
-    checkBio();
+    void checkBiometrics();
   }, [handleBiometric]);
 
   const handlePasswordUnlock = async () => {

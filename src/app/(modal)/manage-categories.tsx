@@ -49,11 +49,9 @@ export default function ManageCategoriesModal() {
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Template Modal State
   const [templateModalVisible, setTemplateModalVisible] = useState(false);
   const [addingTemplate, setAddingTemplate] = useState(false);
 
-  // Category Edit / Create state
   const [categoryModalVisible, setCategoryModalVisible] = useState(false);
   const [editingCategory, setEditingCategory] = useState<CategoryRow | null>(null);
   const [selectedGroupId, setSelectedGroupId] = useState<string>('');
@@ -166,7 +164,6 @@ export default function ManageCategoriesModal() {
     }
   };
 
-  // Group Create / Edit state
   const [groupModalVisible, setGroupModalVisible] = useState(false);
   const [editingGroup, setEditingGroup] = useState<CategoryGroupRow | null>(null);
   const [groupName, setGroupName] = useState('');
@@ -406,7 +403,7 @@ export default function ManageCategoriesModal() {
         })}
       </ScrollView>
 
-      {/* Category Create / Edit Modal */}
+      {}
       <Modal
         visible={categoryModalVisible}
         animationType="slide"
@@ -424,7 +421,7 @@ export default function ManageCategoriesModal() {
           </View>
 
           <ScrollView contentContainerStyle={styles.modalContent}>
-            {/* Name Input */}
+            {}
             <View style={styles.formGroup}>
               <Text style={styles.formLabel}>{t('categories.categoryName')}</Text>
               <TextInput
@@ -436,7 +433,7 @@ export default function ManageCategoriesModal() {
               />
             </View>
 
-            {/* Select Group */}
+            {}
             <View style={styles.formGroup}>
               <Text style={styles.formLabel}>{t('categories.belongsTo')}</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
@@ -457,14 +454,14 @@ export default function ManageCategoriesModal() {
               </ScrollView>
             </View>
 
-            {/* Color Picker */}
+            {}
             <ColorPicker
               label={t('categories.pickColor')}
               selectedColor={catColor}
               onSelectColor={setCatColor}
             />
 
-            {/* Icon Picker */}
+            {}
             <IconPicker
               label={t('categories.pickIcon')}
               selectedIcon={catIcon}
@@ -472,7 +469,7 @@ export default function ManageCategoriesModal() {
               onSelectIcon={setCatIcon}
             />
 
-            {/* Preview Banner */}
+            {}
             <View style={styles.previewCard}>
               <Text style={styles.previewLabel}>{t('categories.preview')}</Text>
               <View style={styles.previewRow}>
@@ -494,7 +491,7 @@ export default function ManageCategoriesModal() {
         </View>
       </Modal>
 
-      {/* Group Create Modal */}
+      {}
       <Modal
         visible={groupModalVisible}
         animationType="slide"
@@ -584,7 +581,7 @@ export default function ManageCategoriesModal() {
         </View>
       </Modal>
 
-      {/* Starter Templates Modal */}
+      {}
       <Modal
         visible={templateModalVisible}
         animationType="slide"
@@ -682,7 +679,6 @@ export default function ManageCategoriesModal() {
                     )}
                   </View>
 
-                  {/* Sub categories preview */}
                   <View style={styles.templateCatWrap}>
                     {tmpl.categories.map((c, cIdx) => (
                       <View key={cIdx} style={styles.templateCatChip}>

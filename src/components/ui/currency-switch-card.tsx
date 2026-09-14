@@ -36,7 +36,7 @@ export function CurrencySwitchCard() {
 
   const supported = currency === 'VND' || currency === 'USD';
   const target = currency === 'VND' ? 'USD' : 'VND';
-  // Accept a decimal comma or dot, never guess a thousands separator.
+
   const parsedRate = /^\d+(?:[.,]\d+)?$/.test(rate.trim()) ? Number(rate.trim().replace(',', '.')) : NaN;
   let preview: number | null = null;
   let previewError = '';

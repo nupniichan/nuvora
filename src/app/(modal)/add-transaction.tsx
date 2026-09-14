@@ -50,17 +50,14 @@ export default function AddTransactionModal() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Category presentation states (compact & group tabs)
   const [isCategoryExpanded, setIsCategoryExpanded] = useState(false);
   const [selectedGroupFilter, setSelectedGroupFilter] = useState<string>('all');
   const [searchCatQuery, setSearchCatQuery] = useState('');
 
-  // Quick Inline Custom Category addition
   const [isAddingCustomCat, setIsAddingCustomCat] = useState(false);
   const [customCatName, setCustomCatName] = useState('');
   const [creatingCustomCat, setCreatingCustomCat] = useState(false);
 
-  // Spending limit warning
   const [limitWarning, setLimitWarning] = useState<{
     hasLimit: boolean;
     isOverLimit: boolean;
@@ -74,19 +71,19 @@ export default function AddTransactionModal() {
   }, [t]);
 
   const loadCategories = useCallback(async () => {
-    const [grps, cats] = await Promise.all([
+    const [categoryGroups, categoryList] = await Promise.all([
       getAllCategoryGroups(type),
       getAllCategories(type),
     ]);
-    setGroups(grps);
-    setCategories(cats);
+    setGroups(categoryGroups);
+    setCategories(categoryList);
     setSelectedCategoryId((previousId) =>
-      previousId && cats.some((category) => category.id === previousId)
+      previousId && categoryList.some((category) => category.id === previousId)
         ? previousId
-        : cats[0]?.id ?? null
+        : categoryList[0]?.id ?? null
     );
     setSelectedGroupFilter((previousGroupId) =>
-      previousGroupId === 'all' || grps.some((group) => group.id === previousGroupId)
+      previousGroupId === 'all' || categoryGroups.some((group) => group.id === previousGroupId)
         ? previousGroupId
         : 'all'
     );
@@ -104,7 +101,7 @@ export default function AddTransactionModal() {
       (selectedGroupFilter !== 'all' ? selectedGroupFilter : groups[0]?.id) || '';
     if (!targetGroupId) return;
 
-    const targetGroup = groups.find((g) => g.id === targetGroupId) || groups[0];
+    const targetGroup = groups.find((group) => group.id === targetGroupId) || groups[0];
     setCreatingCustomCat(true);
     try {
       const created = await createCategory({
@@ -113,46 +110,45 @@ export default function AddTransactionModal() {
         icon: targetGroup.icon || 'category',
         color: targetGroup.color || Colors.primaryDark,
       });
-      const updatedCats = await getAllCategories(targetGroup.type);
-      setCategories(updatedCats);
+      const updatedCategories = await getAllCategories(targetGroup.type);
+      setCategories(updatedCategories);
       setSelectedCategoryId(created.id);
       setCustomCatName('');
       setIsAddingCustomCat(false);
       setIsCategoryExpanded(false);
-    } catch (e: any) {
-      console.warn('Could not create custom category', e);
+    } catch (createError: any) {
+      console.warn('Could not create custom category', createError);
     } finally {
       setCreatingCustomCat(false);
     }
   };
 
-  const filteredCategories = categories.filter((cat) => {
+  const filteredCategories = categories.filter((category) => {
     const matchesGroup =
       selectedGroupFilter === 'all' ||
-      cat.group_id === selectedGroupFilter ||
-      cat.group_name === selectedGroupFilter;
+      category.group_id === selectedGroupFilter ||
+      category.group_name === selectedGroupFilter;
     const matchesSearch =
       !searchCatQuery.trim() ||
-      cat.name.toLowerCase().includes(searchCatQuery.toLowerCase().trim()) ||
-      cat.group_name.toLowerCase().includes(searchCatQuery.toLowerCase().trim());
+      category.name.toLowerCase().includes(searchCatQuery.toLowerCase().trim()) ||
+      category.group_name.toLowerCase().includes(searchCatQuery.toLowerCase().trim());
     return matchesGroup && matchesSearch;
   });
 
-  // Real-time limit check
   useEffect(() => {
     async function checkLimit() {
       if (type === 'expense' && selectedCategoryId && amountMinor > 0) {
-        const d = new Date(date);
-        const y = d.getFullYear();
-        const m = d.getMonth() + 1;
-        const res = await checkSpendingLimit(selectedCategoryId, y, m, amountMinor);
-        if (res.hasLimit) {
+        const parsedDate = new Date(date);
+        const year = parsedDate.getFullYear();
+        const month = parsedDate.getMonth() + 1;
+        const limitResult = await checkSpendingLimit(selectedCategoryId, year, month, amountMinor);
+        if (limitResult.hasLimit) {
           setLimitWarning({
             hasLimit: true,
-            isOverLimit: res.isOverLimit,
-            percentUsed: res.percentUsed,
-            limit: res.limit,
-            projectedTotal: res.projectedTotal,
+            isOverLimit: limitResult.isOverLimit,
+            percentUsed: limitResult.percentUsed,
+            limit: limitResult.limit,
+            projectedTotal: limitResult.projectedTotal,
           });
         } else {
           setLimitWarning(null);
@@ -161,11 +157,11 @@ export default function AddTransactionModal() {
         setLimitWarning(null);
       }
     }
-    checkLimit();
+    void checkLimit();
   }, [type, selectedCategoryId, amountMinor, date]);
 
   const currency = activeAccount ? activeAccount.currency : 'VND';
-  const selectedCategory = categories.find((c) => c.id === selectedCategoryId);
+  const selectedCategory = categories.find((category) => category.id === selectedCategoryId);
 
   const handleDatePreset = (preset: 'today' | 'yesterday' | 'custom') => {
     setDatePreset(preset);
@@ -173,9 +169,9 @@ export default function AddTransactionModal() {
     if (preset === 'today') {
       setDate(formatDateISO(now));
     } else if (preset === 'yesterday') {
-      const y = new Date(now);
-      y.setDate(y.getDate() - 1);
-      setDate(formatDateISO(y));
+      const yesterday = new Date(now);
+      yesterday.setDate(yesterday.getDate() - 1);
+      setDate(formatDateISO(yesterday));
     }
   };
 
@@ -204,8 +200,8 @@ export default function AddTransactionModal() {
       }), t);
 
       if (saved) closeModal();
-    } catch (e: any) {
-      setError(e.message || t('transactions.saveError'));
+    } catch (saveError: any) {
+      setError(saveError.message || t('transactions.saveError'));
     } finally {
       setLoading(false);
     }
@@ -221,7 +217,6 @@ export default function AddTransactionModal() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        {/* Transaction Type Segment */}
         <View style={styles.segmentRow}>
           <TouchableOpacity
             style={[styles.segmentBtn, type === 'expense' && styles.activeExpense]}
@@ -242,7 +237,6 @@ export default function AddTransactionModal() {
           </TouchableOpacity>
         </View>
 
-        {/* Amount Input */}
         <MoneyInput
           label={t('transactions.amount')}
           currency={currency}
@@ -250,7 +244,6 @@ export default function AddTransactionModal() {
           onChangeMinor={setAmountMinor}
         />
 
-        {/* Spending Limit Warning Banner */}
         {limitWarning && (
           <View
             style={[
@@ -285,7 +278,6 @@ export default function AddTransactionModal() {
           </View>
         )}
 
-        {/* Date Selector */}
         <Card style={styles.fieldCard}>
           <Text style={styles.fieldLabel}>{t('transactions.recordedDate')}</Text>
           <View style={styles.datePresetRow}>
@@ -328,7 +320,6 @@ export default function AddTransactionModal() {
           )}
         </Card>
 
-        {/* Category Selector for Income / Expense (Compact & Expandable with Group Pills) */}
         <Card style={styles.fieldCard}>
           <View style={styles.fieldHeaderRow}>
             <Text style={styles.fieldLabel}>{t('transactions.category')}</Text>
@@ -368,7 +359,6 @@ export default function AddTransactionModal() {
             </View>
           ) : (
             <View style={styles.categoryCardBody}>
-              {/* 1. Selected Category Highlight Tile (Compact view) */}
               {selectedCategory ? (
                 <TouchableOpacity
                   style={[
@@ -419,10 +409,8 @@ export default function AddTransactionModal() {
                 </TouchableOpacity>
               )}
 
-              {/* 2. Expanded Category Selector Panel with Group Tabs & Search */}
               {isCategoryExpanded && (
                 <View style={styles.expandedCatPanel}>
-                  {/* Search input if more than 6 categories */}
                   {categories.length > 6 && (
                     <View style={styles.catSearchBox}>
                       <MaterialIcons name="search" size={16} color={Colors.light.textSecondary} />
@@ -441,7 +429,6 @@ export default function AddTransactionModal() {
                     </View>
                   )}
 
-                  {/* Group Filter Tabs / Pills (Danh mục tổng) */}
                   {groups.length > 0 && (
                     <ScrollView
                       horizontal
@@ -470,19 +457,19 @@ export default function AddTransactionModal() {
                         </Text>
                       </TouchableOpacity>
 
-                      {groups.map((grp) => {
-                        const count = categories.filter((c) => c.group_id === grp.id).length;
-                        const isSelected = selectedGroupFilter === grp.id;
+                      {groups.map((group) => {
+                        const count = categories.filter((category) => category.group_id === group.id).length;
+                        const isSelected = selectedGroupFilter === group.id;
                         return (
                           <TouchableOpacity
-                            key={grp.id}
+                            key={group.id}
                             style={[styles.groupPill, isSelected && styles.activeGroupPill]}
-                            onPress={() => setSelectedGroupFilter(grp.id)}
+                            onPress={() => setSelectedGroupFilter(group.id)}
                           >
                             <MaterialIcons
-                              name={(grp.icon as any) || 'folder'}
+                              name={(group.icon as any) || 'folder'}
                               size={14}
-                              color={isSelected ? '#1A1C2E' : grp.color || Colors.light.textSecondary}
+                              color={isSelected ? '#1A1C2E' : group.color || Colors.light.textSecondary}
                             />
                             <Text
                               style={[
@@ -490,7 +477,7 @@ export default function AddTransactionModal() {
                                 isSelected && styles.activeGroupPillText,
                               ]}
                             >
-                              {grp.name} ({count})
+                              {group.name} ({count})
                             </Text>
                           </TouchableOpacity>
                         );
@@ -498,7 +485,6 @@ export default function AddTransactionModal() {
                     </ScrollView>
                   )}
 
-                  {/* Quick Inline Custom Category Form */}
                   {isAddingCustomCat ? (
                     <View style={styles.quickAddCatBox}>
                       <View style={styles.quickAddCatHeader}>
@@ -507,7 +493,7 @@ export default function AddTransactionModal() {
                             group:
                               selectedGroupFilter === 'all'
                                 ? groups[0]?.name || t('transactions.commonGroup')
-                                : groups.find((g) => g.id === selectedGroupFilter)?.name || '',
+                                : groups.find((group) => group.id === selectedGroupFilter)?.name || '',
                           })}
                         </Text>
                         <TouchableOpacity onPress={() => setIsAddingCustomCat(false)}>
@@ -536,19 +522,18 @@ export default function AddTransactionModal() {
                     </View>
                   ) : null}
 
-                  {/* Category Grid Items */}
                   <ScrollView
                     style={styles.catGridScroll}
                     nestedScrollEnabled
                     showsVerticalScrollIndicator={false}
                   >
                     <View style={styles.categoryGridContainer}>
-                      {filteredCategories.map((cat) => {
-                        const isSelected = cat.id === selectedCategoryId;
-                        const catColor = cat.color || Colors.primaryDark;
+                      {filteredCategories.map((category) => {
+                        const isSelected = category.id === selectedCategoryId;
+                        const catColor = category.color || Colors.primaryDark;
                         return (
                           <TouchableOpacity
-                            key={cat.id}
+                            key={category.id}
                             style={[
                               styles.categoryGridItem,
                               isSelected && {
@@ -557,12 +542,12 @@ export default function AddTransactionModal() {
                               },
                             ]}
                             onPress={() => {
-                              setSelectedCategoryId(cat.id);
+                              setSelectedCategoryId(category.id);
                               setIsCategoryExpanded(false);
                             }}
                           >
                             <MaterialIcons
-                              name={(cat.icon as any) || 'category'}
+                              name={(category.icon as any) || 'category'}
                               size={16}
                               color={isSelected ? Colors.primaryStrong : catColor}
                             />
@@ -573,13 +558,12 @@ export default function AddTransactionModal() {
                               ]}
                               numberOfLines={1}
                             >
-                              {cat.name}
+                              {category.name}
                             </Text>
                           </TouchableOpacity>
                         );
                       })}
 
-                      {/* Button to add custom category */}
                       <TouchableOpacity
                         style={styles.addCustomCatBtn}
                         onPress={() => setIsAddingCustomCat(true)}
@@ -597,7 +581,6 @@ export default function AddTransactionModal() {
           )}
         </Card>
 
-        {/* Note Input with quick suggestions */}
         <Card style={styles.fieldCard}>
           <Text style={styles.fieldLabel}>{t('transactions.noteLabel')}</Text>
           <TextInput
@@ -761,22 +744,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.light.border,
   },
-  categoryChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 10,
-    backgroundColor: Colors.light.backgroundElement,
-    borderWidth: 1,
-    borderColor: 'transparent',
-  },
-  categoryChipText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.light.text,
-  },
   catHeaderRight: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -800,8 +767,8 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
   },
   selectedCatIconBadge: {
-    width: 40,
-    height: 40,
+    width: 36,
+    height: 36,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
@@ -811,22 +778,18 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   selectedCatName: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
     color: Colors.light.text,
   },
   selectedCatGroup: {
-    fontSize: 12,
+    fontSize: 11,
     color: Colors.light.textSecondary,
   },
   changeBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 2,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    borderRadius: 8,
-    backgroundColor: Colors.primaryFaded,
   },
   changeBadgeText: {
     fontSize: 12,
@@ -838,22 +801,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     padding: 14,
-    borderRadius: 12,
-    backgroundColor: Colors.light.backgroundElement,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: Colors.light.border,
     borderStyle: 'dashed',
+    borderColor: Colors.light.border,
+    justifyContent: 'center',
   },
   noCatText: {
-    fontSize: 14,
+    fontSize: 13,
+    fontWeight: '600',
     color: Colors.light.textSecondary,
-    fontWeight: '500',
   },
   expandedCatPanel: {
     gap: 10,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: Colors.light.border,
+    marginTop: 4,
   },
   catSearchBox: {
     flexDirection: 'row',
@@ -863,8 +824,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
   },
   catSearchInput: {
     flex: 1,
@@ -877,16 +836,16 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   groupPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
     backgroundColor: Colors.light.backgroundElement,
-    borderWidth: 1,
-    borderColor: 'transparent',
   },
   activeGroupPill: {
     backgroundColor: Colors.primary,
-    borderColor: Colors.primaryDark,
   },
   groupPillText: {
     fontSize: 12,
@@ -897,43 +856,10 @@ const styles = StyleSheet.create({
     color: '#1A1C2E',
     fontWeight: '700',
   },
-  catGridScroll: {
-    maxHeight: 200,
-  },
-  categoryGridContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    paddingVertical: 4,
-  },
-  categoryGridItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    backgroundColor: Colors.light.backgroundElement,
-    borderWidth: 1,
-    borderColor: 'transparent',
-    maxWidth: '48%',
-  },
-  categoryGridText: {
-    flexShrink: 1,
-    fontSize: 12,
-    fontWeight: '600',
-    color: Colors.light.text,
-  },
-  selectedCategoryChipText: {
-    color: Colors.primaryStrong,
-    fontWeight: '700',
-  },
   quickAddCatBox: {
-    padding: 12,
-    borderRadius: 12,
-    backgroundColor: Colors.light.backgroundElement,
-    borderWidth: 1.5,
-    borderColor: Colors.primary,
+    backgroundColor: Colors.primaryLight,
+    padding: 10,
+    borderRadius: 10,
     gap: 8,
   },
   quickAddCatHeader: {
@@ -944,16 +870,15 @@ const styles = StyleSheet.create({
   quickAddCatTitle: {
     fontSize: 12,
     fontWeight: '700',
-    color: Colors.light.text,
+    color: Colors.primaryStrong,
   },
   quickAddCatInputRow: {
     flexDirection: 'row',
     gap: 8,
-    alignItems: 'center',
   },
   quickAddCatInput: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.light.surface,
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -964,34 +889,64 @@ const styles = StyleSheet.create({
   },
   quickAddCatSubmitBtn: {
     backgroundColor: Colors.primary,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingHorizontal: 12,
     borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   quickAddCatSubmitText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#1A1C2E',
+    color: Colors.primaryStrong,
+  },
+  catGridScroll: {
+    maxHeight: 180,
+  },
+  categoryGridContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  categoryGridItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: Colors.light.backgroundElement,
+    borderWidth: 1,
+    borderColor: 'transparent',
+    maxWidth: '48%',
+  },
+  categoryGridText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.light.text,
+    flexShrink: 1,
+  },
+  selectedCategoryChipText: {
+    color: Colors.primaryStrong,
+    fontWeight: '700',
   },
   addCustomCatBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingVertical: 8,
-    borderRadius: 10,
-    backgroundColor: Colors.primaryFaded,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: Colors.primary,
     borderStyle: 'dashed',
+    borderColor: Colors.primaryDark,
   },
   addCustomCatBtnText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '600',
     color: Colors.primaryDark,
   },
   emptyCatBox: {
-    paddingVertical: 16,
+    padding: 16,
     alignItems: 'center',
     gap: 10,
   },
@@ -1004,27 +959,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     backgroundColor: Colors.primary,
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
   },
   seedCatBtnText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     color: '#1A1C2E',
   },
   noteInput: {
     backgroundColor: Colors.light.backgroundElement,
-    borderRadius: 10,
+    borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
     color: Colors.light.text,
+    borderWidth: 1,
+    borderColor: Colors.light.border,
   },
   errorText: {
-    color: '#C62828',
     fontSize: 13,
-    fontWeight: '600',
+    color: '#C62828',
     textAlign: 'center',
   },
   footer: {
