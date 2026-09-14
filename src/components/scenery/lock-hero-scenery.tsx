@@ -4,6 +4,7 @@ import { Animated, Easing, LayoutChangeEvent, Platform, StyleSheet, View } from 
 import Svg, {
   Circle,
   Defs,
+  G,
   LinearGradient,
   Path,
   Rect,
@@ -51,6 +52,10 @@ export function LockHeroScenery({
   const [meteorStreak] = useState(() => new Animated.Value(0));
   const [windowLightPulse] = useState(() => new Animated.Value(0.8));
   const [cloudDrift] = useState(() => new Animated.Value(0));
+
+  // Day-mode: windmill & petal (welcome-style)
+  const [windmillRotation] = useState(() => new Animated.Value(0));
+  const [petalMotion] = useState(() => new Animated.Value(0));
 
   // Localized badge animations: tight micro-shake on error, subtle localized burst on unlock
   const [shakeTranslateX] = useState(() => new Animated.Value(0));
@@ -229,6 +234,27 @@ export function LockHeroScenery({
       })
     );
 
+    // Day-mode windmill rotation
+    const windmillAnimation = Animated.loop(
+      Animated.timing(windmillRotation, {
+        toValue: 1,
+        duration: 9000,
+        easing: Easing.linear,
+        useNativeDriver: isNative,
+      })
+    );
+
+    // Day-mode petal fall
+    const petalAnimation = Animated.loop(
+      Animated.timing(petalMotion, {
+        toValue: 1,
+        duration: 4500,
+        easing: Easing.linear,
+        useNativeDriver: isNative,
+        isInteraction: false,
+      })
+    );
+
     celestialAnimation.start();
     sunAnimation.start();
     starFastAnimation.start();
@@ -236,6 +262,8 @@ export function LockHeroScenery({
     meteorAnimation.start();
     windowAnimation.start();
     cloudAnimation.start();
+    windmillAnimation.start();
+    petalAnimation.start();
 
     return () => {
       celestialAnimation.stop();
@@ -245,6 +273,8 @@ export function LockHeroScenery({
       meteorAnimation.stop();
       windowAnimation.stop();
       cloudAnimation.stop();
+      windmillAnimation.stop();
+      petalAnimation.stop();
     };
   }, [
     moonPulse,
@@ -254,6 +284,8 @@ export function LockHeroScenery({
     meteorStreak,
     windowLightPulse,
     cloudDrift,
+    windmillRotation,
+    petalMotion,
   ]);
 
   const handleLayout = (event: LayoutChangeEvent) => {
@@ -289,6 +321,29 @@ export function LockHeroScenery({
   const houseLeft = 46;
   const houseBottom = 28;
 
+  // Day-mode (welcome-style) interpolations
+  const windmillSpin = windmillRotation.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+  const petalTranslateX = petalMotion.interpolate({
+    inputRange: [0, 0.25, 0.5, 0.75, 1],
+    outputRange: [0, width * 0.18, width * 0.24, width * 0.43, width * 0.55],
+  });
+  const petalTranslateY = petalMotion.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-24, height + 24],
+  });
+  const petalRotation = petalMotion.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '240deg'],
+  });
+
+  // Responsive windmill placement (top-right, matching welcome)
+  const windmillTowerX = Math.max(180, width - 85);
+  const windmillBaseY = height - 42;
+  const windmillTopY = windmillBaseY - 40;
+
   // Colors localized exclusively to the lock badge
   const isError = status === 'error';
   const isUnlocked = status === 'unlocked';
@@ -315,6 +370,11 @@ export function LockHeroScenery({
         ? 'rgba(204, 204, 255, 0.22)'
         : 'rgba(255, 255, 255, 0.35)';
 
+  // Day palette (welcome-aligned)
+  const dayMountainColor = '#9EA7E5';
+  const dayMidHill = '#8FA4D4';
+  const dayFrontHill = '#7991CA';
+
   return (
     <View style={styles.container} onLayout={handleLayout}>
       <Svg
@@ -331,102 +391,131 @@ export function LockHeroScenery({
             </LinearGradient>
           ) : (
             <LinearGradient id="lockSkyGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-              <Stop offset="0%" stopColor="#9CB4FF" />
-              <Stop offset="55%" stopColor="#C5C7FC" />
-              <Stop offset="100%" stopColor="#FFEAD9" />
+              <Stop offset="0%" stopColor="#9EB5FF" />
+              <Stop offset="55%" stopColor="#C7CAFC" />
+              <Stop offset="100%" stopColor="#FFE8D6" />
             </LinearGradient>
           )}
 
-          {/* Shinkai Celestial Glow */}
+          {/* Celestial Glow */}
           <LinearGradient id="lockCelestialGlow" x1="0%" y1="0%" x2="100%" y2="100%">
             <Stop offset="0%" stopColor={isNight ? 'rgba(235, 240, 255, 0.35)' : 'rgba(255, 245, 210, 0.5)'} />
             <Stop offset="100%" stopColor="transparent" />
           </LinearGradient>
 
-          {/* Hill Gradients */}
-          <LinearGradient id="lockHillBack" x1="0%" y1="0%" x2="0%" y2="100%">
-            <Stop offset="0%" stopColor={isNight ? '#222340' : '#8FA4D4'} />
-            <Stop offset="100%" stopColor={isNight ? '#18192E' : '#7E94C5'} />
-          </LinearGradient>
+          {/* Day sunbeam gradient */}
+          {!isNight && (
+            <LinearGradient id="lockSunbeam" x1="0%" y1="0%" x2="100%" y2="100%">
+              <Stop offset="0%" stopColor="rgba(255, 245, 210, 0.45)" />
+              <Stop offset="60%" stopColor="rgba(255, 235, 190, 0.08)" />
+              <Stop offset="100%" stopColor="transparent" />
+            </LinearGradient>
+          )}
 
-          <LinearGradient id="lockHillFront" x1="0%" y1="0%" x2="0%" y2="100%">
-            <Stop offset="0%" stopColor={isNight ? '#1C1D33' : '#6F84B5'} />
-            <Stop offset="100%" stopColor={isNight ? '#131424' : '#5E72A2'} />
-          </LinearGradient>
+          {/* Day mountain gradient */}
+          {!isNight && (
+            <LinearGradient id="lockMountainGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+              <Stop offset="0%" stopColor={dayMountainColor} />
+              <Stop offset="100%" stopColor={dayMidHill} />
+            </LinearGradient>
+          )}
+
+          {/* Night hill gradients */}
+          {isNight && (
+            <>
+              <LinearGradient id="lockHillBack" x1="0%" y1="0%" x2="0%" y2="100%">
+                <Stop offset="0%" stopColor="#222340" />
+                <Stop offset="100%" stopColor="#18192E" />
+              </LinearGradient>
+              <LinearGradient id="lockHillFront" x1="0%" y1="0%" x2="0%" y2="100%">
+                <Stop offset="0%" stopColor="#1C1D33" />
+                <Stop offset="100%" stopColor="#131424" />
+              </LinearGradient>
+            </>
+          )}
         </Defs>
 
         {/* Sky Background */}
         <Rect x="0" y="0" width={width} height={height} fill="url(#lockSkyGradient)" />
 
-        {/* Celestial body (Crescent Moon at Night vs Radiant Sun by Day) */}
         {isNight ? (
           <>
+            {/* Night: Crescent Moon */}
             <Circle cx={width - 55} cy="38" r="22" fill="url(#lockCelestialGlow)" />
             <Path
               d={`M${width - 51},24 A 14 14 0 1 0 ${width - 42},46 A 11 11 0 1 1 ${width - 51},24 Z`}
               fill="#FFF9E6"
             />
+
+            {/* Night Distant Ridge */}
+            <Path
+              d={`M0,${height * 0.72} Q${width * 0.25},${height * 0.48} ${width * 0.5},${height * 0.65} T${width},${height * 0.6} L${width},${height} L0,${height} Z`}
+              fill="url(#lockHillBack)"
+              opacity={0.85}
+            />
+
+            {/* Night Foreground Hill */}
+            <Path
+              d={`M0,${height * 0.82} Q${width * 0.35},${height * 0.68} ${width * 0.65},${height * 0.8} T${width},${height * 0.74} L${width},${height} L0,${height} Z`}
+              fill="url(#lockHillFront)"
+            />
+
+            {/* Night Cottage */}
+            <Rect x={houseLeft} y={height - houseBottom - 20} width="28" height="20" fill="#2A2B45" rx="2" />
+            <Path
+              d={`M${houseLeft - 4},${height - houseBottom - 20} L${houseLeft + 14},${height - houseBottom - 35} L${houseLeft + 32},${height - houseBottom - 20} Z`}
+              fill="#3D3B5C"
+            />
+            <Rect x={houseLeft + 20} y={height - houseBottom - 31} width="4" height="10" fill="#33314D" rx="1" />
+            <Rect x={houseLeft + 38} y={height - houseBottom - 16} width="2" height="16" fill="#4B4B6E" />
+            <Circle cx={houseLeft + 39} cy={height - houseBottom - 16} r="3.5" fill="#FFEAA7" opacity={0.9} />
           </>
         ) : (
           <>
-            <Circle cx={width - 55} cy="38" r="28" fill="url(#lockCelestialGlow)" />
-            <Circle cx={width - 55} cy="38" r="16" fill="#FFF8E0" />
-            <Circle cx={width - 55} cy="38" r="19" fill="rgba(255, 245, 200, 0.4)" />
+            {/* Day: Diagonal Sunbeams */}
+            <Path d={`M0,0 L${width * 0.25},0 L${width * 0.55},${height} L0,${height} Z`} fill="url(#lockSunbeam)" opacity={0.6} />
+            <Path d={`M${width * 0.12},0 L${width * 0.42},0 L${width * 0.8},${height} L${width * 0.35},${height} Z`} fill="url(#lockSunbeam)" opacity={0.4} />
+
+            {/* Day: Distant Mountains */}
+            <Path
+              d={`M0,${height * 0.72} Q${width * 0.2},${height * 0.42} ${width * 0.42},${height * 0.58} T${width * 0.82},${height * 0.52} Q${width * 0.92},${height * 0.55} ${width},${height * 0.64} L${width},${height} L0,${height} Z`}
+              fill="url(#lockMountainGrad)"
+              opacity={0.7}
+            />
+
+            {/* Day: Midground Hill */}
+            <Path
+              d={`M0,${height * 0.8} Q${width * 0.3},${height * 0.62} ${width * 0.6},${height * 0.75} T${width},${height * 0.7} L${width},${height} L0,${height} Z`}
+              fill={dayMidHill}
+            />
+
+            {/* Day: Windmill Tower */}
+            <Path
+              d={`M${windmillTowerX - 9},${windmillBaseY} L${windmillTowerX - 5},${windmillTopY} L${windmillTowerX + 5},${windmillTopY} L${windmillTowerX + 9},${windmillBaseY} Z`}
+              fill="#F5F5FC"
+            />
+            <Path
+              d={`M${windmillTowerX - 7},${windmillTopY} Q${windmillTowerX},${windmillTopY - 10} ${windmillTowerX + 7},${windmillTopY} Z`}
+              fill="#6A68A5"
+            />
+            <Rect x={windmillTowerX - 2} y={windmillBaseY - 12} width="4" height="8" fill="#454580" rx="1" />
+
+            {/* Day: Foreground Hill */}
+            <Path
+              d={`M0,${height * 0.9} Q${width * 0.35},${height * 0.78} ${width * 0.7},${height * 0.88} T${width},${height * 0.84} L${width},${height} L0,${height} Z`}
+              fill={dayFrontHill}
+            />
+
+            {/* Day: Small Cottage (left) */}
+            <Rect x="48" y={height - 40} width="26" height="18" fill="#FFFFFF" rx="2" />
+            <Path d={`M45,${height - 40} L61,${height - 55} L77,${height - 40} Z`} fill="#7873B8" />
+            <Rect x="58" y={height - 35} width="6" height="6" fill="#FFEAA7" rx="1" />
+
+            {/* Day: Dawn Sun Glow (top-left, like welcome) */}
+            <Circle cx="45" cy="38" r="18" fill="rgba(255, 250, 230, 0.85)" />
+            <Circle cx="45" cy="38" r="26" fill="rgba(255, 240, 200, 0.3)" />
           </>
         )}
-
-        {/* Distant Ridge */}
-        <Path
-          d={`M0,${height * 0.72} Q${width * 0.25},${height * 0.48} ${width * 0.5},${height * 0.65} T${width},${height * 0.6} L${width},${height} L0,${height} Z`}
-          fill="url(#lockHillBack)"
-          opacity={0.85}
-        />
-
-        {/* Foreground Hill */}
-        <Path
-          d={`M0,${height * 0.82} Q${width * 0.35},${height * 0.68} ${width * 0.65},${height * 0.8} T${width},${height * 0.74} L${width},${height} L0,${height} Z`}
-          fill="url(#lockHillFront)"
-        />
-
-        {/* Cottage on the hill slope */}
-        <Rect
-          x={houseLeft}
-          y={height - houseBottom - 20}
-          width="28"
-          height="20"
-          fill={isNight ? '#2A2B45' : '#FFFFFF'}
-          rx="2"
-        />
-        {/* Roof */}
-        <Path
-          d={`M${houseLeft - 4},${height - houseBottom - 20} L${houseLeft + 14},${height - houseBottom - 35} L${houseLeft + 32},${height - houseBottom - 20} Z`}
-          fill={isNight ? '#3D3B5C' : '#6A68A5'}
-        />
-        {/* Chimney */}
-        <Rect
-          x={houseLeft + 20}
-          y={height - houseBottom - 31}
-          width="4"
-          height="10"
-          fill={isNight ? '#33314D' : '#57548A'}
-          rx="1"
-        />
-
-        {/* Lantern Post (Night) or Flower Post (Day) */}
-        <Rect
-          x={houseLeft + 38}
-          y={height - houseBottom - 16}
-          width="2"
-          height="16"
-          fill={isNight ? '#4B4B6E' : '#667085'}
-        />
-        <Circle
-          cx={houseLeft + 39}
-          cy={height - houseBottom - 16}
-          r="3.5"
-          fill={isNight ? '#FFEAA7' : '#FFB84C'}
-          opacity={0.9}
-        />
       </Svg>
 
       {/* Night-only celestial animations */}
@@ -466,41 +555,105 @@ export function LockHeroScenery({
             <View style={styles.meteorHead} />
             <View style={styles.meteorTail} />
           </Animated.View>
+
+          {/* Night Cottage Glowing Window */}
+          <Animated.View
+            style={[
+              styles.cottageWindow,
+              {
+                left: houseLeft + 10,
+                bottom: houseBottom + 7,
+                backgroundColor: '#FFD166',
+                opacity: windowLightPulse,
+              },
+            ]}
+          />
         </>
       )}
 
-      {/* Day-only animated clouds */}
+      {/* Day-only: drifting cloud */}
       {!isNight && (
         <Animated.View
           style={[
             styles.dayCloud,
             {
-              top: 22,
+              top: 20,
               transform: [{ translateX: cloudTranslateX }],
             },
           ]}
         >
-          <Svg width="85" height="30" viewBox="0 0 85 30">
+          <Svg width="90" height="32" viewBox="0 0 90 32">
             <Path
-              d="M10,25 Q18,25 24,20 Q32,10 46,13 Q57,7 68,15 Q78,15 81,21 Q84,25 74,25 Z"
-              fill="rgba(255, 255, 255, 0.88)"
+              d="M10,24 Q18,24 24,18 Q32,8 48,12 Q60,6 72,14 Q82,14 85,20 Q88,24 76,24 Z"
+              fill="rgba(255, 255, 255, 0.85)"
             />
           </Svg>
         </Animated.View>
       )}
 
-      {/* Cottage Glowing Window */}
-      <Animated.View
-        style={[
-          styles.cottageWindow,
-          {
-            left: houseLeft + 10,
-            bottom: houseBottom + 7,
-            backgroundColor: isNight ? '#FFD166' : '#FFEAA7',
-            opacity: windowLightPulse,
-          },
-        ]}
-      />
+      {/* Day-only: rotating windmill blades */}
+      {!isNight && (
+        <View
+          style={[
+            styles.windmillAxis,
+            {
+              left: windmillTowerX - 28,
+              top: windmillTopY - 28,
+            },
+          ]}
+        >
+          <Animated.View
+            style={[
+              styles.bladesGroup,
+              { transform: [{ rotate: windmillSpin }] },
+            ]}
+          >
+            <Svg width="56" height="56" viewBox="0 0 56 56">
+              <G transform="translate(28, 28)">
+                <Circle cx="0" cy="0" r="2.5" fill="#454580" />
+                <Path d="M-1.5,0 L-3,-22 L3,-22 L1.5,0 Z" fill="#FFFFFF" opacity={0.92} />
+                <Path d="M-1.5,0 L-3,22 L3,22 L1.5,0 Z" fill="#FFFFFF" opacity={0.92} />
+                <Path d="M0,-1.5 L-22,-3 L-22,3 L0,1.5 Z" fill="#FFFFFF" opacity={0.92} />
+                <Path d="M0,-1.5 L22,-3 L22,3 L0,1.5 Z" fill="#FFFFFF" opacity={0.92} />
+              </G>
+            </Svg>
+          </Animated.View>
+        </View>
+      )}
+
+      {/* Day-only: fluttering petal */}
+      {!isNight && (
+        <Animated.View
+          style={[
+            styles.petalWrapper,
+            {
+              top: 0,
+              transform: [
+                { translateX: petalTranslateX },
+                { translateY: petalTranslateY },
+                { rotate: petalRotation },
+              ],
+            },
+          ]}
+        >
+          <View style={styles.petalGraphic} />
+        </Animated.View>
+      )}
+
+      {/* Day: Cottage Glowing Window */}
+      {!isNight && (
+        <Animated.View
+          style={[
+            styles.cottageWindow,
+            {
+              left: 68,
+              bottom: 13,
+              backgroundColor: '#FFEAA7',
+              opacity: windowLightPulse,
+            },
+          ]}
+        />
+      )}
 
       {/* Security Emblem - Positioned in Bottom Right with Localized Micro-Animations */}
       <Animated.View
@@ -618,6 +771,31 @@ const styles = StyleSheet.create({
   dayCloud: {
     position: 'absolute',
     left: 0,
+  },
+  windmillAxis: {
+    position: 'absolute',
+    width: 56,
+    height: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bladesGroup: {
+    width: 56,
+    height: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  petalWrapper: {
+    position: 'absolute',
+    left: 30,
+  },
+  petalGraphic: {
+    width: 6,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#FFD4E2',
+    opacity: 0.85,
+    transform: [{ rotate: '45deg' }],
   },
   cottageWindow: {
     position: 'absolute',

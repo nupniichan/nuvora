@@ -2,7 +2,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/button';
@@ -69,8 +69,8 @@ export default function LockScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <View style={styles.hero}>
+      <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.heroSection}>
           <LockHeroScenery
             status={lockStatus}
             onUnlockComplete={handleUnlockComplete}
@@ -103,7 +103,7 @@ export default function LockScreen() {
             variant="outline"
           />
         ) : null}
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -114,34 +114,31 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.background,
   },
   content: {
-    flex: 1,
+    flexGrow: 1,
+    width: '100%',
+    maxWidth: 520,
+    alignSelf: 'center',
     paddingHorizontal: 24,
+    paddingVertical: 24,
     justifyContent: 'center',
-    gap: 24,
+    gap: 32,
   },
-  hero: {
+  heroSection: {
     alignItems: 'center',
     gap: 12,
-  },
-  iconBadge: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
-    backgroundColor: Colors.primaryFaded,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  badgeText: {
-    fontSize: 32,
   },
   title: {
     fontSize: 28,
     fontWeight: '800',
     color: Colors.light.text,
+    textAlign: 'center',
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 15,
     color: Colors.light.textSecondary,
+    textAlign: 'center',
+    paddingHorizontal: 16,
+    lineHeight: 22,
   },
   card: {
     gap: 16,
