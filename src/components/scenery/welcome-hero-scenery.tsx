@@ -13,16 +13,13 @@ import Svg, {
 const isNative = Platform.OS !== 'web';
 
 export function WelcomeHeroScenery() {
-  // Dynamic layout measurement to guarantee 100% responsive precision
   const [dimensions, setDimensions] = useState({ width: 340, height: 180 });
 
-  // Animation values initialized via useState for React 19 compiler compatibility
   const [windmillRotation] = useState(() => new Animated.Value(0));
   const [cloudOffset] = useState(() => new Animated.Value(0));
   const [petalMotion] = useState(() => new Animated.Value(0));
 
   useEffect(() => {
-    // Smooth windmill rotation
     const windmillAnimation = Animated.loop(
       Animated.timing(windmillRotation, {
         toValue: 1,
@@ -32,7 +29,6 @@ export function WelcomeHeroScenery() {
       })
     );
 
-    // Drifting clouds
     const cloudAnimation = Animated.loop(
       Animated.timing(cloudOffset, {
         toValue: 1,
@@ -42,7 +38,6 @@ export function WelcomeHeroScenery() {
       })
     );
 
-    // Reset only after the petal has fallen outside the clipped frame.
     const petalAnimation = Animated.loop(
       Animated.timing(petalMotion, {
         toValue: 1,
@@ -65,9 +60,9 @@ export function WelcomeHeroScenery() {
   }, [windmillRotation, cloudOffset, petalMotion]);
 
   const handleLayout = (event: LayoutChangeEvent) => {
-    const { width, height } = event.nativeEvent.layout;
-    if (width > 0 && height > 0) {
-      setDimensions({ width, height });
+    const { width: layoutWidth, height: layoutHeight } = event.nativeEvent.layout;
+    if (layoutWidth > 0 && layoutHeight > 0) {
+      setDimensions({ width: layoutWidth, height: layoutHeight });
     }
   };
 
@@ -96,12 +91,10 @@ export function WelcomeHeroScenery() {
     outputRange: ['0deg', '240deg'],
   });
 
-  // Responsive windmill placement: anchored relative to right side
   const windmillTowerX = Math.max(180, width - 85);
   const windmillBaseY = height - 42;
   const windmillTopY = windmillBaseY - 40;
 
-  // Dawn color palette
   const skyTop = '#9EB5FF';
   const skyMid = '#C7CAFC';
   const skyBottom = '#FFE8D6';
@@ -134,27 +127,22 @@ export function WelcomeHeroScenery() {
           </LinearGradient>
         </Defs>
 
-        {/* Sky */}
         <Rect x="0" y="0" width={width} height={height} fill="url(#welcomeDawnSky)" />
 
-        {/* Diagonal Sunbeams */}
         <Path d={`M0,0 L${width * 0.25},0 L${width * 0.55},${height} L0,${height} Z`} fill="url(#welcomeSunbeam)" opacity={0.6} />
         <Path d={`M${width * 0.12},0 L${width * 0.42},0 L${width * 0.8},${height} L${width * 0.35},${height} Z`} fill="url(#welcomeSunbeam)" opacity={0.4} />
 
-        {/* Distant Mountains */}
         <Path
           d={`M0,${height * 0.72} Q${width * 0.2},${height * 0.42} ${width * 0.42},${height * 0.58} T${width * 0.82},${height * 0.52} Q${width * 0.92},${height * 0.55} ${width},${height * 0.64} L${width},${height} L0,${height} Z`}
           fill="url(#welcomeMountainGrad)"
           opacity={0.7}
         />
 
-        {/* Midground Hill */}
         <Path
           d={`M0,${height * 0.8} Q${width * 0.3},${height * 0.62} ${width * 0.6},${height * 0.75} T${width},${height * 0.7} L${width},${height} L0,${height} Z`}
           fill={midHill}
         />
 
-        {/* Windmill Tower (Responsive anchored) */}
         <Path
           d={`M${windmillTowerX - 9},${windmillBaseY} L${windmillTowerX - 5},${windmillTopY} L${windmillTowerX + 5},${windmillTopY} L${windmillTowerX + 9},${windmillBaseY} Z`}
           fill="#F5F5FC"
@@ -172,23 +160,19 @@ export function WelcomeHeroScenery() {
           rx="1"
         />
 
-        {/* Foreground Hill */}
         <Path
           d={`M0,${height * 0.9} Q${width * 0.35},${height * 0.78} ${width * 0.7},${height * 0.88} T${width},${height * 0.84} L${width},${height} L0,${height} Z`}
           fill={frontHill}
         />
 
-        {/* Small Cottage */}
         <Rect x="48" y={height - 40} width="26" height="18" fill="#FFFFFF" rx="2" />
         <Path d={`M45,${height - 40} L61,${height - 55} L77,${height - 40} Z`} fill="#7873B8" />
         <Rect x="58" y={height - 35} width="6" height="6" fill="#FFEAA7" rx="1" />
 
-        {/* Dawn Sun Glow */}
         <Circle cx="45" cy="38" r="18" fill="rgba(255, 250, 230, 0.85)" />
         <Circle cx="45" cy="38" r="26" fill="rgba(255, 240, 200, 0.3)" />
       </Svg>
 
-      {/* Rotating Windmill Blades (Responsive locked to windmill top) */}
       <View
         style={[
           styles.windmillAxis,
@@ -218,7 +202,6 @@ export function WelcomeHeroScenery() {
         </Animated.View>
       </View>
 
-      {/* Drifting Cloud */}
       <Animated.View
         style={[
           styles.cloudContainer,
@@ -236,7 +219,6 @@ export function WelcomeHeroScenery() {
         </Svg>
       </Animated.View>
 
-      {/* Fluttering Petal */}
       <Animated.View
         style={[
           styles.petalWrapper,
@@ -253,7 +235,6 @@ export function WelcomeHeroScenery() {
         <View style={styles.petalGraphic} />
       </Animated.View>
 
-      {/* Frame Border */}
       <View style={styles.frameBorder} />
     </View>
   );

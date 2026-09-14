@@ -12,10 +12,8 @@ import Svg, {
 const isNative = Platform.OS !== 'web';
 
 export function BalanceCardScenery() {
-  // Dynamic layout measurement to guarantee 100% responsive precision
   const [dimensions, setDimensions] = useState({ width: 360, height: 190 });
 
-  // Animation values initialized via useState for React 19 compiler compatibility
   const [cloudFarX] = useState(() => new Animated.Value(0));
   const [cloudNearX] = useState(() => new Animated.Value(0));
   const [chimneySmokeProgress] = useState(() => new Animated.Value(0));
@@ -23,7 +21,6 @@ export function BalanceCardScenery() {
   const [ambientSparklePulse] = useState(() => new Animated.Value(0));
 
   useEffect(() => {
-    // Parallax drifting clouds
     const cloudFarAnimation = Animated.loop(
       Animated.timing(cloudFarX, {
         toValue: 1,
@@ -42,7 +39,6 @@ export function BalanceCardScenery() {
       })
     );
 
-    // Chimney smoke cycle
     const smokeAnimation = Animated.loop(
       Animated.timing(chimneySmokeProgress, {
         toValue: 1,
@@ -52,7 +48,6 @@ export function BalanceCardScenery() {
       })
     );
 
-    // Warm cottage window pulse
     const windowAnimation = Animated.loop(
       Animated.sequence([
         Animated.timing(cottageWindowGlow, {
@@ -70,7 +65,6 @@ export function BalanceCardScenery() {
       ])
     );
 
-    // Ambient floating light particles
     const sparkleAnimation = Animated.loop(
       Animated.sequence([
         Animated.timing(ambientSparklePulse, {
@@ -110,15 +104,14 @@ export function BalanceCardScenery() {
   ]);
 
   const handleLayout = (event: LayoutChangeEvent) => {
-    const { width, height } = event.nativeEvent.layout;
-    if (width > 0 && height > 0) {
-      setDimensions({ width, height });
+    const { width: layoutWidth, height: layoutHeight } = event.nativeEvent.layout;
+    if (layoutWidth > 0 && layoutHeight > 0) {
+      setDimensions({ width: layoutWidth, height: layoutHeight });
     }
   };
 
   const { width, height } = dimensions;
 
-  // Interpolated transforms
   const cloudFarTranslateX = cloudFarX.interpolate({
     inputRange: [0, 1],
     outputRange: [-60, width + 40],
@@ -168,7 +161,6 @@ export function BalanceCardScenery() {
     outputRange: [0, -10],
   });
 
-  // Palette aligned with Nuvora periwinkle theme
   const skyTop = '#EFF1FE';
   const skyBottom = '#DDE2FB';
   const distantHill = '#CBD1F7';
@@ -184,7 +176,6 @@ export function BalanceCardScenery() {
   const windowLight = '#FFE58F';
   const smokeColor = 'rgba(255, 255, 255, 0.85)';
 
-  // Cottage placed on the open upper-right slope above footer buttons
   const cottageX = Math.max(160, width - 112);
   const cottageY = Math.round(height * 0.46);
   const chimneyX = cottageX + 22;
@@ -224,55 +215,44 @@ export function BalanceCardScenery() {
           </LinearGradient>
         </Defs>
 
-        {/* Sky Background */}
         <Rect x="0" y="0" width={width} height={height} fill="url(#balanceSkyGradient)" />
 
-        {/* Subtle Sunbeam */}
         <Path d={`M${width},0 L${width * 0.65},0 L${width * 0.35},${height} L${width},${height} Z`} fill="url(#balanceSunbeamGradient)" />
 
-        {/* Layer 1: Distant Mountain Ridge (Smooth full-width curve from 0 to width) */}
         <Path
           d={`M0,${height * 0.62} C${width * 0.3},${height * 0.52} ${width * 0.52},${height * 0.34} ${width * 0.72},${height * 0.4} C${width * 0.86},${height * 0.44} ${width * 0.94},${height * 0.52} ${width},${height * 0.56} L${width},${height} L0,${height} Z`}
           fill="url(#balanceHillGradient1)"
           opacity={0.7}
         />
 
-        {/* Layer 2: Midground Rolling Hill (Seamless full-width curve from 0 to width) */}
         <Path
           d={`M0,${height * 0.72} C${width * 0.25},${height * 0.68} ${width * 0.48},${height * 0.54} ${width * 0.7},${height * 0.52} C${width * 0.84},${height * 0.5} ${width * 0.94},${height * 0.6} ${width},${height * 0.64} L${width},${height} L0,${height} Z`}
           fill="url(#balanceHillGradient2)"
         />
 
-        {/* Pine Trees on the ridge */}
         <Path d={`M${cottageX - 38},${cottageY + 2} L${cottageX - 33},${cottageY - 11} L${cottageX - 28},${cottageY + 2} Z`} fill={treeColorFar} />
         <Path d={`M${cottageX - 30},${cottageY + 5} L${cottageX - 25},${cottageY - 8} L${cottageX - 20},${cottageY + 5} Z`} fill={treeColorNear} />
         <Path d={`M${cottageX + 40},${cottageY + 4} L${cottageX + 46},${cottageY - 11} L${cottageX + 52},${cottageY + 4} Z`} fill={treeColorFar} />
         <Path d={`M${cottageX + 48},${cottageY + 6} L${cottageX + 54},${cottageY - 7} L${cottageX + 60},${cottageY + 6} Z`} fill={treeColorNear} />
 
-        {/* Cottage Chimney */}
         <Rect x={chimneyX} y={chimneyY} width="5" height="12" fill={houseChimney} rx="1" />
         <Rect x={chimneyX - 1} y={chimneyY - 1} width="7" height="2" fill={houseRoof} rx="0.5" />
 
-        {/* Cottage Main Wall */}
         <Rect x={cottageX} y={cottageY} width="32" height="24" fill={houseWall} rx="3" />
-        {/* Cottage Gabled Roof */}
         <Path d={`M${cottageX - 5},${cottageY + 1} L${cottageX + 16},${cottageY - 16} L${cottageX + 37},${cottageY + 1} Z`} fill={houseRoof} />
         <Circle cx={cottageX + 16} cy={cottageY - 6} r="2.5" fill={houseWall} />
 
-        {/* Layer 3: Foreground Meadow Slope (Seamless full-width curve from 0 to width) */}
         <Path
           d={`M0,${height * 0.84} C${width * 0.28},${height * 0.82} ${width * 0.58},${height * 0.74} ${width * 0.8},${height * 0.72} C${width * 0.9},${height * 0.72} ${width * 0.98},${height * 0.76} ${width},${height * 0.78} L${width},${height} L0,${height} Z`}
           fill="url(#balanceHillGradient3)"
         />
 
-        {/* Wildflower Dots along the foreground meadow */}
         <Circle cx={Math.max(120, width * 0.35)} cy={height * 0.86} r="1.5" fill="#FFFFFF" opacity={0.8} />
         <Circle cx={Math.max(160, width * 0.48)} cy={height * 0.89} r="1.8" fill="#FFF0A0" opacity={0.9} />
         <Circle cx={cottageX - 12} cy={height * 0.84} r="1.5" fill="#FFFFFF" opacity={0.8} />
         <Circle cx={cottageX + 26} cy={height * 0.88} r="1.6" fill="#FFD0D8" opacity={0.85} />
       </Svg>
 
-      {/* Far Cloud Layer */}
       <Animated.View
         style={[
           styles.cloudWrapper,
@@ -295,7 +275,6 @@ export function BalanceCardScenery() {
         </Svg>
       </Animated.View>
 
-      {/* Near Cloud Layer */}
       <Animated.View
         style={[
           styles.cloudWrapper,
@@ -314,7 +293,6 @@ export function BalanceCardScenery() {
         </Svg>
       </Animated.View>
 
-      {/* Animated Chimney Smoke (Locked directly above chimney) */}
       <View
         style={[
           styles.smokeOrigin,
@@ -354,7 +332,6 @@ export function BalanceCardScenery() {
         />
       </View>
 
-      {/* Glowing Window (Locked directly inside the cottage wall) */}
       <Animated.View
         style={[
           styles.windowLightElement,
@@ -367,7 +344,6 @@ export function BalanceCardScenery() {
         ]}
       />
 
-      {/* Ambient Floating Sparkles */}
       <Animated.View
         style={[
           styles.sparkleArea,
@@ -382,7 +358,6 @@ export function BalanceCardScenery() {
         <View style={[styles.sparklePoint, { top: 25, right: 170, width: 5, height: 5 }]} />
       </Animated.View>
 
-      {/* Soft Scrim to guarantee high contrast for balance text */}
       <View style={styles.contrastScrim} />
     </View>
   );

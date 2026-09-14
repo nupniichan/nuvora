@@ -30,11 +30,8 @@ export function LockHeroScenery({
   onUnlockComplete,
 }: LockHeroSceneryProps) {
   const [systemTimeOfDay, setSystemTimeOfDay] = useState<TimeOfDay>(() => getTimeOfDay());
-
-  // Dynamic layout measurement to guarantee 100% responsive precision
   const [dimensions, setDimensions] = useState({ width: 340, height: 180 });
 
-  // Update clock every minute for seamless day/night transitions
   useEffect(() => {
     const interval = setInterval(() => {
       setSystemTimeOfDay(getTimeOfDay());
@@ -43,8 +40,8 @@ export function LockHeroScenery({
   }, []);
 
   const currentTimeOfDay = forceTimeOfDay ?? systemTimeOfDay;
+  const isNight = currentTimeOfDay === 'night';
 
-  // Animation values initialized via useState for React 19 Compiler
   const [moonPulse] = useState(() => new Animated.Value(0.75));
   const [sunGlow] = useState(() => new Animated.Value(0.8));
   const [starTwinkleFast] = useState(() => new Animated.Value(0.3));
@@ -53,17 +50,14 @@ export function LockHeroScenery({
   const [windowLightPulse] = useState(() => new Animated.Value(0.8));
   const [cloudDrift] = useState(() => new Animated.Value(0));
 
-  // Day-mode: windmill & petal (welcome-style)
   const [windmillRotation] = useState(() => new Animated.Value(0));
   const [petalMotion] = useState(() => new Animated.Value(0));
 
-  // Localized badge animations: tight micro-shake on error, subtle localized burst on unlock
   const [shakeTranslateX] = useState(() => new Animated.Value(0));
   const [unlockBadgeScale] = useState(() => new Animated.Value(1));
   const [burstScale] = useState(() => new Animated.Value(0.9));
   const [burstOpacity] = useState(() => new Animated.Value(0));
 
-  // Localized micro-shake for the lock badge on error (tight range)
   useEffect(() => {
     if (status === 'error') {
       Animated.sequence([
@@ -78,11 +72,9 @@ export function LockHeroScenery({
     }
   }, [status, shakeTranslateX]);
 
-  // Localized unlock pop & subtle compact burst ring
   useEffect(() => {
     if (status === 'unlocked') {
       Animated.parallel([
-        // Badge subtle spring pop (small range)
         Animated.sequence([
           Animated.timing(unlockBadgeScale, {
             toValue: 1.16,
@@ -97,7 +89,6 @@ export function LockHeroScenery({
             useNativeDriver: isNative,
           }),
         ]),
-        // Compact radiant burst ring around badge only (small range)
         Animated.sequence([
           Animated.timing(burstOpacity, { toValue: 0.75, duration: 60, useNativeDriver: isNative }),
           Animated.parallel([
@@ -122,161 +113,176 @@ export function LockHeroScenery({
   }, [status, unlockBadgeScale, burstScale, burstOpacity, onUnlockComplete]);
 
   useEffect(() => {
-    // Celestial pulse
-    const celestialAnimation = Animated.loop(
-      Animated.sequence([
-        Animated.timing(moonPulse, {
+    const activeAnimations: Animated.CompositeAnimation[] = [];
+
+    if (isNight) {
+      const celestialAnimation = Animated.loop(
+        Animated.sequence([
+          Animated.timing(moonPulse, {
+            toValue: 1,
+            duration: 3000,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: isNative,
+          }),
+          Animated.timing(moonPulse, {
+            toValue: 0.65,
+            duration: 3000,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: isNative,
+          }),
+        ])
+      );
+
+      const starFastAnimation = Animated.loop(
+        Animated.sequence([
+          Animated.timing(starTwinkleFast, {
+            toValue: 1,
+            duration: 1200,
+            easing: Easing.inOut(Easing.quad),
+            useNativeDriver: isNative,
+          }),
+          Animated.timing(starTwinkleFast, {
+            toValue: 0.2,
+            duration: 1200,
+            easing: Easing.inOut(Easing.quad),
+            useNativeDriver: isNative,
+          }),
+        ])
+      );
+
+      const starSlowAnimation = Animated.loop(
+        Animated.sequence([
+          Animated.timing(starTwinkleSlow, {
+            toValue: 0.15,
+            duration: 1700,
+            easing: Easing.inOut(Easing.quad),
+            useNativeDriver: isNative,
+          }),
+          Animated.timing(starTwinkleSlow, {
+            toValue: 1,
+            duration: 1700,
+            easing: Easing.inOut(Easing.quad),
+            useNativeDriver: isNative,
+          }),
+        ])
+      );
+
+      const meteorAnimation = Animated.loop(
+        Animated.sequence([
+          Animated.delay(2500),
+          Animated.timing(meteorStreak, {
+            toValue: 1,
+            duration: 1200,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: isNative,
+          }),
+          Animated.delay(4000),
+        ])
+      );
+
+      const windowAnimation = Animated.loop(
+        Animated.sequence([
+          Animated.timing(windowLightPulse, {
+            toValue: 1,
+            duration: 2200,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: isNative,
+          }),
+          Animated.timing(windowLightPulse, {
+            toValue: 0.7,
+            duration: 2200,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: isNative,
+          }),
+        ])
+      );
+
+      activeAnimations.push(
+        celestialAnimation,
+        starFastAnimation,
+        starSlowAnimation,
+        meteorAnimation,
+        windowAnimation
+      );
+    } else {
+      const sunAnimation = Animated.loop(
+        Animated.sequence([
+          Animated.timing(sunGlow, {
+            toValue: 1,
+            duration: 2500,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: isNative,
+          }),
+          Animated.timing(sunGlow, {
+            toValue: 0.7,
+            duration: 2500,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: isNative,
+          }),
+        ])
+      );
+
+      const cloudAnimation = Animated.loop(
+        Animated.timing(cloudDrift, {
           toValue: 1,
-          duration: 3000,
-          easing: Easing.inOut(Easing.sin),
+          duration: 20000,
+          easing: Easing.linear,
           useNativeDriver: isNative,
-        }),
-        Animated.timing(moonPulse, {
-          toValue: 0.65,
-          duration: 3000,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: isNative,
-        }),
-      ])
-    );
+        })
+      );
 
-    const sunAnimation = Animated.loop(
-      Animated.sequence([
-        Animated.timing(sunGlow, {
+      const windmillAnimation = Animated.loop(
+        Animated.timing(windmillRotation, {
           toValue: 1,
-          duration: 2500,
-          easing: Easing.inOut(Easing.sin),
+          duration: 9000,
+          easing: Easing.linear,
           useNativeDriver: isNative,
-        }),
-        Animated.timing(sunGlow, {
-          toValue: 0.7,
-          duration: 2500,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: isNative,
-        }),
-      ])
-    );
+        })
+      );
 
-    // Staggered star twinkle
-    const starFastAnimation = Animated.loop(
-      Animated.sequence([
-        Animated.timing(starTwinkleFast, {
+      const petalAnimation = Animated.loop(
+        Animated.timing(petalMotion, {
           toValue: 1,
-          duration: 1200,
-          easing: Easing.inOut(Easing.quad),
+          duration: 4500,
+          easing: Easing.linear,
           useNativeDriver: isNative,
-        }),
-        Animated.timing(starTwinkleFast, {
-          toValue: 0.2,
-          duration: 1200,
-          easing: Easing.inOut(Easing.quad),
-          useNativeDriver: isNative,
-        }),
-      ])
-    );
+          isInteraction: false,
+        })
+      );
 
-    const starSlowAnimation = Animated.loop(
-      Animated.sequence([
-        Animated.timing(starTwinkleSlow, {
-          toValue: 0.15,
-          duration: 1700,
-          easing: Easing.inOut(Easing.quad),
-          useNativeDriver: isNative,
-        }),
-        Animated.timing(starTwinkleSlow, {
-          toValue: 1,
-          duration: 1700,
-          easing: Easing.inOut(Easing.quad),
-          useNativeDriver: isNative,
-        }),
-      ])
-    );
+      const windowAnimation = Animated.loop(
+        Animated.sequence([
+          Animated.timing(windowLightPulse, {
+            toValue: 1,
+            duration: 2200,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: isNative,
+          }),
+          Animated.timing(windowLightPulse, {
+            toValue: 0.7,
+            duration: 2200,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: isNative,
+          }),
+        ])
+      );
 
-    // Shooting meteor
-    const meteorAnimation = Animated.loop(
-      Animated.sequence([
-        Animated.delay(2500),
-        Animated.timing(meteorStreak, {
-          toValue: 1,
-          duration: 1200,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: isNative,
-        }),
-        Animated.delay(4000),
-      ])
-    );
+      activeAnimations.push(
+        sunAnimation,
+        cloudAnimation,
+        windmillAnimation,
+        petalAnimation,
+        windowAnimation
+      );
+    }
 
-    // Cottage window breathing light
-    const windowAnimation = Animated.loop(
-      Animated.sequence([
-        Animated.timing(windowLightPulse, {
-          toValue: 1,
-          duration: 2200,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: isNative,
-        }),
-        Animated.timing(windowLightPulse, {
-          toValue: 0.7,
-          duration: 2200,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: isNative,
-        }),
-      ])
-    );
-
-    // Cloud drift for day
-    const cloudAnimation = Animated.loop(
-      Animated.timing(cloudDrift, {
-        toValue: 1,
-        duration: 20000,
-        easing: Easing.linear,
-        useNativeDriver: isNative,
-      })
-    );
-
-    // Day-mode windmill rotation
-    const windmillAnimation = Animated.loop(
-      Animated.timing(windmillRotation, {
-        toValue: 1,
-        duration: 9000,
-        easing: Easing.linear,
-        useNativeDriver: isNative,
-      })
-    );
-
-    // Day-mode petal fall
-    const petalAnimation = Animated.loop(
-      Animated.timing(petalMotion, {
-        toValue: 1,
-        duration: 4500,
-        easing: Easing.linear,
-        useNativeDriver: isNative,
-        isInteraction: false,
-      })
-    );
-
-    celestialAnimation.start();
-    sunAnimation.start();
-    starFastAnimation.start();
-    starSlowAnimation.start();
-    meteorAnimation.start();
-    windowAnimation.start();
-    cloudAnimation.start();
-    windmillAnimation.start();
-    petalAnimation.start();
+    activeAnimations.forEach((animation) => animation.start());
 
     return () => {
-      celestialAnimation.stop();
-      sunAnimation.stop();
-      starFastAnimation.stop();
-      starSlowAnimation.stop();
-      meteorAnimation.stop();
-      windowAnimation.stop();
-      cloudAnimation.stop();
-      windmillAnimation.stop();
-      petalAnimation.stop();
+      activeAnimations.forEach((animation) => animation.stop());
     };
   }, [
+    isNight,
     moonPulse,
     sunGlow,
     starTwinkleFast,
@@ -289,16 +295,14 @@ export function LockHeroScenery({
   ]);
 
   const handleLayout = (event: LayoutChangeEvent) => {
-    const { width, height } = event.nativeEvent.layout;
-    if (width > 0 && height > 0) {
-      setDimensions({ width, height });
+    const { width: layoutWidth, height: layoutHeight } = event.nativeEvent.layout;
+    if (layoutWidth > 0 && layoutHeight > 0) {
+      setDimensions({ width: layoutWidth, height: layoutHeight });
     }
   };
 
-  const isNight = currentTimeOfDay === 'night';
   const { width, height } = dimensions;
 
-  // Responsive calculations
   const meteorTranslateX = meteorStreak.interpolate({
     inputRange: [0, 1],
     outputRange: [-40, width - 40],
@@ -317,11 +321,9 @@ export function LockHeroScenery({
     outputRange: [-60, width + 40],
   });
 
-  // Cottage anchored gracefully on the left hillside
   const houseLeft = 46;
   const houseBottom = 28;
 
-  // Day-mode (welcome-style) interpolations
   const windmillSpin = windmillRotation.interpolate({
     inputRange: [0, 1],
     outputRange: ['0deg', '360deg'],
@@ -339,12 +341,10 @@ export function LockHeroScenery({
     outputRange: ['0deg', '240deg'],
   });
 
-  // Responsive windmill placement (top-right, matching welcome)
   const windmillTowerX = Math.max(180, width - 85);
   const windmillBaseY = height - 42;
   const windmillTopY = windmillBaseY - 40;
 
-  // Colors localized exclusively to the lock badge
   const isError = status === 'error';
   const isUnlocked = status === 'unlocked';
 
@@ -370,7 +370,6 @@ export function LockHeroScenery({
         ? 'rgba(204, 204, 255, 0.22)'
         : 'rgba(255, 255, 255, 0.35)';
 
-  // Day palette (welcome-aligned)
   const dayMountainColor = '#9EA7E5';
   const dayMidHill = '#8FA4D4';
   const dayFrontHill = '#7991CA';
@@ -382,7 +381,6 @@ export function LockHeroScenery({
         style={StyleSheet.absoluteFill}
       >
         <Defs>
-          {/* Day / Night Sky Gradients */}
           {isNight ? (
             <LinearGradient id="lockSkyGradient" x1="0%" y1="0%" x2="0%" y2="100%">
               <Stop offset="0%" stopColor="#111224" />
@@ -397,13 +395,11 @@ export function LockHeroScenery({
             </LinearGradient>
           )}
 
-          {/* Celestial Glow */}
           <LinearGradient id="lockCelestialGlow" x1="0%" y1="0%" x2="100%" y2="100%">
             <Stop offset="0%" stopColor={isNight ? 'rgba(235, 240, 255, 0.35)' : 'rgba(255, 245, 210, 0.5)'} />
             <Stop offset="100%" stopColor="transparent" />
           </LinearGradient>
 
-          {/* Day sunbeam gradient */}
           {!isNight && (
             <LinearGradient id="lockSunbeam" x1="0%" y1="0%" x2="100%" y2="100%">
               <Stop offset="0%" stopColor="rgba(255, 245, 210, 0.45)" />
@@ -412,7 +408,6 @@ export function LockHeroScenery({
             </LinearGradient>
           )}
 
-          {/* Day mountain gradient */}
           {!isNight && (
             <LinearGradient id="lockMountainGrad" x1="0%" y1="0%" x2="0%" y2="100%">
               <Stop offset="0%" stopColor={dayMountainColor} />
@@ -420,7 +415,6 @@ export function LockHeroScenery({
             </LinearGradient>
           )}
 
-          {/* Night hill gradients */}
           {isNight && (
             <>
               <LinearGradient id="lockHillBack" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -435,32 +429,24 @@ export function LockHeroScenery({
           )}
         </Defs>
 
-        {/* Sky Background */}
         <Rect x="0" y="0" width={width} height={height} fill="url(#lockSkyGradient)" />
 
         {isNight ? (
           <>
-            {/* Night: Crescent Moon */}
             <Circle cx={width - 55} cy="38" r="22" fill="url(#lockCelestialGlow)" />
             <Path
               d={`M${width - 51},24 A 14 14 0 1 0 ${width - 42},46 A 11 11 0 1 1 ${width - 51},24 Z`}
               fill="#FFF9E6"
             />
-
-            {/* Night Distant Ridge */}
             <Path
               d={`M0,${height * 0.72} Q${width * 0.25},${height * 0.48} ${width * 0.5},${height * 0.65} T${width},${height * 0.6} L${width},${height} L0,${height} Z`}
               fill="url(#lockHillBack)"
               opacity={0.85}
             />
-
-            {/* Night Foreground Hill */}
             <Path
               d={`M0,${height * 0.82} Q${width * 0.35},${height * 0.68} ${width * 0.65},${height * 0.8} T${width},${height * 0.74} L${width},${height} L0,${height} Z`}
               fill="url(#lockHillFront)"
             />
-
-            {/* Night Cottage */}
             <Rect x={houseLeft} y={height - houseBottom - 20} width="28" height="20" fill="#2A2B45" rx="2" />
             <Path
               d={`M${houseLeft - 4},${height - houseBottom - 20} L${houseLeft + 14},${height - houseBottom - 35} L${houseLeft + 32},${height - houseBottom - 20} Z`}
@@ -472,24 +458,17 @@ export function LockHeroScenery({
           </>
         ) : (
           <>
-            {/* Day: Diagonal Sunbeams */}
             <Path d={`M0,0 L${width * 0.25},0 L${width * 0.55},${height} L0,${height} Z`} fill="url(#lockSunbeam)" opacity={0.6} />
             <Path d={`M${width * 0.12},0 L${width * 0.42},0 L${width * 0.8},${height} L${width * 0.35},${height} Z`} fill="url(#lockSunbeam)" opacity={0.4} />
-
-            {/* Day: Distant Mountains */}
             <Path
               d={`M0,${height * 0.72} Q${width * 0.2},${height * 0.42} ${width * 0.42},${height * 0.58} T${width * 0.82},${height * 0.52} Q${width * 0.92},${height * 0.55} ${width},${height * 0.64} L${width},${height} L0,${height} Z`}
               fill="url(#lockMountainGrad)"
               opacity={0.7}
             />
-
-            {/* Day: Midground Hill */}
             <Path
               d={`M0,${height * 0.8} Q${width * 0.3},${height * 0.62} ${width * 0.6},${height * 0.75} T${width},${height * 0.7} L${width},${height} L0,${height} Z`}
               fill={dayMidHill}
             />
-
-            {/* Day: Windmill Tower */}
             <Path
               d={`M${windmillTowerX - 9},${windmillBaseY} L${windmillTowerX - 5},${windmillTopY} L${windmillTowerX + 5},${windmillTopY} L${windmillTowerX + 9},${windmillBaseY} Z`}
               fill="#F5F5FC"
@@ -499,29 +478,21 @@ export function LockHeroScenery({
               fill="#6A68A5"
             />
             <Rect x={windmillTowerX - 2} y={windmillBaseY - 12} width="4" height="8" fill="#454580" rx="1" />
-
-            {/* Day: Foreground Hill */}
             <Path
               d={`M0,${height * 0.9} Q${width * 0.35},${height * 0.78} ${width * 0.7},${height * 0.88} T${width},${height * 0.84} L${width},${height} L0,${height} Z`}
               fill={dayFrontHill}
             />
-
-            {/* Day: Small Cottage (left) */}
             <Rect x="48" y={height - 40} width="26" height="18" fill="#FFFFFF" rx="2" />
             <Path d={`M45,${height - 40} L61,${height - 55} L77,${height - 40} Z`} fill="#7873B8" />
             <Rect x="58" y={height - 35} width="6" height="6" fill="#FFEAA7" rx="1" />
-
-            {/* Day: Dawn Sun Glow (top-left, like welcome) */}
             <Circle cx="45" cy="38" r="18" fill="rgba(255, 250, 230, 0.85)" />
             <Circle cx="45" cy="38" r="26" fill="rgba(255, 240, 200, 0.3)" />
           </>
         )}
       </Svg>
 
-      {/* Night-only celestial animations */}
       {isNight && (
         <>
-          {/* Twinkling Star Group 1 */}
           <Animated.View style={[styles.absoluteFillStyle, { opacity: starTwinkleFast }]}>
             <View style={[styles.starDot, { top: 22, left: Math.max(30, width * 0.1) }]} />
             <View style={[styles.starDot, { top: 58, left: Math.max(70, width * 0.22) }]} />
@@ -530,7 +501,6 @@ export function LockHeroScenery({
             <View style={[styles.starDot, { top: 38, right: 85 }]} />
           </Animated.View>
 
-          {/* Twinkling Star Group 2 */}
           <Animated.View style={[styles.absoluteFillStyle, { opacity: starTwinkleSlow }]}>
             <View style={[styles.starDot, { top: 42, left: width * 0.32 }]} />
             <View style={[styles.starDot, { top: 18, left: width * 0.62 }]} />
@@ -538,7 +508,6 @@ export function LockHeroScenery({
             <View style={[styles.starDot, { top: 80, left: width * 0.4 }]} />
           </Animated.View>
 
-          {/* Shooting Meteor */}
           <Animated.View
             style={[
               styles.meteorBox,
@@ -556,7 +525,6 @@ export function LockHeroScenery({
             <View style={styles.meteorTail} />
           </Animated.View>
 
-          {/* Night Cottage Glowing Window */}
           <Animated.View
             style={[
               styles.cottageWindow,
@@ -571,7 +539,6 @@ export function LockHeroScenery({
         </>
       )}
 
-      {/* Day-only: drifting cloud */}
       {!isNight && (
         <Animated.View
           style={[
@@ -591,7 +558,6 @@ export function LockHeroScenery({
         </Animated.View>
       )}
 
-      {/* Day-only: rotating windmill blades */}
       {!isNight && (
         <View
           style={[
@@ -621,7 +587,6 @@ export function LockHeroScenery({
         </View>
       )}
 
-      {/* Day-only: fluttering petal */}
       {!isNight && (
         <Animated.View
           style={[
@@ -640,7 +605,6 @@ export function LockHeroScenery({
         </Animated.View>
       )}
 
-      {/* Day: Cottage Glowing Window */}
       {!isNight && (
         <Animated.View
           style={[
@@ -655,7 +619,6 @@ export function LockHeroScenery({
         />
       )}
 
-      {/* Security Emblem - Positioned in Bottom Right with Localized Micro-Animations */}
       <Animated.View
         style={[
           styles.bottomRightBadgeWrapper,
@@ -667,7 +630,6 @@ export function LockHeroScenery({
           },
         ]}
       >
-        {/* Localized compact burst ring on unlock */}
         <Animated.View
           style={[
             styles.burstRing,
@@ -679,7 +641,6 @@ export function LockHeroScenery({
           ]}
         />
 
-        {/* Ambient Pulsing Aura (Crimson on error, Emerald on unlock) */}
         <View
           style={[
             styles.badgeAura,
@@ -689,7 +650,6 @@ export function LockHeroScenery({
           ]}
         />
 
-        {/* Badge Icon (Morphs from lock-outline to lock-open) */}
         <View
           style={[
             styles.securityBadge,
