@@ -16,6 +16,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ColorPicker, PRESET_COLORS } from '@/components/ui/color-picker';
+import { DatePicker } from '@/components/ui/date-picker';
 import { IconPicker } from '@/components/ui/icon-picker';
 import { MoneyInput } from '@/components/ui/money-input';
 import { Colors } from '@/constants/theme';
@@ -386,13 +387,12 @@ export default function ManageGoalsModal() {
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>{t('goals.targetDate')}</Text>
-              <TextInput
-                style={styles.textInput}
+              <DatePicker
+                label={t('goals.targetDate')}
                 placeholder={t('goals.targetDatePlaceholder')}
-                placeholderTextColor={Colors.light.textSecondary}
                 value={targetDate}
-                onChangeText={setTargetDate}
+                onChange={setTargetDate}
+                allowClear
               />
             </View>
 

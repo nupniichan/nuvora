@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { DatePicker } from '@/components/ui/date-picker';
 import { EmptyState } from '@/components/ui/empty-state';
 import { MoneyInput } from '@/components/ui/money-input';
 import { Colors, MaxContentWidth } from '@/constants/theme';
@@ -298,13 +299,11 @@ export default function TransactionsScreen() {
             />
 
             <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>{t('transactions.dateFormat')}</Text>
-              <TextInput
-                style={styles.textInput}
+              <DatePicker
+                label={t('transactions.date')}
                 value={editDate}
-                onChangeText={setEditDate}
-                placeholder="YYYY-MM-DD"
-                placeholderTextColor={Colors.light.textSecondary}
+                onChange={setEditDate}
+                placeholder={t('datePicker.placeholder', { defaultValue: 'Chọn ngày...' })}
               />
             </View>
 
