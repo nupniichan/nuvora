@@ -87,3 +87,93 @@ export function getTimeOfDay(date: Date = new Date()): TimeOfDay {
   const hour = date.getHours();
   return hour >= 6 && hour < 18 ? 'day' : 'night';
 }
+
+export function addDays(dateStr: string, days: number): string {
+  const { year, month, day } = parseISODate(dateStr);
+  const d = new Date(year, month - 1, day + days);
+  return formatDateISO(d);
+}
+
+export function formatDateDisplay(dateStr?: string | null, locale: string = 'vi'): string {
+  if (!dateStr) return '';
+  const datePart = dateStr.includes('T') ? dateStr.split('T')[0] : dateStr;
+  const timePart = dateStr.includes('T') ? dateStr.split('T')[1]?.slice(0, 5) : '';
+
+  const { year, month, day } = parseISODate(datePart);
+  if (isNaN(year) || isNaN(month) || isNaN(day)) return dateStr;
+
+  const dd = String(day).padStart(2, '0');
+  const mm = String(month).padStart(2, '0');
+  const formattedDate = locale === 'vi' ? `${dd}/${mm}/${year}` : `${year}-${mm}-${dd}`;
+
+  if (timePart) {
+    return `${formattedDate} ${timePart}`;
+  }
+  return formattedDate;
+}
+
+export interface CalendarDayItem {
+  dateStr: string;
+  day: number;
+  month: number;
+  year: number;
+  isCurrentMonth: boolean;
+  isToday: boolean;
+}
+
+export function getCalendarMatrix(
+  year: number,
+  month: number,
+  todayStr: string = formatDateISO(new Date())
+): CalendarDayItem[] {
+  const firstDayOfMonth = new Date(year, month - 1, 1).getDay();
+  const daysInCurrentMonth = getDaysInMonth(year, month);
+
+  const prevMonth = month === 1 ? 12 : month - 1;
+  const prevYear = month === 1 ? year - 1 : year;
+  const daysInPrevMonth = getDaysInMonth(prevYear, prevMonth);
+
+  const items: CalendarDayItem[] = [];
+
+  for (let i = firstDayOfMonth - 1; i >= 0; i--) {
+    const day = daysInPrevMonth - i;
+    const dateStr = formatYMD(prevYear, prevMonth, day);
+    items.push({
+      dateStr,
+      day,
+      month: prevMonth,
+      year: prevYear,
+      isCurrentMonth: false,
+      isToday: dateStr === todayStr,
+    });
+  }
+
+  for (let day = 1; day <= daysInCurrentMonth; day++) {
+    const dateStr = formatYMD(year, month, day);
+    items.push({
+      dateStr,
+      day,
+      month,
+      year,
+      isCurrentMonth: true,
+      isToday: dateStr === todayStr,
+    });
+  }
+
+  const nextMonth = month === 12 ? 1 : month + 1;
+  const nextYear = month === 12 ? year + 1 : year;
+  const remainingCells = 42 - items.length;
+  for (let day = 1; day <= remainingCells; day++) {
+    const dateStr = formatYMD(nextYear, nextMonth, day);
+    items.push({
+      dateStr,
+      day,
+      month: nextMonth,
+      year: nextYear,
+      isCurrentMonth: false,
+      isToday: dateStr === todayStr,
+    });
+  }
+
+  return items;
+}

@@ -1,4 +1,12 @@
-import { calculateNextOccurrence, getDaysInMonth, getTimeOfDay } from '../date-utils';
+import {
+  addDays,
+  calculateNextOccurrence,
+  CalendarDayItem,
+  formatDateDisplay,
+  getCalendarMatrix,
+  getDaysInMonth,
+  getTimeOfDay,
+} from '../date-utils';
 
 describe('Date & Recurrence Utilities', () => {
   test('getDaysInMonth', () => {
@@ -44,5 +52,35 @@ describe('Date & Recurrence Utilities', () => {
 
     const dawnBeforeSix = new Date(2025, 0, 1, 5, 59);
     expect(getTimeOfDay(dawnBeforeSix)).toBe('night');
+  });
+
+  test('addDays adds and subtracts days correctly', () => {
+    expect(addDays('2026-09-15', 1)).toBe('2026-09-16');
+    expect(addDays('2026-09-15', -1)).toBe('2026-09-14');
+    expect(addDays('2026-09-30', 1)).toBe('2026-10-01');
+    expect(addDays('2026-03-01', -1)).toBe('2026-02-28');
+  });
+
+  test('formatDateDisplay formats dates for display', () => {
+    expect(formatDateDisplay('2026-09-15', 'vi')).toBe('15/09/2026');
+    expect(formatDateDisplay('2026-09-15', 'en')).toBe('2026-09-15');
+    expect(formatDateDisplay('2026-09-15T14:30:00', 'vi')).toBe('15/09/2026 14:30');
+    expect(formatDateDisplay('')).toBe('');
+    expect(formatDateDisplay(null)).toBe('');
+  });
+
+  test('getCalendarMatrix returns 42 calendar grid items', () => {
+    const matrix = getCalendarMatrix(2026, 9, '2026-09-15');
+    expect(matrix.length).toBe(42);
+    expect(matrix[0].day).toBe(30);
+    expect(matrix[0].isCurrentMonth).toBe(false);
+    expect(matrix[1].day).toBe(31);
+    expect(matrix[1].isCurrentMonth).toBe(false);
+    expect(matrix[2].day).toBe(1);
+    expect(matrix[2].isCurrentMonth).toBe(true);
+
+    const todayItem = matrix.find((item) => item.dateStr === '2026-09-15');
+    expect(todayItem?.isToday).toBe(true);
+    expect(todayItem?.isCurrentMonth).toBe(true);
   });
 });
