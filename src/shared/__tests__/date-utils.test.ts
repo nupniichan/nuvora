@@ -1,7 +1,6 @@
 import {
   addDays,
   calculateNextOccurrence,
-  CalendarDayItem,
   formatDateDisplay,
   getCalendarMatrix,
   getDaysInMonth,

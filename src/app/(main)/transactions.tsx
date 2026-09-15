@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { CategoryPicker } from '@/components/ui/category-picker';
 import { DatePicker } from '@/components/ui/date-picker';
 import { EmptyState } from '@/components/ui/empty-state';
 import { MoneyInput } from '@/components/ui/money-input';
@@ -81,10 +82,6 @@ export default function TransactionsScreen() {
 
   const handleTypeChange = (newType: EntryType) => {
     setEditType(newType);
-    const validCategories = categories.filter((category) => category.group_type === newType);
-    if (!validCategories.some((category) => category.id === editCategoryId)) {
-      setEditCategoryId(validCategories[0]?.id ?? null);
-    }
   };
 
   const handleSaveEdit = async () => {
@@ -307,53 +304,12 @@ export default function TransactionsScreen() {
               />
             </View>
 
-            <View style={styles.formGroup}>
-              <View style={styles.categoryLabelRow}>
-                <Text style={styles.formLabel}>{t('transactions.category')}</Text>
-                {editCategoryId && (
-                  <TouchableOpacity onPress={() => setEditCategoryId(null)}>
-                    <Text style={styles.clearCatText}>{t('common.removeSelection')}</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-
-              <View style={styles.categoryGrid}>
-                {categories
-                  .filter((category) => category.group_type === editType)
-                  .map((category) => {
-                    const isSelected = category.id === editCategoryId;
-                    const catColor = category.color || Colors.primaryDark;
-                    return (
-                      <TouchableOpacity
-                        key={category.id}
-                        style={[
-                          styles.categoryGridItem,
-                          isSelected && {
-                            backgroundColor: Colors.primaryLight,
-                            borderColor: Colors.primaryDark,
-                          },
-                        ]}
-                        onPress={() => setEditCategoryId(category.id)}
-                      >
-                        <MaterialIcons
-                          name={(category.icon as any) || 'category'}
-                          size={16}
-                          color={isSelected ? Colors.primaryStrong : catColor}
-                        />
-                        <Text
-                          style={[
-                            styles.categoryGridText,
-                            isSelected && styles.selectedCategoryChipText,
-                          ]}
-                          numberOfLines={1}
-                        >
-                          {category.name}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-              </View>
-            </View>
+            <CategoryPicker
+              type={editType}
+              selectedCategoryId={editCategoryId}
+              onSelectCategory={(catId) => setEditCategoryId(catId)}
+              allowClear
+            />
 
             <View style={styles.formGroup}>
               <Text style={styles.formLabel}>{t('transactions.note')}</Text>
@@ -608,44 +564,6 @@ const styles = StyleSheet.create({
     color: Colors.light.text,
     borderWidth: 1,
     borderColor: Colors.light.border,
-  },
-  selectedCategoryChipText: {
-    color: Colors.primaryStrong,
-    fontWeight: '700',
-  },
-  categoryLabelRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  clearCatText: {
-    fontSize: 12,
-    color: Colors.expense,
-    fontWeight: '600',
-  },
-  categoryGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    maxHeight: 180,
-  },
-  categoryGridItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderRadius: 10,
-    backgroundColor: Colors.light.backgroundElement,
-    borderWidth: 1,
-    borderColor: 'transparent',
-    maxWidth: '48%',
-  },
-  categoryGridText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: Colors.light.text,
-    flexShrink: 1,
   },
   modalFooter: {
     flexDirection: 'row',

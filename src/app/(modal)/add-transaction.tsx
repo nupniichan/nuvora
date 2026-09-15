@@ -1,5 +1,4 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -30,7 +29,6 @@ import { formatMoney } from '@/shared/money';
 
 export default function AddTransactionModal() {
   const { t } = useTranslation();
-  const router = useRouter();
   const closeModal = useSafeBack('/(main)/transactions');
 
   const [type, setType] = useState<EntryType>('expense');

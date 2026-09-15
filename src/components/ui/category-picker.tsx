@@ -1,6 +1,6 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ScrollView,
@@ -28,9 +28,10 @@ import { seedStarterCategories } from '@/features/categories/starter-templates';
 export interface CategoryPickerProps {
   type: EntryType;
   selectedCategoryId: string | null;
-  onSelectCategory: (categoryId: string, category?: CategoryWithGroup) => void;
+  onSelectCategory: (categoryId: string | null, category?: CategoryWithGroup) => void;
   label?: string;
   style?: StyleProp<ViewStyle>;
+  allowClear?: boolean;
   onCategoriesLoaded?: (categories: CategoryWithGroup[]) => void;
 }
 
@@ -40,6 +41,7 @@ export function CategoryPicker({
   onSelectCategory,
   label,
   style,
+  allowClear = false,
   onCategoriesLoaded,
 }: CategoryPickerProps) {
   const { t, i18n } = useTranslation();
@@ -55,32 +57,47 @@ export function CategoryPicker({
   const [customCatName, setCustomCatName] = useState('');
   const [creatingCustomCat, setCreatingCustomCat] = useState(false);
 
+  const onSelectCategoryRef = useRef(onSelectCategory);
+  const onCategoriesLoadedRef = useRef(onCategoriesLoaded);
+  const selectedCategoryIdRef = useRef(selectedCategoryId);
+
+  useEffect(() => {
+    onSelectCategoryRef.current = onSelectCategory;
+    onCategoriesLoadedRef.current = onCategoriesLoaded;
+    selectedCategoryIdRef.current = selectedCategoryId;
+  });
+
   const loadCategories = useCallback(async () => {
-    const [categoryGroups, categoryList] = await Promise.all([
-      getAllCategoryGroups(type),
-      getAllCategories(type),
-    ]);
-    setGroups(categoryGroups);
-    setCategories(categoryList);
-    onCategoriesLoaded?.(categoryList);
+    try {
+      const [categoryGroups, categoryList] = await Promise.all([
+        getAllCategoryGroups(type),
+        getAllCategories(type),
+      ]);
+      setGroups(categoryGroups);
+      setCategories(categoryList);
+      onCategoriesLoadedRef.current?.(categoryList);
 
-    const validSelected =
-      selectedCategoryId && categoryList.some((category) => category.id === selectedCategoryId);
-    if (!validSelected && categoryList.length > 0) {
-      onSelectCategory(categoryList[0].id, categoryList[0]);
-    } else if (validSelected) {
-      const activeCat = categoryList.find((category) => category.id === selectedCategoryId);
-      if (activeCat) {
-        onSelectCategory(activeCat.id, activeCat);
+      const currentId = selectedCategoryIdRef.current;
+      const validSelected = currentId && categoryList.some((category) => category.id === currentId);
+
+      if (!validSelected && categoryList.length > 0 && !allowClear) {
+        onSelectCategoryRef.current(categoryList[0].id, categoryList[0]);
+      } else if (validSelected) {
+        const activeCat = categoryList.find((category) => category.id === currentId);
+        if (activeCat) {
+          onSelectCategoryRef.current(activeCat.id, activeCat);
+        }
       }
-    }
 
-    setSelectedGroupFilter((previousGroupId) =>
-      previousGroupId === 'all' || categoryGroups.some((group) => group.id === previousGroupId)
-        ? previousGroupId
-        : 'all'
-    );
-  }, [type, selectedCategoryId, onSelectCategory, onCategoriesLoaded]);
+      setSelectedGroupFilter((previousGroupId) =>
+        previousGroupId === 'all' || categoryGroups.some((group) => group.id === previousGroupId)
+          ? previousGroupId
+          : 'all'
+      );
+    } catch (e) {
+      console.warn('Failed to load categories', e);
+    }
+  }, [type, allowClear]);
 
   useFocusEffect(
     useCallback(() => {
@@ -105,9 +122,9 @@ export function CategoryPicker({
       });
       const updatedCategories = await getAllCategories(targetGroup.type);
       setCategories(updatedCategories);
-      onCategoriesLoaded?.(updatedCategories);
+      onCategoriesLoadedRef.current?.(updatedCategories);
       const createdWithGroup = updatedCategories.find((category) => category.id === created.id);
-      onSelectCategory(created.id, createdWithGroup);
+      onSelectCategoryRef.current(created.id, createdWithGroup);
       setCustomCatName('');
       setIsAddingCustomCat(false);
       setIsCategoryExpanded(false);
@@ -118,25 +135,34 @@ export function CategoryPicker({
     }
   };
 
-  const filteredCategories = categories.filter((category) => {
-    const matchesGroup =
-      selectedGroupFilter === 'all' ||
-      category.group_id === selectedGroupFilter ||
-      category.group_name === selectedGroupFilter;
-    const matchesSearch =
-      !searchCatQuery.trim() ||
-      category.name.toLowerCase().includes(searchCatQuery.toLowerCase().trim()) ||
-      category.group_name.toLowerCase().includes(searchCatQuery.toLowerCase().trim());
-    return matchesGroup && matchesSearch;
-  });
+  const filteredCategories = useMemo(() => {
+    return categories.filter((category) => {
+      const matchesGroup =
+        selectedGroupFilter === 'all' ||
+        category.group_id === selectedGroupFilter ||
+        category.group_name === selectedGroupFilter;
+      const matchesSearch =
+        !searchCatQuery.trim() ||
+        category.name.toLowerCase().includes(searchCatQuery.toLowerCase().trim()) ||
+        category.group_name.toLowerCase().includes(searchCatQuery.toLowerCase().trim());
+      return matchesGroup && matchesSearch;
+    });
+  }, [categories, selectedGroupFilter, searchCatQuery]);
 
-  const selectedCategory = categories.find((category) => category.id === selectedCategoryId);
+  const selectedCategory = useMemo(() => {
+    return categories.find((category) => category.id === selectedCategoryId);
+  }, [categories, selectedCategoryId]);
 
   return (
     <Card style={[styles.fieldCard, style]}>
       <View style={styles.fieldHeaderRow}>
         <Text style={styles.fieldLabel}>{label || t('transactions.category')}</Text>
         <View style={styles.catHeaderRight}>
+          {allowClear && selectedCategoryId && (
+            <TouchableOpacity onPress={() => onSelectCategoryRef.current(null, undefined)}>
+              <Text style={styles.clearCatText}>{t('common.removeSelection')}</Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity onPress={() => setIsCategoryExpanded(!isCategoryExpanded)}>
             <Text style={styles.toggleCatBtnText}>
               {isCategoryExpanded
@@ -355,7 +381,7 @@ export function CategoryPicker({
                           },
                         ]}
                         onPress={() => {
-                          onSelectCategory(category.id, category);
+                          onSelectCategoryRef.current(category.id, category);
                           setIsCategoryExpanded(false);
                         }}
                       >
@@ -411,6 +437,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.light.textSecondary,
     textTransform: 'uppercase',
+  },
+  clearCatText: {
+    fontSize: 12,
+    color: Colors.light.textSecondary,
+    textDecorationLine: 'underline',
   },
   catHeaderRight: {
     flexDirection: 'row',
