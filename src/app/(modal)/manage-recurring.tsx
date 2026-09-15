@@ -11,12 +11,12 @@ import {
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { CategoryPicker } from '@/components/ui/category-picker';
 import { Input } from '@/components/ui/input';
 import { MoneyInput } from '@/components/ui/money-input';
 import { Colors } from '@/constants/theme';
 import { AccountRow, EntryType } from '@/database/types';
 import { getDefaultAccount } from '@/features/accounts/account-queries';
-import { CategoryWithGroup, getAllCategories } from '@/features/categories/category-queries';
 import { createRecurringRule, processRecurringCatchUp } from '@/features/recurring/recurring-queries';
 import { useSafeBack } from '@/hooks/use-safe-back';
 import { formatDateISO } from '@/shared/date-utils';
@@ -29,7 +29,6 @@ export default function ManageRecurringModal() {
   const [type, setType] = useState<EntryType>('expense');
   const [amountMinor, setAmountMinor] = useState<number>(0);
   const [activeAccount, setActiveAccount] = useState<AccountRow | null>(null);
-  const [categories, setCategories] = useState<CategoryWithGroup[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
 
   const [frequency, setFrequency] = useState<'monthly' | 'weekly' | 'daily'>('monthly');
@@ -39,19 +38,9 @@ export default function ManageRecurringModal() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function loadData() {
-      const availableCategories = await getAllCategories(type);
-      setCategories(availableCategories);
-      if (availableCategories.length > 0) {
-        setSelectedCategoryId(availableCategories[0].id);
-      }
-    }
-    void loadData().catch(() => setError(t('recurring.saveError')));
-  }, [t, type]);
-
-  useEffect(() => {
     getDefaultAccount().then(setActiveAccount).catch(() => setError(t('recurring.saveError')));
   }, [t]);
+
   const currency = activeAccount ? activeAccount.currency : 'VND';
 
   const handleSave = async () => {
@@ -142,32 +131,11 @@ export default function ManageRecurringModal() {
           onChangeMinor={setAmountMinor}
         />
 
-        {categories.length > 0 && (
-          <Card style={styles.fieldCard}>
-            <Text style={styles.fieldLabel}>{t('transactions.category')}</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipList}>
-              {categories.map((categoryItem) => {
-                const isSelected = categoryItem.id === selectedCategoryId;
-                return (
-                  <TouchableOpacity
-                    key={categoryItem.id}
-                    style={[styles.chip, isSelected && styles.selectedChip]}
-                    onPress={() => setSelectedCategoryId(categoryItem.id)}
-                  >
-                    <MaterialIcons
-                      name={(categoryItem.icon as any) || 'category'}
-                      size={14}
-                      color={isSelected ? '#1A1C2E' : Colors.light.textSecondary}
-                    />
-                    <Text style={[styles.chipText, isSelected && styles.selectedChipText]}>
-                      {categoryItem.name}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          </Card>
-        )}
+        <CategoryPicker
+          type={type}
+          selectedCategoryId={selectedCategoryId}
+          onSelectCategory={(catId) => setSelectedCategoryId(catId)}
+        />
 
         <Card style={styles.fieldCard}>
           <Text style={styles.fieldLabel}>{t('recurring.frequency')}</Text>
@@ -328,30 +296,6 @@ const styles = StyleSheet.create({
     color: Colors.light.textSecondary,
     textTransform: 'uppercase',
   },
-  chipList: {
-    gap: 8,
-  },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 10,
-    backgroundColor: Colors.light.backgroundElement,
-  },
-  selectedChip: {
-    backgroundColor: Colors.primary,
-  },
-  chipText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.light.text,
-  },
-  selectedChipText: {
-    color: '#1A1C2E',
-    fontWeight: '700',
-  },
   freqRow: {
     flexDirection: 'row',
     gap: 8,
@@ -439,3 +383,5 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
 });
+
+
