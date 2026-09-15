@@ -489,5 +489,34 @@
     "invalidMonth": "Select a valid month.",
     "invalidSavedLimit": "The saved limit could not be read. Please check your limit settings.",
     "saveError": "Could not save the spending limit. Please try again."
+  },
+  "datePicker": {
+    "selectDate": "Select Date",
+    "selectTime": "Select Time",
+    "selectDateTime": "Select Date & Time",
+    "placeholder": "Select date...",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "tomorrow": "Tomorrow",
+    "sevenDaysAgo": "7 days ago",
+    "startOfMonth": "Start of month",
+    "endOfMonth": "End of month",
+    "monthYear": "{{month}} {{year}}",
+    "time": "Time",
+    "hour": "Hour",
+    "minute": "Minute",
+    "clear": "Clear",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "quickPresets": "Quick Select",
+    "weekdays": {
+      "sun": "Su",
+      "mon": "Mo",
+      "tue": "Tu",
+      "wed": "We",
+      "thu": "Th",
+      "fri": "Fr",
+      "sat": "Sa"
+    }
   }
 }

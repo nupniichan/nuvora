@@ -489,5 +489,34 @@
     "invalidMonth": "Vui lòng chọn tháng hợp lệ.",
     "invalidSavedLimit": "Không thể đọc hạn mức đã lưu. Vui lòng kiểm tra lại thiết lập hạn mức.",
     "saveError": "Không thể lưu hạn mức. Vui lòng thử lại."
+  },
+  "datePicker": {
+    "selectDate": "Chọn ngày",
+    "selectTime": "Chọn giờ",
+    "selectDateTime": "Chọn ngày & giờ",
+    "placeholder": "Chọn ngày...",
+    "today": "Hôm nay",
+    "yesterday": "Hôm qua",
+    "tomorrow": "Ngày mai",
+    "sevenDaysAgo": "7 ngày trước",
+    "startOfMonth": "Đầu tháng",
+    "endOfMonth": "Cuối tháng",
+    "monthYear": "Tháng {{month}}, {{year}}",
+    "time": "Thời gian",
+    "hour": "Giờ",
+    "minute": "Phút",
+    "clear": "Xóa",
+    "confirm": "Xác nhận",
+    "cancel": "Hủy",
+    "quickPresets": "Chọn nhanh",
+    "weekdays": {
+      "sun": "CN",
+      "mon": "T2",
+      "tue": "T3",
+      "wed": "T4",
+      "thu": "T5",
+      "fri": "T6",
+      "sat": "T7"
+    }
   }
 }
