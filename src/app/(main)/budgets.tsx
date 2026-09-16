@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { FinancialCalendar } from '@/components/ui/financial-calendar';
 import { Card } from '@/components/ui/card';
 import { MonthlyLimitCard } from '@/components/ui/monthly-limit-card';
 import { getDefaultAccount } from '@/features/accounts/account-queries';
@@ -47,6 +48,7 @@ export default function BudgetsScreen() {
   const [loading, setLoading] = useState(true);
   const [history, setHistory] = useState<SpendingHistory | null>(null);
   const [loadError, setLoadError] = useState(false);
+  const [activeView, setActiveView] = useState<'overview' | 'calendar'>('overview');
   const requestId = useRef(0);
 
   const loadData = useCallback(async () => {
@@ -68,7 +70,6 @@ export default function BudgetsScreen() {
     } catch (e) {
       if (request !== requestId.current) return;
       setLoadError(true);
-      console.warn('Lỗi tải tổng quan ngân sách', e);
     } finally {
       if (request === requestId.current) setLoading(false);
     }
@@ -121,7 +122,6 @@ export default function BudgetsScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-      {}
       <View style={styles.header}>
         <View style={styles.titleRow}>
           <View>
@@ -130,7 +130,39 @@ export default function BudgetsScreen() {
           </View>
         </View>
 
-        {}
+        <View style={styles.segmentControl}>
+          <TouchableOpacity
+            accessibilityRole="tab"
+            accessibilityState={{ selected: activeView === 'overview' }}
+            style={[styles.segmentBtn, activeView === 'overview' && styles.segmentBtnActive]}
+            onPress={() => setActiveView('overview')}
+          >
+            <MaterialIcons
+              name="bar-chart"
+              size={14}
+              color={activeView === 'overview' ? Colors.primaryStrong : Colors.light.textSecondary}
+            />
+            <Text style={[styles.segmentLabel, activeView === 'overview' && styles.segmentLabelActive]}>
+              {t('calendar.viewOverview')}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            accessibilityRole="tab"
+            accessibilityState={{ selected: activeView === 'calendar' }}
+            style={[styles.segmentBtn, activeView === 'calendar' && styles.segmentBtnActive]}
+            onPress={() => setActiveView('calendar')}
+          >
+            <MaterialIcons
+              name="calendar-month"
+              size={14}
+              color={activeView === 'calendar' ? Colors.primaryStrong : Colors.light.textSecondary}
+            />
+            <Text style={[styles.segmentLabel, activeView === 'calendar' && styles.segmentLabelActive]}>
+              {t('calendar.viewCalendar')}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         <View style={styles.monthNav}>
           <TouchableOpacity accessibilityRole="button" accessibilityLabel={t('charts.previousMonth')} onPress={handlePrevMonth} style={styles.navArrowBtn}>
             <MaterialIcons name="chevron-left" size={24} color={Colors.light.text} />
@@ -143,10 +175,21 @@ export default function BudgetsScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
+        {activeView === 'calendar' && (
+          <FinancialCalendar
+            year={currentYear}
+            month={currentMonth}
+            currency={currency}
+            onPrevMonth={handlePrevMonth}
+            onNextMonth={handleNextMonth}
+          />
+        )}
+
+        {activeView === 'overview' && (
+          <>
         {loading ? <ActivityIndicator color={Colors.primaryStrong} /> : null}
         {loadError && <TouchableOpacity accessibilityRole="button" onPress={loadData}><Text style={styles.emptyCategoryText}>{t('charts.loadError')} · {t('common.retry')}</Text></TouchableOpacity>}
         {!loading && !loadError && <>
-        {}
         {snapshot && <MonthlyLimitCard snapshot={snapshot} />}
         <Card style={styles.overviewCard}>
           <View style={styles.overviewHeader}>
@@ -161,7 +204,6 @@ export default function BudgetsScreen() {
             )}
           </View>
 
-          {}
           <View style={styles.metricsRow}>
             <View style={styles.metricItem}>
               <Text style={styles.metricLabel}>{t('budgets.totalIncome')}</Text>
@@ -191,7 +233,6 @@ export default function BudgetsScreen() {
             </View>
           </View>
 
-          {}
           {totalIncome > 0 && (
             <View style={styles.overviewProgressSection}>
               <View style={styles.progressHeaderRow}>
@@ -456,6 +497,8 @@ export default function BudgetsScreen() {
           )}
         </View>
         </>}
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -492,6 +535,38 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 1.8,
     color: Colors.primaryDark,
+  },
+  segmentControl: {
+    flexDirection: 'row',
+    backgroundColor: Colors.light.backgroundElement,
+    borderRadius: 12,
+    padding: 3,
+    gap: 3,
+  },
+  segmentBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingVertical: 7,
+    borderRadius: 10,
+  },
+  segmentBtnActive: {
+    backgroundColor: Colors.light.surface,
+    shadowColor: Colors.primaryDark,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  segmentLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.light.textSecondary,
+  },
+  segmentLabelActive: {
+    color: Colors.primaryStrong,
   },
   monthNav: {
     flexDirection: 'row',

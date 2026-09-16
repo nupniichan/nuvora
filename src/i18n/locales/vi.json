@@ -195,7 +195,7 @@
     "totalExpense": "Tổng chi tiêu",
     "netBalance": "Số dư tháng",
     "saveBudget": "Lưu hạn mức",
-    "pageTitle": "Kế hoạch tài chính",
+    "pageTitle": "Thống kê tài chính",
     "overview": "Tổng quan dòng tiền",
     "overLimitCount": "{{count}} danh mục vượt hạn mức",
     "spendIncomeRatio": "Tỷ lệ chi tiêu / thu nhập",
@@ -344,7 +344,23 @@
     "balanceDecreasedWithPercent": "Giảm {{amount}} ({{percent}})"
   },
   "navigation": {
-    "plans": "Kế hoạch"
+    "plans": "Thống kê"
+  },
+  "calendar": {
+    "title": "Lịch tài chính",
+    "viewCalendar": "Lịch",
+    "viewOverview": "Tổng quan",
+    "viewGrid": "Dạng lịch",
+    "viewDay": "Theo ngày",
+    "viewMonth": "Theo tháng",
+    "income": "Thu nhập",
+    "expense": "Chi tiêu",
+    "net": "Số dư",
+    "noTransactions": "Không có giao dịch trong ngày này",
+    "noTransactionsMonth": "Không có giao dịch trong tháng này",
+    "dayTotal": "Tổng trong ngày",
+    "selectedDate": "Ngày {{date}}",
+    "weekdays": ["CN", "T2", "T3", "T4", "T5", "T6", "T7"]
   },
   "charts": {
     "dailySpending": "Nhịp chi tiêu",

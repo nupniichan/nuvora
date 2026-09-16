@@ -195,7 +195,7 @@
     "totalExpense": "Total Expenses",
     "netBalance": "Net Balance",
     "saveBudget": "Save Limits",
-    "pageTitle": "Financial plans",
+    "pageTitle": "Financial Statistics",
     "overview": "Cash flow overview",
     "overLimitCount": "{{count}} categories over limit",
     "spendIncomeRatio": "Spending to income",
@@ -344,7 +344,23 @@
     "balanceDecreasedWithPercent": "Down {{amount}} ({{percent}})"
   },
   "navigation": {
-    "plans": "Plans"
+    "plans": "Statistics"
+  },
+  "calendar": {
+    "title": "Financial Calendar",
+    "viewCalendar": "Calendar",
+    "viewOverview": "Overview",
+    "viewGrid": "Calendar",
+    "viewDay": "By day",
+    "viewMonth": "By month",
+    "income": "Income",
+    "expense": "Expenses",
+    "net": "Net",
+    "noTransactions": "No transactions on this day",
+    "noTransactionsMonth": "No transactions this month",
+    "dayTotal": "Day total",
+    "selectedDate": "{{date}}",
+    "weekdays": ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"]
   },
   "charts": {
     "dailySpending": "Your spending rhythm",

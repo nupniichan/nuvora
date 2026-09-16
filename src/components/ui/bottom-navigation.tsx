@@ -11,7 +11,7 @@ import { getActiveMainTab } from '@/shared/navigation';
 const tabs = [
   { name: 'index', href: '/(main)', label: 'dashboard.title', icon: 'dashboard' },
   { name: 'transactions', href: '/(main)/transactions', label: 'transactions.title', icon: 'receipt-long' },
-  { name: 'budgets', href: '/(main)/budgets', label: 'navigation.plans', icon: 'pie-chart' },
+  { name: 'budgets', href: '/(main)/budgets', label: 'navigation.plans', icon: 'bar-chart' },
   { name: 'more', href: '/(main)/more', label: 'settings.title', icon: 'settings' },
 ] as const;
 
