@@ -1,10 +1,9 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Colors } from '@/constants/theme';
-import { getCurrencyMetadata } from '@/shared/currency-config';
-import { formatMoney, toMinorUnits } from '@/shared/money';
+import { formatMinorForInput, parseAndFormatInput } from '@/shared/money';
 
 export interface MoneyInputProps {
   label?: string;
@@ -12,28 +11,35 @@ export interface MoneyInputProps {
   valueMinor: number;
   onChangeMinor: (minor: number) => void;
   error?: string;
+  placeholder?: string;
 }
 
-export function MoneyInput({ label, currency, valueMinor, onChangeMinor, error }: MoneyInputProps) {
+export function MoneyInput({
+  label,
+  currency,
+  valueMinor,
+  onChangeMinor,
+  error,
+  placeholder = '0',
+}: MoneyInputProps) {
   const { i18n } = useTranslation();
   const locale = i18n.resolvedLanguage === 'en' ? 'en-US' : 'vi-VN';
-  const meta = getCurrencyMetadata(currency);
-  const safeMinor = typeof valueMinor === 'number' && !isNaN(valueMinor) ? valueMinor : 0;
 
-  const displayValue =
-    safeMinor === 0 ? '' : (safeMinor / Math.pow(10, meta.decimalPlaces)).toString()
-  ;
+  const [textValue, setTextValue] = useState<string>(() =>
+    formatMinorForInput(valueMinor, currency, locale)
+  );
+
+  useEffect(() => {
+    const currentParsed = parseAndFormatInput(textValue, currency, locale);
+    if (currentParsed.minor !== valueMinor) {
+      setTextValue(formatMinorForInput(valueMinor, currency, locale));
+    }
+  }, [valueMinor, currency, locale]);
 
   const handleChangeText = (text: string) => {
-
-    const cleanText = text.replace(/[^0-9.]/g, '');
-    const num = parseFloat(cleanText);
-    if (!isNaN(num) && num >= 0) {
-      const minor = toMinorUnits(num, currency);
-      onChangeMinor(minor);
-    } else {
-      onChangeMinor(0);
-    }
+    const { formatted, minor } = parseAndFormatInput(text, currency, locale);
+    setTextValue(formatted);
+    onChangeMinor(minor);
   };
 
   return (
@@ -42,17 +48,14 @@ export function MoneyInput({ label, currency, valueMinor, onChangeMinor, error }
       <View style={[styles.inputRow, error ? styles.inputError : null]}>
         <TextInput
           style={styles.textInput}
-          value={displayValue}
+          value={textValue}
           onChangeText={handleChangeText}
           keyboardType="numeric"
-          placeholder="0"
+          placeholder={placeholder}
           placeholderTextColor={Colors.light.textSecondary}
         />
         <Text style={styles.currencyBadge}>{currency}</Text>
       </View>
-      <Text style={styles.formattedPreview}>
-        {formatMoney(valueMinor, currency, locale)}
-      </Text>
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
     </View>
   );
@@ -95,11 +98,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
-  },
-  formattedPreview: {
-    fontSize: 13,
-    color: Colors.light.textSecondary,
-    textAlign: 'right',
   },
   inputError: {
     borderColor: Colors.error,
