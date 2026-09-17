@@ -1,7 +1,9 @@
 import {
   addMoney,
   allocateMoney,
+  formatMinorForInput,
   formatMoney,
+  parseAndFormatInput,
   subtractMoney,
   toMajorUnits,
   toMinorUnits,
@@ -31,6 +33,36 @@ describe('Money Utilities', () => {
     expect(formatMoney(-1050, 'USD', 'en-US')).toBe('-$10.50');
   });
 
+  test('formatMinorForInput formats numbers for text inputs', () => {
+    expect(formatMinorForInput(1000000, 'VND', 'vi-VN')).toBe('1.000.000');
+    expect(formatMinorForInput(1000000, 'VND', 'en-US')).toBe('1,000,000');
+    expect(formatMinorForInput(1050, 'USD', 'en-US')).toBe('10.5');
+    expect(formatMinorForInput(0, 'VND')).toBe('');
+  });
+
+  test('parseAndFormatInput auto-formats as user types', () => {
+    expect(parseAndFormatInput('1000000', 'VND', 'vi-VN')).toEqual({
+      formatted: '1.000.000',
+      minor: 1000000,
+    });
+    expect(parseAndFormatInput('1.000.0000', 'VND', 'vi-VN')).toEqual({
+      formatted: '10.000.000',
+      minor: 10000000,
+    });
+    expect(parseAndFormatInput('1.000.00', 'VND', 'vi-VN')).toEqual({
+      formatted: '100.000',
+      minor: 100000,
+    });
+    expect(parseAndFormatInput('', 'VND', 'vi-VN')).toEqual({
+      formatted: '',
+      minor: 0,
+    });
+    expect(parseAndFormatInput('1000.5', 'USD', 'en-US')).toEqual({
+      formatted: '1,000.5',
+      minor: 100050,
+    });
+  });
+
   test('addMoney and subtractMoney', () => {
     const a = { amount: 100, currency: 'USD' };
     const b = { amount: 50, currency: 'USD' };
@@ -40,18 +72,15 @@ describe('Money Utilities', () => {
   });
 
   test('allocateMoney preserves exact total sum using Largest Remainder Method', () => {
-
     const total = 100;
     const weights = [1, 1, 1];
     const allocations = allocateMoney(total, weights);
 
     expect(allocations.reduce((sum, val) => sum + val, 0)).toBe(total);
-
     expect(allocations).toEqual([34, 33, 33]);
   });
 
   test('allocateMoney for percentage weights', () => {
-
     const total = 100000;
     const weights = [50, 30, 20];
     const allocations = allocateMoney(total, weights);
