@@ -16,6 +16,49 @@ export function formatDateISO(date: Date | string = new Date()): string {
   return formatYMD(date.getFullYear(), date.getMonth() + 1, date.getDate());
 }
 
+export function formatDateTimeISO(date: Date | string = new Date()): string {
+  if (typeof date === 'string') {
+    if (date.includes('T')) {
+      const parts = date.split('T');
+      const timePart = parts[1]?.slice(0, 8) || '00:00:00';
+      const timeParts = timePart.split(':');
+      const hh = (timeParts[0] || '00').padStart(2, '0');
+      const mm = (timeParts[1] || '00').padStart(2, '0');
+      const ss = (timeParts[2] || '00').padStart(2, '0');
+      return `${parts[0]}T${hh}:${mm}:${ss}`;
+    }
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    return `${date}T${hh}:${mm}:00`;
+  }
+  const ymd = formatYMD(date.getFullYear(), date.getMonth() + 1, date.getDate());
+  const hh = String(date.getHours()).padStart(2, '0');
+  const mm = String(date.getMinutes()).padStart(2, '0');
+  const ss = String(date.getSeconds()).padStart(2, '0');
+  return `${ymd}T${hh}:${mm}:${ss}`;
+}
+
+export function appendCurrentTime(dateStr: string): string {
+  if (dateStr.includes('T')) return dateStr;
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2, '0');
+  const mm = String(now.getMinutes()).padStart(2, '0');
+  return `${dateStr}T${hh}:${mm}:00`;
+}
+
+export function hasTime(dateStr?: string | null): boolean {
+  return Boolean(dateStr && dateStr.includes('T'));
+}
+
+export function extractDatePart(dateStr: string): string {
+  return dateStr.includes('T') ? dateStr.split('T')[0] : dateStr;
+}
+
+export function extractTimePart(dateStr: string): string {
+  return dateStr.includes('T') ? dateStr.split('T')[1]?.slice(0, 5) : '';
+}
+
 export function nowISO(): string {
   return new Date().toISOString();
 }

@@ -1,10 +1,15 @@
 import {
   addDays,
+  appendCurrentTime,
   calculateNextOccurrence,
+  extractDatePart,
+  extractTimePart,
   formatDateDisplay,
+  formatDateTimeISO,
   getCalendarMatrix,
   getDaysInMonth,
   getTimeOfDay,
+  hasTime,
 } from '../date-utils';
 
 describe('Date & Recurrence Utilities', () => {
@@ -81,5 +86,25 @@ describe('Date & Recurrence Utilities', () => {
     const todayItem = matrix.find((item) => item.dateStr === '2026-09-15');
     expect(todayItem?.isToday).toBe(true);
     expect(todayItem?.isCurrentMonth).toBe(true);
+  });
+
+  test('formatDateTimeISO, appendCurrentTime, hasTime, extractDatePart, extractTimePart', () => {
+    const d = new Date(2026, 8, 18, 14, 30, 0);
+    expect(formatDateTimeISO(d)).toBe('2026-09-18T14:30:00');
+    expect(formatDateTimeISO('2026-09-18T09:15:00')).toBe('2026-09-18T09:15:00');
+
+    expect(hasTime('2026-09-18T14:30:00')).toBe(true);
+    expect(hasTime('2026-09-18')).toBe(false);
+    expect(hasTime(null)).toBe(false);
+
+    expect(extractDatePart('2026-09-18T14:30:00')).toBe('2026-09-18');
+    expect(extractDatePart('2026-09-18')).toBe('2026-09-18');
+
+    expect(extractTimePart('2026-09-18T14:30:00')).toBe('14:30');
+    expect(extractTimePart('2026-09-18')).toBe('');
+
+    const appended = appendCurrentTime('2026-09-18');
+    expect(appended.startsWith('2026-09-18T')).toBe(true);
+    expect(appendCurrentTime('2026-09-18T10:00:00')).toBe('2026-09-18T10:00:00');
   });
 });
