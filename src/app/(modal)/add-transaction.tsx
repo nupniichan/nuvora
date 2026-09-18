@@ -24,7 +24,7 @@ import { useSafeBack } from '@/hooks/use-safe-back';
 import { createTransaction } from '@/features/transactions/transaction-queries';
 import { withMonthlyLimitConfirmation } from '@/features/budgets/confirm-monthly-limit';
 import { isValidTransactionDate } from '@/features/budgets/monthly-limits';
-import { formatDateISO } from '@/shared/date-utils';
+import { extractDatePart, formatDateISO, formatDateTimeISO, parseISODate } from '@/shared/date-utils';
 import { formatMoney } from '@/shared/money';
 
 export default function AddTransactionModal() {
@@ -37,7 +37,7 @@ export default function AddTransactionModal() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<CategoryWithGroup | null>(null);
   const [note, setNote] = useState<string>('');
-  const [date, setDate] = useState<string>(formatDateISO(new Date()));
+  const [date, setDate] = useState<string>(formatDateTimeISO(new Date()));
   const [datePreset, setDatePreset] = useState<'today' | 'yesterday' | 'custom'>('today');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,9 +57,9 @@ export default function AddTransactionModal() {
   useEffect(() => {
     async function checkLimit() {
       if (type === 'expense' && selectedCategoryId && amountMinor > 0) {
-        const parsedDate = new Date(date);
-        const year = parsedDate.getFullYear();
-        const month = parsedDate.getMonth() + 1;
+        const datePart = extractDatePart(date);
+        const { year, month } = parseISODate(datePart);
+        if (isNaN(year) || isNaN(month)) return;
         const limitResult = await checkSpendingLimit(selectedCategoryId, year, month, amountMinor);
         if (limitResult.hasLimit) {
           setLimitWarning({
@@ -83,11 +83,12 @@ export default function AddTransactionModal() {
 
   const handleDateChange = (newDate: string) => {
     setDate(newDate);
+    const dateOnly = extractDatePart(newDate);
     const today = formatDateISO(new Date());
     const yesterday = formatDateISO(new Date(Date.now() - 86400000));
-    if (newDate === today) {
+    if (dateOnly === today) {
       setDatePreset('today');
-    } else if (newDate === yesterday) {
+    } else if (dateOnly === yesterday) {
       setDatePreset('yesterday');
     } else {
       setDatePreset('custom');
@@ -98,11 +99,11 @@ export default function AddTransactionModal() {
     setDatePreset(preset);
     const now = new Date();
     if (preset === 'today') {
-      setDate(formatDateISO(now));
+      setDate(formatDateTimeISO(now));
     } else if (preset === 'yesterday') {
       const yesterday = new Date(now);
       yesterday.setDate(yesterday.getDate() - 1);
-      setDate(formatDateISO(yesterday));
+      setDate(formatDateTimeISO(yesterday));
     }
   };
 
@@ -232,6 +233,7 @@ export default function AddTransactionModal() {
           </View>
 
           <DatePicker
+            mode="datetime"
             value={date}
             onChange={handleDateChange}
             placeholder={t('datePicker.placeholder', { defaultValue: 'Chọn ngày...' })}

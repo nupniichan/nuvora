@@ -45,7 +45,7 @@ import {
   skipOccurrence,
 } from '@/features/recurring/recurring-queries';
 import { getTransactions } from '@/features/transactions/transaction-queries';
-import { formatDateISO } from '@/shared/date-utils';
+import { formatDateDisplay, formatDateISO } from '@/shared/date-utils';
 import { formatMoney } from '@/shared/money';
 
 interface UpcomingForecastItem {
@@ -295,7 +295,7 @@ export default function DashboardScreen() {
                   <View style={styles.pendingDetails}>
                     <Text style={styles.pendingRuleName}>{item.rule_name}</Text>
                     <Text style={styles.pendingDate}>
-                      {t('dashboard.dueOn', { date: item.scheduled_date })}
+                      {t('dashboard.dueOn', { date: formatDateDisplay(item.scheduled_date, locale === 'vi-VN' ? 'vi' : 'en') })}
                     </Text>
                   </View>
                   <Text
@@ -518,7 +518,7 @@ export default function DashboardScreen() {
                   </View>
                   <View style={styles.txInfo}>
                     <Text style={styles.txNote} numberOfLines={1}>{transaction.note || t(`transactions.${transaction.type}`)}</Text>
-                    <Text style={styles.txDate}>{transaction.date}</Text>
+                    <Text style={styles.txDate}>{formatDateDisplay(transaction.date, locale === 'vi-VN' ? 'vi' : 'en')}</Text>
                   </View>
                   <Text
                     style={[

@@ -108,6 +108,10 @@ export function DatePicker({
       const [hours, minutes] = timePart.split(':').map((num) => parseInt(num, 10));
       setSelectedHour(isNaN(hours) ? 12 : Math.max(0, Math.min(23, hours)));
       setSelectedMinute(isNaN(minutes) ? 0 : Math.max(0, Math.min(59, minutes)));
+    } else {
+      const now = new Date();
+      setSelectedHour(now.getHours());
+      setSelectedMinute(now.getMinutes());
     }
     setIsOpen(true);
   }, [disabled, value, todayDateString]);

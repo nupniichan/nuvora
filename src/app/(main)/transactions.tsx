@@ -29,7 +29,7 @@ import {
   getTransactions,
   updateTransaction,
 } from '@/features/transactions/transaction-queries';
-import { formatDateISO } from '@/shared/date-utils';
+import { appendCurrentTime, formatDateDisplay, formatDateTimeISO } from '@/shared/date-utils';
 import { formatMoney } from '@/shared/money';
 
 import { alertMessage, confirmAction } from '@/shared/dialog';
@@ -37,7 +37,8 @@ import { withMonthlyLimitConfirmation } from '@/features/budgets/confirm-monthly
 import { isValidTransactionDate } from '@/features/budgets/monthly-limits';
 
 export default function TransactionsScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = i18n.resolvedLanguage === 'en' ? 'en' : 'vi';
   const router = useRouter();
 
   const [transactions, setTransactions] = useState<TransactionRow[]>([]);
@@ -76,7 +77,7 @@ export default function TransactionsScreen() {
     setEditAmount(typeof transaction.amount === 'number' && !isNaN(transaction.amount) ? transaction.amount : 0);
     setEditCategoryId(transaction.category_id || null);
     setEditNote(transaction.note || '');
-    setEditDate(transaction.date || formatDateISO(new Date()));
+    setEditDate(transaction.date ? appendCurrentTime(transaction.date) : formatDateTimeISO(new Date()));
     setEditModalVisible(true);
   };
 
@@ -93,7 +94,7 @@ export default function TransactionsScreen() {
     }
     setSaving(true);
     try {
-      const date = editDate.trim() || formatDateISO(new Date());
+      const date = editDate.trim() ? appendCurrentTime(editDate.trim()) : formatDateTimeISO(new Date());
       if (!isValidTransactionDate(date)) {
         alertMessage(t('common.error'), t('monthlyLimit.invalidDate'));
         return;
@@ -204,7 +205,7 @@ export default function TransactionsScreen() {
                       {item.note || category?.name || t(`transactions.${item.type}`)}
                     </Text>
                     <Text style={styles.txDate} numberOfLines={2}>
-                      {category?.name ? `${category.name} • ` : ''}{item.date}
+                      {category?.name ? `${category.name} • ` : ''}{formatDateDisplay(item.date, locale)}
                     </Text>
                   </View>
                 </View>
@@ -297,6 +298,7 @@ export default function TransactionsScreen() {
 
             <View style={styles.formGroup}>
               <DatePicker
+                mode="datetime"
                 label={t('transactions.date')}
                 value={editDate}
                 onChange={setEditDate}
