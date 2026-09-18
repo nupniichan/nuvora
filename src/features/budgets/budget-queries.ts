@@ -226,7 +226,7 @@ export async function getMonthlySnapshot(
      LEFT JOIN categories c ON c.id = t.category_id
      LEFT JOIN category_groups cg ON cg.id = c.group_id
      WHERE t.date >= ? AND t.date <= ?;`,
-    [periodStart, periodEnd]
+    [periodStart, `${periodEnd}T23:59:59`]
   );
 
   let totalIncome = 0;
@@ -486,7 +486,7 @@ export async function checkSpendingLimit(
   const res = await db.getFirstAsync<{ total_spent: number }>(
     `SELECT SUM(amount) as total_spent FROM transactions
      WHERE type = 'expense' AND category_id = ? AND date >= ? AND date <= ?;`,
-    [categoryId, start, end]
+    [categoryId, start, `${end}T23:59:59`]
   );
 
   const spent = Number(res?.total_spent) || 0;

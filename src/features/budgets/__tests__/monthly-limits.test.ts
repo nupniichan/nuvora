@@ -93,7 +93,7 @@ it('excludes the old entry on edit and checks the destination month', async () =
   const entry = await createTransaction({ type: 'expense', amount: 60, currency: 'VND', accountId: account.id, date: '2026-09-08' });
   await updateTransaction(entry.id, { amount: 100 });
   await expect(updateTransaction(entry.id, { date: '2026-10-01' })).rejects.toMatchObject({ projection: { spent: 0, projected: 100, exceeded: 50 } });
-  expect((await getTransactions())[0].date).toBe('2026-09-08');
+  expect((await getTransactions())[0].date).toMatch(/^2026-09-08/);
   expect((await getAccountById(account.id))?.balance).toBe(-100);
   await updateTransaction(entry.id, { type: 'income', amount: 500 });
   expect((await getAccountById(account.id))?.balance).toBe(500);

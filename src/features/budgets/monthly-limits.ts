@@ -18,8 +18,9 @@ export function monthKey(year: number, month: number): string {
 }
 
 export function isValidTransactionDate(date: string): boolean {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;
-  const [year, month, day] = date.split('-').map(Number);
+  if (!/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?Z?)?$/.test(date)) return false;
+  const datePart = date.includes('T') ? date.split('T')[0] : date;
+  const [year, month, day] = datePart.split('-').map(Number);
   return year >= 1000 && month >= 1 && month <= 12 && day >= 1 && day <= new Date(year, month, 0).getDate();
 }
 
@@ -79,10 +80,11 @@ export interface MonthlyLimitProjection {
 
 export async function projectMonthlyExpense(date: string, currency: string, amount: number, excludeTransactionId?: string): Promise<MonthlyLimitProjection> {
   if (!isValidTransactionDate(date)) throw new MonthlyLimitValidationError('invalidDate');
-  const [year, month] = date.split('-').map(Number);
+  const datePart = date.includes('T') ? date.split('T')[0] : date;
+  const [year, month] = datePart.split('-').map(Number);
   const key = monthKey(year, month);
   const { limit } = await getMonthlyLimit(year, month, currency);
-  const end = `${key}-${new Date(year, month, 0).getDate()}`;
+  const end = `${key}-${new Date(year, month, 0).getDate()}T23:59:59`;
   const rows = await getDatabase().getAllAsync<TransactionRow>('SELECT * FROM transactions WHERE date >= ? AND date <= ?;', [`${key}-01`, end]);
   const spent = rows.filter(row => row.type === 'expense' && row.status === 'confirmed' && row.currency === currency && row.id !== excludeTransactionId)
     .reduce((total, row) => total + row.amount, 0);

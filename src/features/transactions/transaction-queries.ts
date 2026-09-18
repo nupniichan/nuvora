@@ -3,6 +3,7 @@ import { runGoalWrite } from '@/database/goal-write';
 import { TransactionRow, TransactionType } from '@/database/types';
 import { generateUUID } from '@/shared/uuid';
 import { requireMonthlyLimitApproval } from '@/features/budgets/monthly-limits';
+import { formatDateTimeISO } from '@/shared/date-utils';
 
 export interface TransactionFilter {
   accountId?: string;
@@ -36,7 +37,7 @@ export async function getTransactions(filter: TransactionFilter = {}): Promise<T
   }
   if (filter.endDate) {
     conditions.push('date <= ?');
-    params.push(filter.endDate);
+    params.push(filter.endDate.includes('T') ? filter.endDate : `${filter.endDate}T23:59:59`);
   }
 
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
@@ -77,9 +78,10 @@ async function createTransactionOnce(data: {
   }
   const id = generateUUID();
   const now = new Date().toISOString();
+  const txDate = data.date.includes('T') ? data.date : formatDateTimeISO(data.date);
 
   await db.withTransactionAsync(async () => {
-    await requireMonthlyLimitApproval({ ...data, operation: `create:${data.accountId}` }, data.monthlyLimitApproval);
+    await requireMonthlyLimitApproval({ ...data, date: txDate, operation: `create:${data.accountId}` }, data.monthlyLimitApproval);
 
     await db.runAsync(
       `INSERT INTO transactions (id, type, amount, currency, account_id, to_account_id, category_id, recurring_rule_id, occurrence_id, note, date, status, created_at, updated_at)
@@ -95,7 +97,7 @@ async function createTransactionOnce(data: {
         data.recurringRuleId || null,
         data.occurrenceId || null,
         data.note || null,
-        data.date,
+        txDate,
         now,
         now,
       ]
@@ -232,7 +234,9 @@ async function updateTransactionOnce(
     const newAccountId = data.accountId !== undefined ? data.accountId : oldTx.account_id;
     const newCategoryId = data.categoryId !== undefined ? data.categoryId : oldTx.category_id;
     const newNote = data.note !== undefined ? data.note : oldTx.note;
-    const newDate = data.date !== undefined ? data.date : oldTx.date;
+    const newDate = data.date !== undefined
+      ? (data.date.includes('T') ? data.date : formatDateTimeISO(data.date))
+      : oldTx.date;
 
     if (newType === 'income') {
       await db.runAsync('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?;', [
