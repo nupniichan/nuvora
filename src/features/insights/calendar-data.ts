@@ -56,7 +56,7 @@ export async function getCalendarMonthData(
      LEFT JOIN categories c ON t.category_id = c.id
      LEFT JOIN category_groups cg ON c.group_id = cg.id
      WHERE t.date >= ? AND t.date <= ?;`,
-    [startDate, endDate],
+    [startDate, `${endDate}T23:59:59`],
   );
 
   const dayMap = new Map<string, CalendarDayData>();
@@ -119,7 +119,7 @@ export async function getYearMonthlySummaries(
     `SELECT id, type, amount, currency, date, status
      FROM transactions
      WHERE date >= ? AND date <= ?;`,
-    [startDate, endDate],
+    [startDate, `${endDate}T23:59:59`],
   );
 
   const summaries: MonthSummary[] = Array.from({ length: 12 }, (_, i) => ({

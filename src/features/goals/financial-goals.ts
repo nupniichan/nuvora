@@ -11,7 +11,7 @@ import {
 import { getDefaultAccount } from '@/features/accounts/account-queries';
 import { buildBalanceComparisons } from '@/features/insights/balance-comparison';
 import { getTransactions } from '@/features/transactions/transaction-queries';
-import { formatDateISO } from '@/shared/date-utils';
+import { formatDateTimeISO } from '@/shared/date-utils';
 import { generateUUID } from '@/shared/uuid';
 import { requireMonthlyLimitApproval } from '@/features/budgets/monthly-limits';
 
@@ -123,7 +123,7 @@ async function completeGoalOnce(id: string, note?: string, monthlyLimitApproval?
     if (!account || balance < goal.target_amount) throw new GoalActionError('insufficientFunds');
 
     const now = new Date().toISOString();
-    const date = formatDateISO(new Date());
+    const date = formatDateTimeISO(new Date());
     const transactionId = 'goal-completion:' + id;
     await requireMonthlyLimitApproval({ type: 'expense', date, currency: account.currency, amount: goal.target_amount, operation: transactionId }, monthlyLimitApproval);
     await txn.runAsync(

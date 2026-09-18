@@ -39,19 +39,20 @@ export function buildSpendingHistory(
 
   for (const tx of transactions) {
     if (tx.currency !== currency || tx.status !== 'confirmed' || tx.type === 'transfer' || !Number.isSafeInteger(tx.amount) || tx.amount <= 0) continue;
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(tx.date)) continue;
-    const [txYear, txMonth, txDay] = tx.date.split('-').map(Number);
+    if (!/^\d{4}-\d{2}-\d{2}/.test(tx.date)) continue;
+    const dateOnly = tx.date.includes('T') ? tx.date.split('T')[0] : tx.date;
+    const [txYear, txMonth, txDay] = dateOnly.split('-').map(Number);
     if (txMonth < 1 || txMonth > 12 || txDay < 1 || txDay > getDaysInMonth(txYear, txMonth)) continue;
-    const period = monthlyMap.get(tx.date.slice(0, 7));
+    const period = monthlyMap.get(dateOnly.slice(0, 7));
     if (!period) continue;
     if (tx.type === 'income') {
       period.income += tx.amount;
-      const day = dailyMap.get(tx.date);
+      const day = dailyMap.get(dateOnly);
       if (day) day.income += tx.amount;
     }
     if (tx.type === 'expense') {
       period.expense += tx.amount;
-      const day = dailyMap.get(tx.date);
+      const day = dailyMap.get(dateOnly);
       if (day) day.amount += tx.amount;
     }
   }
@@ -62,7 +63,7 @@ export async function getSpendingHistory(year: number, month: number, currency: 
   const start = new Date(year, month - 6, 1);
   const transactions = await getTransactions({
     startDate: formatYMD(start.getFullYear(), start.getMonth() + 1, 1),
-    endDate: formatYMD(year, month, getDaysInMonth(year, month)),
+    endDate: `${formatYMD(year, month, getDaysInMonth(year, month))}T23:59:59`,
   });
   return buildSpendingHistory(transactions, year, month, currency);
 }

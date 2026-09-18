@@ -18,8 +18,9 @@ export interface BalanceComparison {
 }
 
 function validDate(value: string): boolean {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-  const [year, month, day] = value.split('-').map(Number);
+  if (!/^\d{4}-\d{2}-\d{2}/.test(value)) return false;
+  const dateOnly = value.includes('T') ? value.split('T')[0] : value;
+  const [year, month, day] = dateOnly.split('-').map(Number);
   return month >= 1 && month <= 12 && day >= 1 && day <= getDaysInMonth(year, month);
 }
 
@@ -28,9 +29,14 @@ export function buildBalanceComparisons(
   transactions: TransactionRow[],
   asOf: Date = new Date(),
 ): BalanceComparison[] {
-  const today = formatDateISO(asOf);
-  const monthEnd = formatDateISO(new Date(asOf.getFullYear(), asOf.getMonth(), 0));
-  const yearEnd = formatDateISO(new Date(asOf.getFullYear() - 1, 11, 31));
+  const todayDateOnly = formatDateISO(asOf);
+  const monthEndDateOnly = formatDateISO(new Date(asOf.getFullYear(), asOf.getMonth(), 0));
+  const yearEndDateOnly = formatDateISO(new Date(asOf.getFullYear() - 1, 11, 31));
+
+  const today = `${todayDateOnly}T23:59:59`;
+  const monthEnd = `${monthEndDateOnly}T23:59:59`;
+  const yearEnd = `${yearEndDateOnly}T23:59:59`;
+
   const totals = new Map<string, { balance: number; month: number; year: number; monthKnown: boolean; yearKnown: boolean }>();
   const confirmed = transactions.filter((tx) => tx.status === 'confirmed'
     && Number.isSafeInteger(tx.amount) && tx.amount > 0 && validDate(tx.date));
@@ -86,7 +92,7 @@ export function buildBalanceComparisons(
   return Array.from(totals, ([currency, total]) => ({
     currency,
     balance: total.balance,
-    month: change(total.balance, total.month, total.monthKnown, monthEnd),
-    year: change(total.balance, total.year, total.yearKnown, yearEnd),
+    month: change(total.balance, total.month, total.monthKnown, monthEndDateOnly),
+    year: change(total.balance, total.year, total.yearKnown, yearEndDateOnly),
   }));
 }

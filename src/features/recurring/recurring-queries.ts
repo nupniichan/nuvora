@@ -7,7 +7,7 @@ import {
 } from '@/database/types';
 import { createTransaction } from '@/features/transactions/transaction-queries';
 import { MonthlyLimitExceededError } from '@/features/budgets/monthly-limits';
-import { formatDateISO } from '@/shared/date-utils';
+import { appendCurrentTime, formatDateISO } from '@/shared/date-utils';
 import { generateUUID } from '@/shared/uuid';
 import { calculateDueOccurrences } from './recurring-engine';
 
@@ -136,7 +136,7 @@ export async function confirmOccurrence(occurrenceId: string, monthlyLimitApprov
     categoryId: rule.category_id || undefined,
     recurringRuleId: rule.id,
     occurrenceId: occurrence.id,
-    date: occurrence.scheduled_date,
+    date: appendCurrentTime(occurrence.scheduled_date),
     note: `Định kỳ: ${rule.name}`,
     monthlyLimitApproval,
   });
@@ -210,7 +210,7 @@ export async function processRecurringCatchUp(
             categoryId: rule.category_id || undefined,
             recurringRuleId: rule.id,
             occurrenceId,
-            date: scheduledDate,
+            date: appendCurrentTime(scheduledDate),
             note: `Tự động định kỳ: ${rule.name}`,
           });
 
