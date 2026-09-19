@@ -36,6 +36,10 @@ A privacy finance application, all your data stays encrypted on your device.
 - **Biometric unlock & encrypted backups** security without the friction
 - **Multi-language support** available in Vietnamese and English ( will support more )
 
+## Philosophy
+Your money, your data, your privacy. No ads, no tracking. I don't care about your data. All I care about is your experience. <br/>
+If it's useful to you then I'm happy. That's all.
+
 ## Tech Stack
 
 - **Framework:** React Native (Expo SDK 57)
