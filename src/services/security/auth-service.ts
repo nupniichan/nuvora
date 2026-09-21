@@ -126,6 +126,17 @@ async function verifyCurrentPassword(password: string): Promise<void> {
   }
 }
 
+export async function verifyMasterPassword(password: string): Promise<boolean> {
+  try {
+    const activeDek = getActiveDek();
+    if (!activeDek || !isAppUnlocked()) return false;
+    const dek = await unwrapDEK(password);
+    return dek === activeDek;
+  } catch {
+    return false;
+  }
+}
+
 export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
   if (accountOperation) throw new Error('accountSecurity.busy');
   const validation = validatePassword(newPassword);

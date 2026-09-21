@@ -1,4 +1,4 @@
-import { changePassword, deleteAccount, getActiveDek, isAppUnlocked, lockApp, resumeAccountDeletion, unlockWithPassword } from '../auth-service';
+import { changePassword, deleteAccount, getActiveDek, isAppUnlocked, lockApp, resumeAccountDeletion, unlockWithPassword, verifyMasterPassword } from '../auth-service';
 import { initializeKeyEnvelope, isKeyEnvelopeInitialized, unwrapDEK } from '../key-manager';
 import { StorageKeys } from '../secure-storage';
 import { getDatabase, closeDatabase } from '@/database/database';
@@ -45,6 +45,14 @@ test('wrong passwords cannot rotate or delete an account', async () => {
   await expect(deleteAccount('incorrect')).rejects.toThrow('incorrectPassword');
   expect(values).toEqual(snapshot);
   expect(isAppUnlocked()).toBe(true);
+});
+
+test('verifyMasterPassword returns true for active master password and false otherwise', async () => {
+  expect(await verifyMasterPassword(password)).toBe(true);
+  expect(await verifyMasterPassword('wrong-password')).toBe(false);
+
+  lockApp();
+  expect(await verifyMasterPassword(password)).toBe(false);
 });
 
 test('failed envelope commit leaves the old password usable', async () => {
