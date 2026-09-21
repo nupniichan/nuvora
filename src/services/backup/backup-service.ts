@@ -1,4 +1,5 @@
 import { getDatabase } from '@/database/database';
+import { recordBackupCompleted } from '@/services/backup/backup-reminder';
 import {
   DEFAULT_KDF_PARAMS,
   KdfParameters,
@@ -46,6 +47,8 @@ export async function createEncryptedBackup(password: string): Promise<string> {
   if (!password) {
     throw new Error('Mật khẩu bảo vệ sao lưu không được để trống.');
   }
+
+  await recordBackupCompleted();
 
   const db = getDatabase();
 
