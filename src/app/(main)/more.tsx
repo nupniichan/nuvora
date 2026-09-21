@@ -1,6 +1,6 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -10,12 +10,27 @@ import { Card } from '@/components/ui/card';
 import { CurrencySwitchCard } from '@/components/ui/currency-switch-card';
 import { Colors, MaxContentWidth } from '@/constants/theme';
 import { getAppLanguage, setAppLanguage } from '@/i18n';
+import {
+  BackupReminderConfig,
+  getBackupReminderConfig,
+} from '@/services/backup/backup-reminder';
 import { lockApp } from '@/services/security/auth-service';
+import { formatDateDisplay } from '@/shared/date-utils';
 
 export default function MoreScreen() {
   const { t, i18n } = useTranslation();
   const router = useRouter();
   const currentLang = (i18n.language?.startsWith('en') || getAppLanguage() === 'en') ? 'en' : 'vi';
+
+  const [backupConfig, setBackupConfig] = useState<BackupReminderConfig | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      getBackupReminderConfig()
+        .then(setBackupConfig)
+        .catch(() => undefined);
+    }, [])
+  );
 
   const toggleLanguage = async () => {
     const nextLang = currentLang === 'vi' ? 'en' : 'vi';
@@ -83,10 +98,39 @@ export default function MoreScreen() {
           />
         </Card>
 
-        {}
         <Card style={styles.sectionCard}>
           <Text style={styles.sectionHeader}>{t('settings.backupRestore')}</Text>
           <Text style={styles.sectionDesc}>{t('settings.backupDescription')}</Text>
+          {backupConfig && (
+            <>
+              <View style={styles.row}>
+                <Text style={styles.rowLabel}>{t('backup.reminderTitle')}</Text>
+                <Text style={styles.rowValue}>
+                  {backupConfig.enabled && backupConfig.frequency !== 'off'
+                    ? backupConfig.frequency === 'custom'
+                      ? t('backup.customDaysSummary', { days: backupConfig.customDays || 7 })
+                      : t(`backup.freq${backupConfig.frequency.charAt(0).toUpperCase() + backupConfig.frequency.slice(1)}`)
+                    : t('backup.freqOff')}
+                </Text>
+              </View>
+              {backupConfig.targetFolderName ? (
+                <View style={styles.row}>
+                  <Text style={styles.rowLabel}>{t('backup.chooseFolder')}</Text>
+                  <Text style={styles.rowValue}>
+                    {backupConfig.targetFolderName} {backupConfig.autoSaveToFolder ? `(${t('backup.autoSaveEnabled')})` : ''}
+                  </Text>
+                </View>
+              ) : null}
+              <View style={styles.row}>
+                <Text style={styles.rowLabel}>{t('backup.lastBackupTime')}</Text>
+                <Text style={styles.rowValue}>
+                  {backupConfig.lastBackupAt
+                    ? formatDateDisplay(backupConfig.lastBackupAt, i18n.language)
+                    : t('backup.neverBackedUp')}
+                </Text>
+              </View>
+            </>
+          )}
           <Button
             title={t('settings.openBackup')}
             icon={<MaterialIcons name="backup" size={18} color={Colors.primaryDark} />}

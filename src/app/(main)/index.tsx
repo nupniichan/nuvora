@@ -16,6 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BalanceCardScenery } from '@/components/scenery';
+import { BackupReminderCard } from '@/components/backup/backup-reminder-card';
 import { Card } from '@/components/ui/card';
 import { CategoryBreakdownChart } from '@/components/ui/charts';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -45,6 +46,11 @@ import {
   skipOccurrence,
 } from '@/features/recurring/recurring-queries';
 import { getTransactions } from '@/features/transactions/transaction-queries';
+import {
+  BackupReminderStatus,
+  checkBackupReminderStatus,
+  dismissBackupReminder,
+} from '@/services/backup/backup-reminder';
 import { formatDateDisplay, formatDateISO } from '@/shared/date-utils';
 import { formatMoney } from '@/shared/money';
 
@@ -73,6 +79,7 @@ export default function DashboardScreen() {
   const [activeGoals, setActiveGoals] = useState<FinancialGoalWithProgress[]>([]);
   const [pendingOccurrences, setPendingOccurrences] = useState<PendingOccurrenceWithRule[]>([]);
   const [upcomingForecast, setUpcomingForecast] = useState<UpcomingForecastItem[]>([]);
+  const [backupReminderStatus, setBackupReminderStatus] = useState<BackupReminderStatus | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
   const loadData = useCallback(async () => {
@@ -97,6 +104,13 @@ export default function DashboardScreen() {
 
       const pending = await getPendingOccurrences();
       setPendingOccurrences(pending);
+
+      try {
+        const reminderStatus = await checkBackupReminderStatus();
+        setBackupReminderStatus(reminderStatus);
+      } catch {
+        // ignore reminder check failure
+      }
 
       const allRules = await getAllRecurringRules();
       const today = new Date();
@@ -155,6 +169,15 @@ export default function DashboardScreen() {
     setRefreshing(false);
   };
 
+  const handleBackupPress = () => {
+    router.push('/(modal)/backup-restore' as any);
+  };
+
+  const handleDismissReminder = async () => {
+    await dismissBackupReminder();
+    setBackupReminderStatus(null);
+  };
+
   const handleConfirmOccurrence = async (id: string) => {
     try {
       await withMonthlyLimitConfirmation((approval) => confirmOccurrence(id, approval), t);
@@ -195,6 +218,14 @@ export default function DashboardScreen() {
             <MaterialIcons name="settings" size={20} color={Colors.light.text} />
           </TouchableOpacity>
         </View>
+
+        {backupReminderStatus?.isDue && (
+          <BackupReminderCard
+            status={backupReminderStatus}
+            onBackupPress={handleBackupPress}
+            onDismissPress={handleDismissReminder}
+          />
+        )}
 
         <Card style={styles.balanceCard}>
           <BalanceCardScenery />
