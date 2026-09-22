@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { CurrencySwitchCard } from '@/components/ui/currency-switch-card';
+import { TimezonePickerModal } from '@/components/ui/timezone-picker-modal';
 import { Colors, MaxContentWidth } from '@/constants/theme';
 import { getAppLanguage, setAppLanguage } from '@/i18n';
 import {
@@ -15,6 +16,13 @@ import {
   getBackupReminderConfig,
 } from '@/services/backup/backup-reminder';
 import { lockApp } from '@/services/security/auth-service';
+import {
+  SYSTEM_TIMEZONE_VALUE,
+  TIMEZONE_OPTIONS,
+  getPreferredGmt,
+  getSystemGmtString,
+  setPreferredGmt,
+} from '@/services/timezone/timezone-service';
 import { formatDateDisplay } from '@/shared/date-utils';
 
 export default function MoreScreen() {
@@ -23,14 +31,24 @@ export default function MoreScreen() {
   const currentLang = (i18n.language?.startsWith('en') || getAppLanguage() === 'en') ? 'en' : 'vi';
 
   const [backupConfig, setBackupConfig] = useState<BackupReminderConfig | null>(null);
+  const [preferredGmt, setPreferredGmtState] = useState<string>(SYSTEM_TIMEZONE_VALUE);
+  const [showTimezoneModal, setShowTimezoneModal] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
       getBackupReminderConfig()
         .then(setBackupConfig)
         .catch(() => undefined);
+      getPreferredGmt()
+        .then(setPreferredGmtState)
+        .catch(() => undefined);
     }, [])
   );
+
+  const handleSelectTimezone = async (gmt: string) => {
+    await setPreferredGmt(gmt);
+    setPreferredGmtState(gmt);
+  };
 
   const toggleLanguage = async () => {
     const nextLang = currentLang === 'vi' ? 'en' : 'vi';
@@ -139,7 +157,7 @@ export default function MoreScreen() {
           />
         </Card>
 
-        {}
+        {/* Language & Timezone */}
         <Card style={styles.sectionCard}>
           <Text style={styles.sectionHeader}>{t('settings.language')}</Text>
           <TouchableOpacity style={styles.row} onPress={toggleLanguage}>
@@ -151,14 +169,45 @@ export default function MoreScreen() {
               </Text>
             </View>
           </TouchableOpacity>
+
+          <View style={styles.cardDivider} />
+
+          <TouchableOpacity style={styles.row} onPress={() => setShowTimezoneModal(true)}>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={styles.rowLabel}>{t('settings.timezone')}</Text>
+              <Text style={styles.sectionDesc}>
+                {preferredGmt === SYSTEM_TIMEZONE_VALUE
+                  ? `${t('settings.systemDefaultTimezone')} (${getSystemGmtString()})`
+                  : (TIMEZONE_OPTIONS.find((o) => o.key === preferredGmt)
+                      ? `${preferredGmt} - ${currentLang === 'vi' ? TIMEZONE_OPTIONS.find((o) => o.key === preferredGmt)?.nameVi : TIMEZONE_OPTIONS.find((o) => o.key === preferredGmt)?.nameEn}`
+                      : preferredGmt)}
+              </Text>
+            </View>
+            <View style={styles.langValueContainer}>
+              <MaterialIcons name="schedule" size={16} color={Colors.primaryDark} />
+              <Text style={styles.rowValue}>
+                {preferredGmt === SYSTEM_TIMEZONE_VALUE
+                  ? t('settings.systemDefaultTimezone')
+                  : preferredGmt}
+              </Text>
+              <MaterialIcons name="chevron-right" size={18} color={Colors.light.textSecondary} />
+            </View>
+          </TouchableOpacity>
         </Card>
 
-        {}
+        {/* About Card */}
         <Card variant="flat" style={styles.aboutCard}>
           <Text style={styles.appTitle}>Nuvora</Text>
           <Text style={styles.appVersion}>1.0.0 · {t('settings.localFirstTagline')}</Text>
           <Text style={styles.appDesc}>{t('settings.privacyDescription')}</Text>
         </Card>
+
+        <TimezonePickerModal
+          visible={showTimezoneModal}
+          currentGmt={preferredGmt}
+          onSelect={handleSelectTimezone}
+          onClose={() => setShowTimezoneModal(false)}
+        />
       </ScrollView>
     </SafeAreaView>
   );
@@ -206,6 +255,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.light.textSecondary,
     lineHeight: 18,
+  },
+  cardDivider: {
+    height: 1,
+    backgroundColor: Colors.light.border,
+    marginVertical: 4,
   },
   row: {
     flexDirection: 'row',
