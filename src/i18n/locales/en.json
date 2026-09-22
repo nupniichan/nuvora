@@ -507,6 +507,12 @@
     "openBackup": "Open backup and restore",
     "recurringDescription": "Prepare recurring income and bills automatically.",
     "interfaceLanguage": "Interface language",
+    "timezone": "Timezone (GMT)",
+    "timezoneDescription": "Select your preferred timezone for recording and viewing transactions.",
+    "systemDefaultTimezone": "System default",
+    "selectTimezone": "Select timezone",
+    "searchTimezone": "Search timezone, city...",
+    "systemTimezoneHint": "Use device timezone ({{gmt}})",
     "localFirstTagline": "Private-first personal finance",
     "privacyDescription": "Your financial data is stored directly on your device."
   },

@@ -507,6 +507,12 @@
     "openBackup": "Mở sao lưu và khôi phục",
     "recurringDescription": "Tự động chuẩn bị các khoản thu và hóa đơn lặp lại.",
     "interfaceLanguage": "Ngôn ngữ giao diện",
+    "timezone": "Múi giờ (GMT)",
+    "timezoneDescription": "Chọn múi giờ bạn muốn hiển thị và ghi nhận giao dịch.",
+    "systemDefaultTimezone": "Mặc định hệ thống",
+    "selectTimezone": "Chọn múi giờ",
+    "searchTimezone": "Tìm kiếm múi giờ, thành phố...",
+    "systemTimezoneHint": "Sử dụng múi giờ thiết bị ({{gmt}})",
     "localFirstTagline": "Tài chính cá nhân, ưu tiên riêng tư",
     "privacyDescription": "Dữ liệu tài chính được lưu trữ trực tiếp trên thiết bị của bạn."
   },
