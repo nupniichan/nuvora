@@ -1,4 +1,5 @@
 import { MaterialIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -24,11 +25,19 @@ import { useSafeBack } from '@/hooks/use-safe-back';
 import { createTransaction } from '@/features/transactions/transaction-queries';
 import { withMonthlyLimitConfirmation } from '@/features/budgets/confirm-monthly-limit';
 import { isValidTransactionDate } from '@/features/budgets/monthly-limits';
-import { extractDatePart, formatDateISO, formatDateTimeISO, parseISODate } from '@/shared/date-utils';
+import {
+  formatDateInGmt,
+  formatDateTimeInGmt,
+  getEffectiveGmtOffsetMinutes,
+  getPreferredGmt,
+  getSystemGmtOffsetMinutes,
+} from '@/services/timezone/timezone-service';
+import { extractDatePart, parseISODate } from '@/shared/date-utils';
 import { formatMoney } from '@/shared/money';
 
 export default function AddTransactionModal() {
   const { t } = useTranslation();
+  const router = useRouter();
   const closeModal = useSafeBack('/(main)/transactions');
 
   const [type, setType] = useState<EntryType>('expense');
@@ -37,7 +46,8 @@ export default function AddTransactionModal() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<CategoryWithGroup | null>(null);
   const [note, setNote] = useState<string>('');
-  const [date, setDate] = useState<string>(formatDateTimeISO(new Date()));
+  const [timezoneOffset, setTimezoneOffset] = useState<number>(getSystemGmtOffsetMinutes());
+  const [date, setDate] = useState<string>(formatDateTimeInGmt(new Date(), getSystemGmtOffsetMinutes()));
   const [datePreset, setDatePreset] = useState<'today' | 'yesterday' | 'custom'>('today');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,6 +59,21 @@ export default function AddTransactionModal() {
     limit: number;
     projectedTotal: number;
   } | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    getPreferredGmt()
+      .then((gmt) => {
+        if (!active) return;
+        const offset = getEffectiveGmtOffsetMinutes(gmt);
+        setTimezoneOffset(offset);
+        setDate(formatDateTimeInGmt(new Date(), offset));
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     getDefaultAccount().then(setActiveAccount).catch(() => setError(t('transactions.saveError')));
@@ -84,8 +109,8 @@ export default function AddTransactionModal() {
   const handleDateChange = (newDate: string) => {
     setDate(newDate);
     const dateOnly = extractDatePart(newDate);
-    const today = formatDateISO(new Date());
-    const yesterday = formatDateISO(new Date(Date.now() - 86400000));
+    const today = formatDateInGmt(new Date(), timezoneOffset);
+    const yesterday = formatDateInGmt(new Date(Date.now() - 86400000), timezoneOffset);
     if (dateOnly === today) {
       setDatePreset('today');
     } else if (dateOnly === yesterday) {
@@ -99,11 +124,10 @@ export default function AddTransactionModal() {
     setDatePreset(preset);
     const now = new Date();
     if (preset === 'today') {
-      setDate(formatDateTimeISO(now));
+      setDate(formatDateTimeInGmt(now, timezoneOffset));
     } else if (preset === 'yesterday') {
-      const yesterday = new Date(now);
-      yesterday.setDate(yesterday.getDate() - 1);
-      setDate(formatDateTimeISO(yesterday));
+      const yesterday = new Date(now.getTime() - 86400000);
+      setDate(formatDateTimeInGmt(yesterday, timezoneOffset));
     }
   };
 
@@ -131,7 +155,12 @@ export default function AddTransactionModal() {
         monthlyLimitApproval,
       }), t);
 
-      if (saved) closeModal();
+      if (saved) {
+        if (router.canDismiss?.()) {
+          router.dismissAll();
+        }
+        router.replace('/(main)');
+      }
     } catch (saveError: any) {
       setError(saveError.message || t('transactions.saveError'));
     } finally {
