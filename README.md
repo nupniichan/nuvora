@@ -1,4 +1,6 @@
 <div align="center">
+  
+<img width="150" height="150" alt="nuvora_logo" src="https://github.com/user-attachments/assets/33e7a001-51e8-4451-a799-3c35f28c82b2" />
 
 # Nuvora
 
