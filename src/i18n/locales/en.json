@@ -483,8 +483,6 @@
     "saveError": "Could not save the conversion. Please try again."
   },
   "settings": {
-    "personalSpace": "Your money space",
-    "personalSpaceDescription": "Make it yours. Move forward at your own pace.",
     "title": "Settings",
     "security": "Security",
     "changePassword": "Change Master Password",
@@ -514,8 +512,7 @@
     "searchTimezone": "Search timezone, city...",
     "systemTimezoneHint": "Use device timezone ({{gmt}})",
     "localFirstTagline": "Private-first personal finance",
-    "privacyDescription": "Your financial data is stored directly on your device.",
-    "replaySplash": "Replay launch animation"
+    "privacyDescription": "Your financial data is stored directly on your device."
   },
   "splash": {
     "tagline": "Your money, your privacy, your data"

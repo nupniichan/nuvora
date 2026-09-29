@@ -4,8 +4,6 @@ import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-import { AnimatedSplashScreen } from '@/components/splash/animated-splash-screen';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { CurrencySwitchCard } from '@/components/ui/currency-switch-card';
@@ -34,7 +32,6 @@ export default function MoreScreen() {
   const [backupConfig, setBackupConfig] = useState<BackupReminderConfig | null>(null);
   const [preferredGmt, setPreferredGmtState] = useState<string>(SYSTEM_TIMEZONE_VALUE);
   const [showTimezoneModal, setShowTimezoneModal] = useState(false);
-  const [showReplaySplash, setShowReplaySplash] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -69,14 +66,6 @@ export default function MoreScreen() {
           <Text style={styles.eyebrow}>NUVORA</Text>
           <Text style={styles.title}>{t('settings.title')}</Text>
         </View>
-
-        <Card variant="flat" style={styles.brandCard}>
-          <View style={styles.brandIcon}><MaterialIcons name="spa" size={28} color={Colors.primaryStrong} /></View>
-          <View style={styles.brandInfo}>
-            <Text style={styles.brandTitle}>{t('settings.personalSpace')}</Text>
-            <Text style={styles.brandDescription}>{t('settings.personalSpaceDescription')}</Text>
-          </View>
-        </Card>
 
         <CurrencySwitchCard />
 
@@ -202,13 +191,6 @@ export default function MoreScreen() {
           <Text style={styles.appTitle}>Nuvora</Text>
           <Text style={styles.appVersion}>1.0.0 · {t('settings.localFirstTagline')}</Text>
           <Text style={styles.appDesc}>{t('settings.privacyDescription')}</Text>
-          <Button
-            title={t('settings.replaySplash')}
-            icon={<MaterialIcons name="play-circle-outline" size={18} color={Colors.primaryStrong} />}
-            onPress={() => setShowReplaySplash(true)}
-            variant="outline"
-            style={styles.replayButton}
-          />
         </Card>
 
         <TimezonePickerModal
@@ -218,12 +200,6 @@ export default function MoreScreen() {
           onClose={() => setShowTimezoneModal(false)}
         />
       </ScrollView>
-
-      {showReplaySplash && (
-        <AnimatedSplashScreen
-          onAnimationComplete={() => setShowReplaySplash(false)}
-        />
-      )}
     </SafeAreaView>
   );
 }
@@ -325,13 +301,4 @@ const styles = StyleSheet.create({
     marginTop: 2,
     lineHeight: 18,
   },
-  replayButton: {
-    marginTop: 10,
-    width: '100%',
-  },
-  brandCard: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: Colors.primaryLight, padding: 20 },
-  brandIcon: { width: 48, height: 48, borderRadius: 17, backgroundColor: '#FFFFFF66', alignItems: 'center', justifyContent: 'center' },
-  brandInfo: { flex: 1, gap: 4 },
-  brandTitle: { fontSize: 17, fontWeight: '800', color: Colors.light.text },
-  brandDescription: { fontSize: 12, lineHeight: 18, color: Colors.primaryStrong },
 });

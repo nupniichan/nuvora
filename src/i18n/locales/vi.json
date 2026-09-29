@@ -491,8 +491,6 @@
     "saveError": "Không lưu được lần quy đổi. Hãy thử lại."
   },
   "settings": {
-    "personalSpace": "Góc tài chính của bạn",
-    "personalSpaceDescription": "Sắp xếp theo cách bạn muốn. Tiến từng bước theo nhịp của bạn.",
     "title": "Cài đặt",
     "security": "Bảo mật",
     "changePassword": "Đổi mật khẩu gốc",
@@ -522,8 +520,7 @@
     "searchTimezone": "Tìm kiếm múi giờ, thành phố...",
     "systemTimezoneHint": "Sử dụng múi giờ thiết bị ({{gmt}})",
     "localFirstTagline": "Tài chính cá nhân, ưu tiên riêng tư",
-    "privacyDescription": "Dữ liệu tài chính được lưu trữ trực tiếp trên thiết bị của bạn.",
-    "replaySplash": "Xem lại animation mở app"
+    "privacyDescription": "Dữ liệu tài chính được lưu trữ trực tiếp trên thiết bị của bạn."
   },
   "splash": {
     "tagline": "Your money, your data, your privacy"
