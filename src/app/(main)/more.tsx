@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AnimatedSplashScreen } from '@/components/splash/animated-splash-screen';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { CurrencySwitchCard } from '@/components/ui/currency-switch-card';
@@ -33,6 +34,7 @@ export default function MoreScreen() {
   const [backupConfig, setBackupConfig] = useState<BackupReminderConfig | null>(null);
   const [preferredGmt, setPreferredGmtState] = useState<string>(SYSTEM_TIMEZONE_VALUE);
   const [showTimezoneModal, setShowTimezoneModal] = useState(false);
+  const [showReplaySplash, setShowReplaySplash] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -200,6 +202,13 @@ export default function MoreScreen() {
           <Text style={styles.appTitle}>Nuvora</Text>
           <Text style={styles.appVersion}>1.0.0 · {t('settings.localFirstTagline')}</Text>
           <Text style={styles.appDesc}>{t('settings.privacyDescription')}</Text>
+          <Button
+            title={currentLang === 'vi' ? 'Xem lại animation mở app' : 'Replay launch animation'}
+            icon={<MaterialIcons name="play-circle-outline" size={18} color={Colors.primaryStrong} />}
+            onPress={() => setShowReplaySplash(true)}
+            variant="outline"
+            style={styles.replayButton}
+          />
         </Card>
 
         <TimezonePickerModal
@@ -209,6 +218,12 @@ export default function MoreScreen() {
           onClose={() => setShowTimezoneModal(false)}
         />
       </ScrollView>
+
+      {showReplaySplash && (
+        <AnimatedSplashScreen
+          onAnimationComplete={() => setShowReplaySplash(false)}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -307,7 +322,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.light.textSecondary,
     textAlign: 'center',
-    marginTop: 4,
+    marginTop: 2,
+    lineHeight: 18,
+  },
+  replayButton: {
+    marginTop: 10,
+    width: '100%',
   },
   brandCard: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: Colors.primaryLight, padding: 20 },
   brandIcon: { width: 48, height: 48, borderRadius: 17, backgroundColor: '#FFFFFF66', alignItems: 'center', justifyContent: 'center' },

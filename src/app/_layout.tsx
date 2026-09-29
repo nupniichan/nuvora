@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { I18nextProvider } from 'react-i18next';
 import { View } from 'react-native';
 
+import { AnimatedSplashScreen } from '@/components/splash/animated-splash-screen';
 import { BottomNavigation } from '@/components/ui/bottom-navigation';
 import i18n, { initializeI18n } from '@/i18n';
 import { useAutoLock } from '@/hooks/use-auto-lock';
@@ -17,6 +18,7 @@ function AutoLockManager() {
 
 export default function RootLayout() {
   const [isReady, setIsReady] = useState(false);
+  const [showSplashAnimation, setShowSplashAnimation] = useState(true);
 
   useEffect(() => {
     async function prepareApp() {
@@ -24,7 +26,7 @@ export default function RootLayout() {
         await initializeI18n();
       } finally {
         setIsReady(true);
-        await SplashScreen.hideAsync();
+        await SplashScreen.hideAsync().catch(() => undefined);
       }
     }
     prepareApp();
@@ -46,6 +48,11 @@ export default function RootLayout() {
             <Stack.Screen name="(modal)" options={{ presentation: 'card' }} />
           </Stack>
           <BottomNavigation />
+          {showSplashAnimation && (
+            <AnimatedSplashScreen
+              onAnimationComplete={() => setShowSplashAnimation(false)}
+            />
+          )}
         </View>
       </ThemeProvider>
     </I18nextProvider>
