@@ -6,11 +6,11 @@ import Svg, {
   G,
   LinearGradient,
   Path,
+  RadialGradient,
   Rect,
   Stop,
 } from 'react-native-svg';
 
-const isNative = Platform.OS !== 'web';
 
 export function WelcomeHeroScenery() {
   const [dimensions, setDimensions] = useState({ width: 340, height: 180 });
@@ -25,16 +25,18 @@ export function WelcomeHeroScenery() {
         toValue: 1,
         duration: 9000,
         easing: Easing.linear,
-        useNativeDriver: isNative,
+        useNativeDriver: false,
+        isInteraction: false,
       })
     );
 
     const cloudAnimation = Animated.loop(
       Animated.timing(cloudOffset, {
         toValue: 1,
-        duration: 18000,
+        duration: 38000,
         easing: Easing.linear,
-        useNativeDriver: isNative,
+        useNativeDriver: false,
+        isInteraction: false,
       })
     );
 
@@ -43,7 +45,7 @@ export function WelcomeHeroScenery() {
         toValue: 1,
         duration: 4500,
         easing: Easing.linear,
-        useNativeDriver: isNative,
+        useNativeDriver: false,
         isInteraction: false,
       })
     );
@@ -115,10 +117,26 @@ export function WelcomeHeroScenery() {
             <Stop offset="100%" stopColor={skyBottom} />
           </LinearGradient>
 
+          <RadialGradient
+            id="welcomeSunHalo"
+            cx="50%"
+            cy="50%"
+            rx="50%"
+            ry="50%"
+            fx="50%"
+            fy="50%"
+          >
+            <Stop offset="0%" stopColor="#FFFEE8" stopOpacity="0.85" />
+            <Stop offset="45%" stopColor="#FFF5CC" stopOpacity="0.4" />
+            <Stop offset="80%" stopColor="#FFEAA8" stopOpacity="0.1" />
+            <Stop offset="100%" stopColor="#FFEAA8" stopOpacity="0" />
+          </RadialGradient>
+
           <LinearGradient id="welcomeSunbeam" x1="0%" y1="0%" x2="100%" y2="100%">
-            <Stop offset="0%" stopColor="rgba(255, 245, 210, 0.45)" />
-            <Stop offset="60%" stopColor="rgba(255, 235, 190, 0.08)" />
-            <Stop offset="100%" stopColor="transparent" />
+            <Stop offset="0%" stopColor="#FFF8DC" stopOpacity="0.25" />
+            <Stop offset="35%" stopColor="#FFF2CC" stopOpacity="0.10" />
+            <Stop offset="70%" stopColor="#FFEBB0" stopOpacity="0.03" />
+            <Stop offset="100%" stopColor="#FFEBB0" stopOpacity="0" />
           </LinearGradient>
 
           <LinearGradient id="welcomeMountainGrad" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -129,8 +147,16 @@ export function WelcomeHeroScenery() {
 
         <Rect x="0" y="0" width={width} height={height} fill="url(#welcomeDawnSky)" />
 
-        <Path d={`M0,0 L${width * 0.25},0 L${width * 0.55},${height} L0,${height} Z`} fill="url(#welcomeSunbeam)" opacity={0.6} />
-        <Path d={`M${width * 0.12},0 L${width * 0.42},0 L${width * 0.8},${height} L${width * 0.35},${height} Z`} fill="url(#welcomeSunbeam)" opacity={0.4} />
+        <Path
+          d={`M0,0 L${width * 0.28},0 L${width * 0.58},${height} L0,${height} Z`}
+          fill="url(#welcomeSunbeam)"
+          opacity={0.45}
+        />
+        <Path
+          d={`M${width * 0.12},0 L${width * 0.38},0 L${width * 0.76},${height} L${width * 0.32},${height} Z`}
+          fill="url(#welcomeSunbeam)"
+          opacity={0.22}
+        />
 
         <Path
           d={`M0,${height * 0.72} Q${width * 0.2},${height * 0.42} ${width * 0.42},${height * 0.58} T${width * 0.82},${height * 0.52} Q${width * 0.92},${height * 0.55} ${width},${height * 0.64} L${width},${height} L0,${height} Z`}
@@ -169,8 +195,8 @@ export function WelcomeHeroScenery() {
         <Path d={`M45,${height - 40} L61,${height - 55} L77,${height - 40} Z`} fill="#7873B8" />
         <Rect x="58" y={height - 35} width="6" height="6" fill="#FFEAA7" rx="1" />
 
-        <Circle cx="45" cy="38" r="18" fill="rgba(255, 250, 230, 0.85)" />
-        <Circle cx="45" cy="38" r="26" fill="rgba(255, 240, 200, 0.3)" />
+        <Circle cx="45" cy="38" r="28" fill="url(#welcomeSunHalo)" />
+        <Circle cx="45" cy="38" r="14" fill="#FFFFF0" opacity={0.92} />
       </Svg>
 
       <View
@@ -262,6 +288,7 @@ const styles = StyleSheet.create({
     height: 56,
     alignItems: 'center',
     justifyContent: 'center',
+    transformOrigin: 'center',
   },
   cloudContainer: {
     position: 'absolute',

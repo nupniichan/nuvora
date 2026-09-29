@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -277,7 +278,7 @@ export default function ManageCategoriesModal() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <View style={styles.header}>
         <Text style={styles.title}>{t('categories.title')}</Text>
         <TouchableOpacity onPress={closeModal} style={styles.closeBtn}>
@@ -410,7 +411,7 @@ export default function ManageCategoriesModal() {
         presentationStyle="pageSheet"
         onRequestClose={() => setCategoryModalVisible(false)}
       >
-        <View style={styles.modalRoot}>
+        <SafeAreaView style={styles.modalRoot} edges={['top', 'left', 'right']}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>
               {t(editingCategory ? 'categories.editCategory' : 'categories.newCategory')}
@@ -488,7 +489,7 @@ export default function ManageCategoriesModal() {
               onPress={handleSaveCategory}
             />
           </View>
-        </View>
+        </SafeAreaView>
       </Modal>
 
       {}
@@ -498,7 +499,7 @@ export default function ManageCategoriesModal() {
         presentationStyle="pageSheet"
         onRequestClose={() => setGroupModalVisible(false)}
       >
-        <View style={styles.modalRoot}>
+        <SafeAreaView style={styles.modalRoot} edges={['top', 'left', 'right']}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>{t('categories.newGroup')}</Text>
             <TouchableOpacity onPress={() => setGroupModalVisible(false)}>
@@ -578,7 +579,7 @@ export default function ManageCategoriesModal() {
               onPress={handleSaveGroup}
             />
           </View>
-        </View>
+        </SafeAreaView>
       </Modal>
 
       {}
@@ -588,7 +589,7 @@ export default function ManageCategoriesModal() {
         presentationStyle="pageSheet"
         onRequestClose={() => setTemplateModalVisible(false)}
       >
-        <View style={styles.modalRoot}>
+        <SafeAreaView style={styles.modalRoot} edges={['top', 'left', 'right']}>
           <View style={styles.modalHeader}>
             <View>
               <Text style={styles.modalTitle}>{t('categories.templateTitle')}</Text>
@@ -691,9 +692,9 @@ export default function ManageCategoriesModal() {
               );
             })}
           </ScrollView>
-        </View>
+        </SafeAreaView>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -707,7 +708,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingTop: 12,
     paddingBottom: 14,
     borderBottomWidth: 1,
     borderBottomColor: Colors.light.border,
@@ -831,7 +832,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 18,
+    paddingTop: 12,
     paddingBottom: 14,
     borderBottomWidth: 1,
     borderBottomColor: Colors.light.border,

@@ -78,8 +78,8 @@ const styles = StyleSheet.create({
   bar: { flexDirection: 'row', borderTopWidth: 1, paddingTop: 9, flexShrink: 0 },
   tab: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   label: { fontSize: 11, fontWeight: '700' },
-  icon: { width: 48, height: 30, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  activeIcon: { backgroundColor: Colors.primaryLight },
+  icon: { width: 48, height: 30, borderRadius: 15, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
+  activeIcon: { backgroundColor: Colors.primaryLight, borderRadius: 15, overflow: 'hidden' },
   leftOfFab: { marginRight: 18 },
   rightOfFab: { marginLeft: 18 },
   fab: {

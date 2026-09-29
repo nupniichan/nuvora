@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
@@ -177,7 +178,7 @@ export default function ManageGoalsModal() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <View style={styles.header}>
         <Text style={styles.title}>{t('goals.title')}</Text>
         <TouchableOpacity onPress={closeModal} style={styles.closeBtn}>
@@ -320,7 +321,7 @@ export default function ManageGoalsModal() {
         presentationStyle="pageSheet"
         onRequestClose={() => setCreateModalVisible(false)}
       >
-        <View style={styles.modalRoot}>
+        <SafeAreaView style={styles.modalRoot} edges={['top', 'left', 'right']}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>
               {editingGoal ? t('goals.editTitle') : t('goals.createTitle')}
@@ -419,10 +420,10 @@ export default function ManageGoalsModal() {
               disabled={!funds || saving}
             />
           </View>
-        </View>
+        </SafeAreaView>
       </Modal>
 
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -436,7 +437,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingTop: 12,
     paddingBottom: 14,
     borderBottomWidth: 1,
     borderBottomColor: Colors.light.border,
@@ -594,7 +595,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 18,
+    paddingTop: 12,
     paddingBottom: 14,
     borderBottomWidth: 1,
     borderBottomColor: Colors.light.border,

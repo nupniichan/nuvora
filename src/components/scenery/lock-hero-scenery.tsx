@@ -7,6 +7,7 @@ import Svg, {
   G,
   LinearGradient,
   Path,
+  RadialGradient,
   Rect,
   Stop,
 } from 'react-native-svg';
@@ -42,7 +43,6 @@ export function LockHeroScenery({
   const currentTimeOfDay = forceTimeOfDay ?? systemTimeOfDay;
   const isNight = currentTimeOfDay === 'night';
 
-  const [moonPulse] = useState(() => new Animated.Value(0.75));
   const [sunGlow] = useState(() => new Animated.Value(0.8));
   const [starTwinkleFast] = useState(() => new Animated.Value(0.3));
   const [starTwinkleSlow] = useState(() => new Animated.Value(0.9));
@@ -114,38 +114,25 @@ export function LockHeroScenery({
 
   useEffect(() => {
     const activeAnimations: Animated.CompositeAnimation[] = [];
+    let isCancelled = false;
+    let meteorComposite: Animated.CompositeAnimation | null = null;
 
     if (isNight) {
-      const celestialAnimation = Animated.loop(
-        Animated.sequence([
-          Animated.timing(moonPulse, {
-            toValue: 1,
-            duration: 3000,
-            easing: Easing.inOut(Easing.sin),
-            useNativeDriver: isNative,
-          }),
-          Animated.timing(moonPulse, {
-            toValue: 0.65,
-            duration: 3000,
-            easing: Easing.inOut(Easing.sin),
-            useNativeDriver: isNative,
-          }),
-        ])
-      );
-
       const starFastAnimation = Animated.loop(
         Animated.sequence([
           Animated.timing(starTwinkleFast, {
             toValue: 1,
             duration: 1200,
             easing: Easing.inOut(Easing.quad),
-            useNativeDriver: isNative,
+            useNativeDriver: false,
+            isInteraction: false,
           }),
           Animated.timing(starTwinkleFast, {
             toValue: 0.2,
             duration: 1200,
             easing: Easing.inOut(Easing.quad),
-            useNativeDriver: isNative,
+            useNativeDriver: false,
+            isInteraction: false,
           }),
         ])
       );
@@ -156,29 +143,42 @@ export function LockHeroScenery({
             toValue: 0.15,
             duration: 1700,
             easing: Easing.inOut(Easing.quad),
-            useNativeDriver: isNative,
+            useNativeDriver: false,
+            isInteraction: false,
           }),
           Animated.timing(starTwinkleSlow, {
             toValue: 1,
             duration: 1700,
             easing: Easing.inOut(Easing.quad),
-            useNativeDriver: isNative,
+            useNativeDriver: false,
+            isInteraction: false,
           }),
         ])
       );
 
-      const meteorAnimation = Animated.loop(
-        Animated.sequence([
-          Animated.delay(2500),
+      // Auto-looping shooting star that resets value and repeats reliably
+      const runMeteor = () => {
+        if (isCancelled) return;
+        meteorStreak.setValue(0);
+        meteorComposite = Animated.sequence([
+          Animated.delay(1800),
           Animated.timing(meteorStreak, {
             toValue: 1,
-            duration: 1200,
+            duration: 1500,
             easing: Easing.out(Easing.cubic),
-            useNativeDriver: isNative,
+            useNativeDriver: false,
+            isInteraction: false,
           }),
-          Animated.delay(4000),
-        ])
-      );
+          Animated.delay(4200),
+        ]);
+        meteorComposite.start(({ finished }) => {
+          if (finished && !isCancelled) {
+            runMeteor();
+          }
+        });
+      };
+
+      runMeteor();
 
       const windowAnimation = Animated.loop(
         Animated.sequence([
@@ -186,22 +186,22 @@ export function LockHeroScenery({
             toValue: 1,
             duration: 2200,
             easing: Easing.inOut(Easing.sin),
-            useNativeDriver: isNative,
+            useNativeDriver: false,
+            isInteraction: false,
           }),
           Animated.timing(windowLightPulse, {
             toValue: 0.7,
             duration: 2200,
             easing: Easing.inOut(Easing.sin),
-            useNativeDriver: isNative,
+            useNativeDriver: false,
+            isInteraction: false,
           }),
         ])
       );
 
       activeAnimations.push(
-        celestialAnimation,
         starFastAnimation,
         starSlowAnimation,
-        meteorAnimation,
         windowAnimation
       );
     } else {
@@ -211,13 +211,15 @@ export function LockHeroScenery({
             toValue: 1,
             duration: 2500,
             easing: Easing.inOut(Easing.sin),
-            useNativeDriver: isNative,
+            useNativeDriver: false,
+            isInteraction: false,
           }),
           Animated.timing(sunGlow, {
             toValue: 0.7,
             duration: 2500,
             easing: Easing.inOut(Easing.sin),
-            useNativeDriver: isNative,
+            useNativeDriver: false,
+            isInteraction: false,
           }),
         ])
       );
@@ -225,9 +227,10 @@ export function LockHeroScenery({
       const cloudAnimation = Animated.loop(
         Animated.timing(cloudDrift, {
           toValue: 1,
-          duration: 20000,
+          duration: 38000,
           easing: Easing.linear,
-          useNativeDriver: isNative,
+          useNativeDriver: false,
+          isInteraction: false,
         })
       );
 
@@ -236,7 +239,8 @@ export function LockHeroScenery({
           toValue: 1,
           duration: 9000,
           easing: Easing.linear,
-          useNativeDriver: isNative,
+          useNativeDriver: false,
+          isInteraction: false,
         })
       );
 
@@ -245,7 +249,7 @@ export function LockHeroScenery({
           toValue: 1,
           duration: 4500,
           easing: Easing.linear,
-          useNativeDriver: isNative,
+          useNativeDriver: false,
           isInteraction: false,
         })
       );
@@ -256,13 +260,15 @@ export function LockHeroScenery({
             toValue: 1,
             duration: 2200,
             easing: Easing.inOut(Easing.sin),
-            useNativeDriver: isNative,
+            useNativeDriver: false,
+            isInteraction: false,
           }),
           Animated.timing(windowLightPulse, {
             toValue: 0.7,
             duration: 2200,
             easing: Easing.inOut(Easing.sin),
-            useNativeDriver: isNative,
+            useNativeDriver: false,
+            isInteraction: false,
           }),
         ])
       );
@@ -279,11 +285,12 @@ export function LockHeroScenery({
     activeAnimations.forEach((animation) => animation.start());
 
     return () => {
+      isCancelled = true;
+      meteorComposite?.stop();
       activeAnimations.forEach((animation) => animation.stop());
     };
   }, [
     isNight,
-    moonPulse,
     sunGlow,
     starTwinkleFast,
     starTwinkleSlow,
@@ -303,17 +310,23 @@ export function LockHeroScenery({
 
   const { width, height } = dimensions;
 
+  const meteorStartX = -30;
+  const meteorEndX = Math.min(220, width * 0.65);
+  const meteorDistanceX = meteorEndX - meteorStartX;
+  const meteorStartY = 14;
+  const meteorEndY = meteorStartY + meteorDistanceX * 0.364;
+
   const meteorTranslateX = meteorStreak.interpolate({
     inputRange: [0, 1],
-    outputRange: [-40, width - 40],
+    outputRange: [meteorStartX, meteorEndX],
   });
   const meteorTranslateY = meteorStreak.interpolate({
     inputRange: [0, 1],
-    outputRange: [10, 80],
+    outputRange: [meteorStartY, meteorEndY],
   });
   const meteorOpacity = meteorStreak.interpolate({
-    inputRange: [0, 0.2, 0.8, 1],
-    outputRange: [0, 1, 0.8, 0],
+    inputRange: [0, 0.15, 0.75, 1],
+    outputRange: [0, 1, 0.9, 0],
   });
 
   const cloudTranslateX = cloudDrift.interpolate({
@@ -395,16 +408,27 @@ export function LockHeroScenery({
             </LinearGradient>
           )}
 
-          <LinearGradient id="lockCelestialGlow" x1="0%" y1="0%" x2="100%" y2="100%">
-            <Stop offset="0%" stopColor={isNight ? 'rgba(235, 240, 255, 0.35)' : 'rgba(255, 245, 210, 0.5)'} />
-            <Stop offset="100%" stopColor="transparent" />
-          </LinearGradient>
+          <RadialGradient
+            id="lockSunHalo"
+            cx="50%"
+            cy="50%"
+            rx="50%"
+            ry="50%"
+            fx="50%"
+            fy="50%"
+          >
+            <Stop offset="0%" stopColor="#FFFEE8" stopOpacity="0.85" />
+            <Stop offset="45%" stopColor="#FFF5CC" stopOpacity="0.4" />
+            <Stop offset="80%" stopColor="#FFEAA8" stopOpacity="0.1" />
+            <Stop offset="100%" stopColor="#FFEAA8" stopOpacity="0" />
+          </RadialGradient>
 
           {!isNight && (
             <LinearGradient id="lockSunbeam" x1="0%" y1="0%" x2="100%" y2="100%">
-              <Stop offset="0%" stopColor="rgba(255, 245, 210, 0.45)" />
-              <Stop offset="60%" stopColor="rgba(255, 235, 190, 0.08)" />
-              <Stop offset="100%" stopColor="transparent" />
+              <Stop offset="0%" stopColor="#FFF8DC" stopOpacity="0.25" />
+              <Stop offset="35%" stopColor="#FFF2CC" stopOpacity="0.10" />
+              <Stop offset="70%" stopColor="#FFEBB0" stopOpacity="0.03" />
+              <Stop offset="100%" stopColor="#FFEBB0" stopOpacity="0" />
             </LinearGradient>
           )}
 
@@ -433,7 +457,6 @@ export function LockHeroScenery({
 
         {isNight ? (
           <>
-            <Circle cx={width - 55} cy="38" r="22" fill="url(#lockCelestialGlow)" />
             <Path
               d={`M${width - 51},24 A 14 14 0 1 0 ${width - 42},46 A 11 11 0 1 1 ${width - 51},24 Z`}
               fill="#FFF9E6"
@@ -458,8 +481,16 @@ export function LockHeroScenery({
           </>
         ) : (
           <>
-            <Path d={`M0,0 L${width * 0.25},0 L${width * 0.55},${height} L0,${height} Z`} fill="url(#lockSunbeam)" opacity={0.6} />
-            <Path d={`M${width * 0.12},0 L${width * 0.42},0 L${width * 0.8},${height} L${width * 0.35},${height} Z`} fill="url(#lockSunbeam)" opacity={0.4} />
+            <Path
+              d={`M0,0 L${width * 0.28},0 L${width * 0.58},${height} L0,${height} Z`}
+              fill="url(#lockSunbeam)"
+              opacity={0.45}
+            />
+            <Path
+              d={`M${width * 0.12},0 L${width * 0.38},0 L${width * 0.76},${height} L${width * 0.32},${height} Z`}
+              fill="url(#lockSunbeam)"
+              opacity={0.22}
+            />
             <Path
               d={`M0,${height * 0.72} Q${width * 0.2},${height * 0.42} ${width * 0.42},${height * 0.58} T${width * 0.82},${height * 0.52} Q${width * 0.92},${height * 0.55} ${width},${height * 0.64} L${width},${height} L0,${height} Z`}
               fill="url(#lockMountainGrad)"
@@ -485,8 +516,8 @@ export function LockHeroScenery({
             <Rect x="48" y={height - 40} width="26" height="18" fill="#FFFFFF" rx="2" />
             <Path d={`M45,${height - 40} L61,${height - 55} L77,${height - 40} Z`} fill="#7873B8" />
             <Rect x="58" y={height - 35} width="6" height="6" fill="#FFEAA7" rx="1" />
-            <Circle cx="45" cy="38" r="18" fill="rgba(255, 250, 230, 0.85)" />
-            <Circle cx="45" cy="38" r="26" fill="rgba(255, 240, 200, 0.3)" />
+            <Circle cx="45" cy="38" r="28" fill="url(#lockSunHalo)" />
+            <Circle cx="45" cy="38" r="14" fill="#FFFFF0" opacity={0.92} />
           </>
         )}
       </Svg>
@@ -515,14 +546,25 @@ export function LockHeroScenery({
                 transform: [
                   { translateX: meteorTranslateX },
                   { translateY: meteorTranslateY },
-                  { rotate: '25deg' },
+                  { rotate: '20deg' },
                 ],
                 opacity: meteorOpacity,
               },
             ]}
           >
-            <View style={styles.meteorHead} />
-            <View style={styles.meteorTail} />
+            <Svg width="56" height="12" viewBox="0 0 56 12">
+              <Defs>
+                <LinearGradient id="meteorTailGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <Stop offset="0%" stopColor="#FFFFFF" stopOpacity="0" />
+                  <Stop offset="65%" stopColor="#FFFFFF" stopOpacity="0.35" />
+                  <Stop offset="90%" stopColor="#FFFFFF" stopOpacity="0.8" />
+                  <Stop offset="100%" stopColor="#FFFFFF" stopOpacity="1" />
+                </LinearGradient>
+              </Defs>
+              <Path d="M0,6 L48,4.5 L48,7.5 Z" fill="url(#meteorTailGrad)" />
+              <Circle cx="48" cy="6" r="4.5" fill="#FFFFFF" opacity={0.35} />
+              <Circle cx="48" cy="6" r="2.2" fill="#FFFFFF" />
+            </Svg>
           </Animated.View>
 
           <Animated.View
@@ -713,20 +755,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     left: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  meteorHead: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#FFFFFF',
-  },
-  meteorTail: {
-    width: 34,
-    height: 1.5,
-    backgroundColor: 'rgba(255, 255, 255, 0.65)',
-    borderRadius: 1,
   },
   dayCloud: {
     position: 'absolute',
@@ -744,6 +772,7 @@ const styles = StyleSheet.create({
     height: 56,
     alignItems: 'center',
     justifyContent: 'center',
+    transformOrigin: 'center',
   },
   petalWrapper: {
     position: 'absolute',

@@ -9,7 +9,6 @@ import Svg, {
   Stop,
 } from 'react-native-svg';
 
-const isNative = Platform.OS !== 'web';
 
 export function BalanceCardScenery() {
   const [dimensions, setDimensions] = useState({ width: 360, height: 190 });
@@ -17,6 +16,7 @@ export function BalanceCardScenery() {
   const [cloudFarX] = useState(() => new Animated.Value(0));
   const [cloudNearX] = useState(() => new Animated.Value(0));
   const [chimneySmokeProgress] = useState(() => new Animated.Value(0));
+  const [chimneySmokeProgress2] = useState(() => new Animated.Value(0));
   const [cottageWindowGlow] = useState(() => new Animated.Value(0.7));
   const [ambientSparklePulse] = useState(() => new Animated.Value(0));
 
@@ -24,18 +24,20 @@ export function BalanceCardScenery() {
     const cloudFarAnimation = Animated.loop(
       Animated.timing(cloudFarX, {
         toValue: 1,
-        duration: 22000,
+        duration: 42000,
         easing: Easing.linear,
-        useNativeDriver: isNative,
+        useNativeDriver: false,
+        isInteraction: false,
       })
     );
 
     const cloudNearAnimation = Animated.loop(
       Animated.timing(cloudNearX, {
         toValue: 1,
-        duration: 15000,
+        duration: 30000,
         easing: Easing.linear,
-        useNativeDriver: isNative,
+        useNativeDriver: false,
+        isInteraction: false,
       })
     );
 
@@ -44,8 +46,22 @@ export function BalanceCardScenery() {
         toValue: 1,
         duration: 3200,
         easing: Easing.out(Easing.quad),
-        useNativeDriver: isNative,
+        useNativeDriver: false,
+        isInteraction: false,
       })
+    );
+
+    const smokeAnimation2 = Animated.loop(
+      Animated.sequence([
+        Animated.delay(1600),
+        Animated.timing(chimneySmokeProgress2, {
+          toValue: 1,
+          duration: 3200,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: false,
+          isInteraction: false,
+        }),
+      ])
     );
 
     const windowAnimation = Animated.loop(
@@ -54,13 +70,15 @@ export function BalanceCardScenery() {
           toValue: 1,
           duration: 1800,
           easing: Easing.inOut(Easing.sin),
-          useNativeDriver: isNative,
+          useNativeDriver: false,
+          isInteraction: false,
         }),
         Animated.timing(cottageWindowGlow, {
           toValue: 0.65,
           duration: 1800,
           easing: Easing.inOut(Easing.sin),
-          useNativeDriver: isNative,
+          useNativeDriver: false,
+          isInteraction: false,
         }),
       ])
     );
@@ -71,13 +89,15 @@ export function BalanceCardScenery() {
           toValue: 1,
           duration: 2600,
           easing: Easing.inOut(Easing.sin),
-          useNativeDriver: isNative,
+          useNativeDriver: false,
+          isInteraction: false,
         }),
         Animated.timing(ambientSparklePulse, {
           toValue: 0,
           duration: 2600,
           easing: Easing.inOut(Easing.sin),
-          useNativeDriver: isNative,
+          useNativeDriver: false,
+          isInteraction: false,
         }),
       ])
     );
@@ -85,6 +105,7 @@ export function BalanceCardScenery() {
     cloudFarAnimation.start();
     cloudNearAnimation.start();
     smokeAnimation.start();
+    smokeAnimation2.start();
     windowAnimation.start();
     sparkleAnimation.start();
 
@@ -92,6 +113,7 @@ export function BalanceCardScenery() {
       cloudFarAnimation.stop();
       cloudNearAnimation.stop();
       smokeAnimation.stop();
+      smokeAnimation2.stop();
       windowAnimation.stop();
       sparkleAnimation.stop();
     };
@@ -99,6 +121,7 @@ export function BalanceCardScenery() {
     cloudFarX,
     cloudNearX,
     chimneySmokeProgress,
+    chimneySmokeProgress2,
     cottageWindowGlow,
     ambientSparklePulse,
   ]);
@@ -139,17 +162,21 @@ export function BalanceCardScenery() {
     outputRange: [0, 0.75, 0.4, 0],
   });
 
-  const smokeTranslateY2 = chimneySmokeProgress.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [-13, -26, 0],
+  const smokeTranslateY2 = chimneySmokeProgress2.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, -26],
   });
-  const smokeScale2 = chimneySmokeProgress.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [0.9, 1.5, 0.3],
+  const smokeTranslateX2 = chimneySmokeProgress2.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 10],
   });
-  const smokeOpacity2 = chimneySmokeProgress.interpolate({
-    inputRange: [0, 0.4, 0.7, 1],
-    outputRange: [0.5, 0.2, 0, 0.6],
+  const smokeScale2 = chimneySmokeProgress2.interpolate({
+    inputRange: [0, 0.4, 1],
+    outputRange: [0.3, 0.8, 1.4],
+  });
+  const smokeOpacity2 = chimneySmokeProgress2.interpolate({
+    inputRange: [0, 0.2, 0.8, 1],
+    outputRange: [0, 0.75, 0.4, 0],
   });
 
   const sparkleOpacity = ambientSparklePulse.interpolate({
@@ -194,9 +221,9 @@ export function BalanceCardScenery() {
           </LinearGradient>
 
           <LinearGradient id="balanceSunbeamGradient" x1="100%" y1="0%" x2="30%" y2="100%">
-            <Stop offset="0%" stopColor="rgba(255, 250, 230, 0.4)" />
-            <Stop offset="60%" stopColor="rgba(255, 255, 255, 0.08)" />
-            <Stop offset="100%" stopColor="transparent" />
+            <Stop offset="0%" stopColor="#FFFADE" stopOpacity="0.25" />
+            <Stop offset="50%" stopColor="#FFFFFF" stopOpacity="0.06" />
+            <Stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
           </LinearGradient>
 
           <LinearGradient id="balanceHillGradient1" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -323,7 +350,7 @@ export function BalanceCardScenery() {
               backgroundColor: smokeColor,
               transform: [
                 { translateY: smokeTranslateY2 },
-                { translateX: smokeTranslateX1 },
+                { translateX: smokeTranslateX2 },
                 { scale: smokeScale2 },
               ],
               opacity: smokeOpacity2,
