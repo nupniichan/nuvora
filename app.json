@@ -4,16 +4,16 @@
     "slug": "nuvora",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/logo/nuvora_logo.png",
     "scheme": "nuvora",
     "userInterfaceStyle": "light",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/logo/nuvora_logo.png"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#CCCCFF",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "backgroundColor": "#282744",
+        "foregroundImage": "./assets/logo/nuvora_logo.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
@@ -21,16 +21,16 @@
     },
     "web": {
       "output": "single",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/logo/nuvora_logo.png"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#F8F8FF",
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "backgroundColor": "#FFFFFF",
+          "image": "./assets/logo/nuvora_logo.png",
+          "imageWidth": 80
         }
       ],
       [
