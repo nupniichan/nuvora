@@ -203,7 +203,7 @@ export default function MoreScreen() {
           <Text style={styles.appVersion}>1.0.0 · {t('settings.localFirstTagline')}</Text>
           <Text style={styles.appDesc}>{t('settings.privacyDescription')}</Text>
           <Button
-            title={currentLang === 'vi' ? 'Xem lại animation mở app' : 'Replay launch animation'}
+            title={t('settings.replaySplash')}
             icon={<MaterialIcons name="play-circle-outline" size={18} color={Colors.primaryStrong} />}
             onPress={() => setShowReplaySplash(true)}
             variant="outline"

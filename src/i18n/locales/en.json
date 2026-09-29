@@ -514,7 +514,11 @@
     "searchTimezone": "Search timezone, city...",
     "systemTimezoneHint": "Use device timezone ({{gmt}})",
     "localFirstTagline": "Private-first personal finance",
-    "privacyDescription": "Your financial data is stored directly on your device."
+    "privacyDescription": "Your financial data is stored directly on your device.",
+    "replaySplash": "Replay launch animation"
+  },
+  "splash": {
+    "tagline": "Your money, your privacy, your data"
   },
   "monthlyLimit": {
     "confirmTitle": "Monthly spending limit exceeded",

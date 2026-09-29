@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Animated,
   Easing,
@@ -21,18 +22,19 @@ export function AnimatedSplashScreen({
   onAnimationComplete,
   autoHideDuration = 2400,
 }: AnimatedSplashScreenProps) {
+  const { t } = useTranslation();
   const isNative = Platform.OS !== 'web';
 
-  const logoScale = useRef(new Animated.Value(0.85)).current;
-  const logoOpacity = useRef(new Animated.Value(0)).current;
-  const shiftX = useRef(new Animated.Value(108)).current;
-  const textOpacity = useRef(new Animated.Value(0)).current;
-  const textTranslateX = useRef(new Animated.Value(-16)).current;
-  const subtitleOpacity = useRef(new Animated.Value(0)).current;
-  const subtitleTranslateX = useRef(new Animated.Value(-10)).current;
-  const glowScale = useRef(new Animated.Value(0.8)).current;
-  const glowOpacity = useRef(new Animated.Value(0)).current;
-  const screenOpacity = useRef(new Animated.Value(1)).current;
+  const [logoScale] = useState(() => new Animated.Value(0.85));
+  const [logoOpacity] = useState(() => new Animated.Value(0));
+  const [shiftX] = useState(() => new Animated.Value(108));
+  const [textOpacity] = useState(() => new Animated.Value(0));
+  const [textTranslateX] = useState(() => new Animated.Value(-16));
+  const [subtitleOpacity] = useState(() => new Animated.Value(0));
+  const [subtitleTranslateX] = useState(() => new Animated.Value(-10));
+  const [glowScale] = useState(() => new Animated.Value(0.8));
+  const [glowOpacity] = useState(() => new Animated.Value(0));
+  const [screenOpacity] = useState(() => new Animated.Value(1));
 
   const [hasFinished, setHasFinished] = useState(false);
 
@@ -228,7 +230,7 @@ export function AnimatedSplashScreen({
               ]}
               numberOfLines={2}
             >
-              Your money, your privacy, your data
+              {t('splash.tagline', 'Your money, your privacy, your data')}
             </Animated.Text>
           </View>
         </Animated.View>

@@ -360,7 +360,15 @@
     "noTransactionsMonth": "Không có giao dịch trong tháng này",
     "dayTotal": "Tổng trong ngày",
     "selectedDate": "Ngày {{date}}",
-    "weekdays": ["CN", "T2", "T3", "T4", "T5", "T6", "T7"]
+    "weekdays": [
+      "CN",
+      "T2",
+      "T3",
+      "T4",
+      "T5",
+      "T6",
+      "T7"
+    ]
   },
   "charts": {
     "dailySpending": "Nhịp chi tiêu",
@@ -514,7 +522,11 @@
     "searchTimezone": "Tìm kiếm múi giờ, thành phố...",
     "systemTimezoneHint": "Sử dụng múi giờ thiết bị ({{gmt}})",
     "localFirstTagline": "Tài chính cá nhân, ưu tiên riêng tư",
-    "privacyDescription": "Dữ liệu tài chính được lưu trữ trực tiếp trên thiết bị của bạn."
+    "privacyDescription": "Dữ liệu tài chính được lưu trữ trực tiếp trên thiết bị của bạn.",
+    "replaySplash": "Xem lại animation mở app"
+  },
+  "splash": {
+    "tagline": "Your money, your data, your privacy"
   },
   "monthlyLimit": {
     "confirmTitle": "Đã vượt hạn mức chi tiêu tháng",
