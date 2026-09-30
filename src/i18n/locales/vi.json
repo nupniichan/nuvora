@@ -49,6 +49,8 @@
     "passwordTooShort": "Mật khẩu phải có ít nhất 8 ký tự",
     "passwordTip": "Hãy lưu giữ mật khẩu cẩn thận. Bạn sẽ cần mật khẩu này để khôi phục bản sao lưu mã hóa.",
     "lockSubtitle": "Nhập mật khẩu để mở khóa dữ liệu",
+    "periodicPasswordSubtitle": "Vui lòng nhập mật khẩu định kỳ để tiếp tục sử dụng sinh trắc học",
+    "periodicPasswordNotice": "Để giúp bạn ghi nhớ mật khẩu và bảo mật dữ liệu, bạn sẽ được yêu cầu nhập mật khẩu mỗi 3 ngày.",
     "unlockBiometric": "Mở khóa bằng sinh trắc học",
     "biometricTitle": "Bật xác thực sinh trắc học?",
     "biometricSubtitle": "Sử dụng vân tay để mở khóa ứng dụng nhanh chóng.",

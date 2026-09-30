@@ -9,6 +9,7 @@ const KEYS = {
   BIOMETRIC_DEK: 'nuvora_biometric_dek',
   LANGUAGE: 'nuvora_language',
   IS_INITIALIZED: 'nuvora_is_initialized',
+  LAST_PASSWORD_AUTH_TIME: 'nuvora_last_password_auth_time',
 };
 
 export async function setSecureItem(key: string, value: string): Promise<void> {

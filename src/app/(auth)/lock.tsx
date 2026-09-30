@@ -13,6 +13,7 @@ import { Colors } from '@/constants/theme';
 import {
   isBiometricsAvailable,
   isBiometricsEnabled,
+  isPasswordAuthExpired,
   lockApp,
   unlockWithBiometrics,
   unlockWithPassword,
@@ -26,6 +27,7 @@ export default function LockScreen() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [canBiometric, setCanBiometric] = useState(false);
+  const [isPeriodicPasswordRequired, setIsPeriodicPasswordRequired] = useState(false);
   const [lockStatus, setLockStatus] = useState<LockStatus>('locked');
 
   const handleUnlockComplete = useCallback(() => {
@@ -43,8 +45,11 @@ export default function LockScreen() {
     lockApp();
     async function checkBiometrics() {
       const isAvailable = (await isBiometricsAvailable()) && (await isBiometricsEnabled());
-      setCanBiometric(isAvailable);
-      if (isAvailable) {
+      const isExpired = await isPasswordAuthExpired();
+      const allowBio = isAvailable && !isExpired;
+      setCanBiometric(allowBio);
+      setIsPeriodicPasswordRequired(isAvailable && isExpired);
+      if (allowBio) {
         handleBiometric();
       }
     }
@@ -76,8 +81,21 @@ export default function LockScreen() {
             onUnlockComplete={handleUnlockComplete}
           />
           <Text style={styles.title}>Nuvora</Text>
-          <Text style={styles.subtitle}>{t('onboarding.lockSubtitle')}</Text>
+          <Text style={styles.subtitle}>
+            {isPeriodicPasswordRequired
+              ? t('onboarding.periodicPasswordSubtitle')
+              : t('onboarding.lockSubtitle')}
+          </Text>
         </View>
+
+        {isPeriodicPasswordRequired && (
+          <View style={styles.noticeBox}>
+            <MaterialIcons name="lock-clock" size={20} color={Colors.primaryDark} />
+            <Text style={styles.noticeText}>
+              {t('onboarding.periodicPasswordNotice')}
+            </Text>
+          </View>
+        )}
 
         <Card style={styles.card}>
           <Input
@@ -139,6 +157,24 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: 16,
     lineHeight: 22,
+  },
+  noticeBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.primaryFaded,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(5, 150, 105, 0.15)',
+  },
+  noticeText: {
+    flex: 1,
+    fontSize: 13,
+    color: Colors.primaryDark,
+    lineHeight: 18,
+    fontWeight: '500',
   },
   card: {
     gap: 16,

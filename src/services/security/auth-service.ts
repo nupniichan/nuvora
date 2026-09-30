@@ -57,6 +57,30 @@ export async function setBiometricsEnabled(enabled: boolean): Promise<void> {
   await setSecureItem(StorageKeys.BIOMETRIC_ENABLED, enabled ? 'true' : 'false');
 }
 
+export const PASSWORD_AUTH_MAX_AGE_MS = 3 * 24 * 60 * 60 * 1000; // 3 days
+
+export async function recordPasswordAuthTime(timestamp: number = Date.now()): Promise<void> {
+  await setSecureItem(StorageKeys.LAST_PASSWORD_AUTH_TIME, timestamp.toString());
+}
+
+export async function getLastPasswordAuthTime(): Promise<number | null> {
+  const val = await getSecureItem(StorageKeys.LAST_PASSWORD_AUTH_TIME);
+  if (!val) return null;
+  const num = parseInt(val, 10);
+  return Number.isFinite(num) ? num : null;
+}
+
+export async function isPasswordAuthExpired(now: number = Date.now()): Promise<boolean> {
+  const lastAuthTime = await getLastPasswordAuthTime();
+  if (lastAuthTime === null || lastAuthTime <= 0) {
+    return true;
+  }
+  if (lastAuthTime > now + 5 * 60 * 1000) {
+    return true;
+  }
+  return (now - lastAuthTime) >= PASSWORD_AUTH_MAX_AGE_MS;
+}
+
 export async function unlockWithPassword(password: string): Promise<boolean> {
   try {
     if (await getSecureItem(StorageKeys.DELETION_PENDING) === 'true') return false;
@@ -65,6 +89,7 @@ export async function unlockWithPassword(password: string): Promise<boolean> {
     isUnlockedState = true;
 
     await initDatabase(dekHex);
+    await recordPasswordAuthTime();
     return true;
   } catch {
     activeDekInMemory = null;
@@ -77,6 +102,9 @@ export async function unlockWithBiometrics(): Promise<boolean> {
   if (await getSecureItem(StorageKeys.DELETION_PENDING) === 'true') return false;
   const canUseBio = (await isBiometricsAvailable()) && (await isBiometricsEnabled());
   if (!canUseBio) {
+    return false;
+  }
+  if (await isPasswordAuthExpired()) {
     return false;
   }
 
@@ -146,6 +174,7 @@ export async function changePassword(currentPassword: string, newPassword: strin
   try {
     await verifyCurrentPassword(currentPassword);
     await rewrapDEK(currentPassword, newPassword);
+    await recordPasswordAuthTime();
   } finally {
     accountOperation = false;
   }

@@ -49,6 +49,8 @@
     "passwordTooShort": "Password must be at least 8 characters",
     "passwordTip": "Keep this password safe. You will need it to restore an encrypted backup.",
     "lockSubtitle": "Enter your password to unlock your data",
+    "periodicPasswordSubtitle": "Please enter your password periodically to continue using biometrics",
+    "periodicPasswordNotice": "To help you remember your password and keep your data secure, you will be asked to enter your password every 3 days.",
     "unlockBiometric": "Unlock with biometrics",
     "biometricTitle": "Enable Biometric Unlock?",
     "biometricSubtitle": "Use fingerprint for quick access.",

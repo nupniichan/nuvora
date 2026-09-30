@@ -1,4 +1,18 @@
-import { changePassword, deleteAccount, getActiveDek, isAppUnlocked, lockApp, resumeAccountDeletion, unlockWithPassword, verifyMasterPassword } from '../auth-service';
+import {
+  changePassword,
+  deleteAccount,
+  getActiveDek,
+  getLastPasswordAuthTime,
+  isAppUnlocked,
+  isPasswordAuthExpired,
+  lockApp,
+  PASSWORD_AUTH_MAX_AGE_MS,
+  recordPasswordAuthTime,
+  resumeAccountDeletion,
+  unlockWithBiometrics,
+  unlockWithPassword,
+  verifyMasterPassword,
+} from '../auth-service';
 import { initializeKeyEnvelope, isKeyEnvelopeInitialized, unwrapDEK } from '../key-manager';
 import { StorageKeys } from '../secure-storage';
 import { getDatabase, closeDatabase } from '@/database/database';
@@ -131,3 +145,59 @@ test('password validation and locked sessions prevent account changes', async ()
   await expect(changePassword(password, 'new-password-123')).rejects.toThrow('sessionExpired');
   await expect(deleteAccount(password)).rejects.toThrow('sessionExpired');
 });
+
+test('password auth expiration enforces 3-day window for biometrics', async () => {
+  const now = Date.now();
+  const lastTime = await getLastPasswordAuthTime();
+  expect(lastTime).not.toBeNull();
+  expect(typeof lastTime).toBe('number');
+
+  const twoDaysLater = (lastTime ?? now) + 2 * 24 * 60 * 60 * 1000;
+  expect(await isPasswordAuthExpired(twoDaysLater)).toBe(false);
+
+  const threeDaysLater = (lastTime ?? now) + PASSWORD_AUTH_MAX_AGE_MS;
+  expect(await isPasswordAuthExpired(threeDaysLater)).toBe(true);
+
+  const fourDaysLater = (lastTime ?? now) + 4 * 24 * 60 * 60 * 1000;
+  expect(await isPasswordAuthExpired(fourDaysLater)).toBe(true);
+});
+
+test('isPasswordAuthExpired returns true if no timestamp exists or timestamp is invalid or future-skewed', async () => {
+  values.delete(StorageKeys.LAST_PASSWORD_AUTH_TIME);
+  expect(await isPasswordAuthExpired()).toBe(true);
+
+  values.set(StorageKeys.LAST_PASSWORD_AUTH_TIME, 'invalid-nan');
+  expect(await isPasswordAuthExpired()).toBe(true);
+
+  const farFuture = Date.now() + 10 * 60 * 1000;
+  values.set(StorageKeys.LAST_PASSWORD_AUTH_TIME, farFuture.toString());
+  expect(await isPasswordAuthExpired()).toBe(true);
+});
+
+test('unlockWithBiometrics is blocked when password auth is expired', async () => {
+  values.set(StorageKeys.BIOMETRIC_ENABLED, 'true');
+  values.set(StorageKeys.BIOMETRIC_DEK, getActiveDek()!);
+
+  const expiredTime = Date.now() - PASSWORD_AUTH_MAX_AGE_MS - 1000;
+  await recordPasswordAuthTime(expiredTime);
+  expect(await isPasswordAuthExpired()).toBe(true);
+
+  lockApp();
+  expect(await unlockWithBiometrics()).toBe(false);
+  expect(isAppUnlocked()).toBe(false);
+
+  expect(await unlockWithPassword(password)).toBe(true);
+  expect(isAppUnlocked()).toBe(true);
+  expect(await isPasswordAuthExpired()).toBe(false);
+});
+
+test('changePassword refreshes password auth timestamp', async () => {
+  const oldTime = Date.now() - 100000;
+  await recordPasswordAuthTime(oldTime);
+  expect(await getLastPasswordAuthTime()).toBe(oldTime);
+
+  await changePassword(password, 'new-password-123');
+  const refreshedTime = await getLastPasswordAuthTime();
+  expect(refreshedTime).toBeGreaterThanOrEqual(oldTime + 100000);
+});
+
