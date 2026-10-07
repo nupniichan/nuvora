@@ -1,6 +1,6 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { LockHeroScenery, LockStatus } from '@/components/scenery';
+import { useSplash } from '@/components/splash/splash-context';
 import { Colors } from '@/constants/theme';
 import {
   isBiometricsAvailable,
@@ -22,6 +23,7 @@ import {
 export default function LockScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const { isSplashFinished } = useSplash();
 
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -29,6 +31,7 @@ export default function LockScreen() {
   const [canBiometric, setCanBiometric] = useState(false);
   const [isPeriodicPasswordRequired, setIsPeriodicPasswordRequired] = useState(false);
   const [lockStatus, setLockStatus] = useState<LockStatus>('locked');
+  const hasPromptedBiometricsRef = useRef(false);
 
   const handleUnlockComplete = useCallback(() => {
     router.replace('/(main)');
@@ -49,12 +52,16 @@ export default function LockScreen() {
       const allowBio = isAvailable && !isExpired;
       setCanBiometric(allowBio);
       setIsPeriodicPasswordRequired(isAvailable && isExpired);
-      if (allowBio) {
-        handleBiometric();
-      }
     }
     void checkBiometrics();
-  }, [handleBiometric]);
+  }, []);
+
+  useEffect(() => {
+    if (canBiometric && isSplashFinished && !hasPromptedBiometricsRef.current) {
+      hasPromptedBiometricsRef.current = true;
+      void handleBiometric();
+    }
+  }, [canBiometric, isSplashFinished, handleBiometric]);
 
   const handlePasswordUnlock = async () => {
     setLoading(true);
