@@ -2,7 +2,14 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/button';
@@ -81,54 +88,63 @@ export default function LockScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.heroSection}>
-          <LockHeroScenery
-            status={lockStatus}
-            onUnlockComplete={handleUnlockComplete}
-          />
-          <Text style={styles.title}>Nuvora</Text>
-          <Text style={styles.subtitle}>
-            {isPeriodicPasswordRequired
-              ? t('onboarding.periodicPasswordSubtitle')
-              : t('onboarding.lockSubtitle')}
-          </Text>
-        </View>
-
-        {isPeriodicPasswordRequired && (
-          <View style={styles.noticeBox}>
-            <MaterialIcons name="lock-clock" size={20} color={Colors.primaryDark} />
-            <Text style={styles.noticeText}>
-              {t('onboarding.periodicPasswordNotice')}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.keyboardAvoid}
+      >
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.heroSection}>
+            <LockHeroScenery
+              status={lockStatus}
+              onUnlockComplete={handleUnlockComplete}
+            />
+            <Text style={styles.title}>Nuvora</Text>
+            <Text style={styles.subtitle}>
+              {isPeriodicPasswordRequired
+                ? t('onboarding.periodicPasswordSubtitle')
+                : t('onboarding.lockSubtitle')}
             </Text>
           </View>
-        )}
 
-        <Card style={styles.card}>
-          <Input
-            placeholder={t('onboarding.passwordPlaceholder')}
-            secureTextEntry
-            value={password}
-            onChangeText={setPassword}
-            error={error ?? undefined}
-          />
-          <Button
-            title={t('common.confirm')}
-            onPress={handlePasswordUnlock}
-            variant="primary"
-            loading={loading}
-          />
-        </Card>
+          {isPeriodicPasswordRequired && (
+            <View style={styles.noticeBox}>
+              <MaterialIcons name="lock-clock" size={20} color={Colors.primaryDark} />
+              <Text style={styles.noticeText}>
+                {t('onboarding.periodicPasswordNotice')}
+              </Text>
+            </View>
+          )}
 
-        {canBiometric ? (
-          <Button
-            title={t('onboarding.unlockBiometric')}
-            icon={<MaterialIcons name="fingerprint" size={20} color={Colors.primaryDark} />}
-            onPress={handleBiometric}
-            variant="outline"
-          />
-        ) : null}
-      </ScrollView>
+          <Card style={styles.card}>
+            <Input
+              placeholder={t('onboarding.passwordPlaceholder')}
+              secureTextEntry
+              value={password}
+              onChangeText={setPassword}
+              error={error ?? undefined}
+            />
+            <Button
+              title={t('common.confirm')}
+              onPress={handlePasswordUnlock}
+              variant="primary"
+              loading={loading}
+            />
+          </Card>
+
+          {canBiometric ? (
+            <Button
+              title={t('onboarding.unlockBiometric')}
+              icon={<MaterialIcons name="fingerprint" size={20} color={Colors.primaryDark} />}
+              onPress={handleBiometric}
+              variant="outline"
+            />
+          ) : null}
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -137,6 +153,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.light.background,
+  },
+  keyboardAvoid: {
+    flex: 1,
   },
   content: {
     flexGrow: 1,

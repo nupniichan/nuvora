@@ -4,6 +4,8 @@ import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StyleSheet,
   Switch,
@@ -205,7 +207,15 @@ export default function ManageBudgetModal() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.keyboardAvoid}
+      >
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
         {initialLoading || monthLoading ? <ActivityIndicator color={Colors.primaryStrong} /> : null}
         {loadError && <Text style={styles.warningText}>{t('charts.loadError')}</Text>}
         <Card style={styles.sectionCard}>
@@ -330,7 +340,8 @@ export default function ManageBudgetModal() {
           disabled={initialLoading || monthLoading || loadError}
           style={styles.saveBtn}
         />
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -339,6 +350,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.light.background,
+  },
+  keyboardAvoid: {
+    flex: 1,
   },
   header: {
     flexDirection: 'row',

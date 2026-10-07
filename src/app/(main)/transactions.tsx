@@ -4,7 +4,9 @@ import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   FlatList,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -260,15 +262,23 @@ export default function TransactionsScreen() {
         presentationStyle="pageSheet"
         onRequestClose={() => setEditModalVisible(false)}
       >
-        <View style={styles.modalRoot}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>{t('transactions.editTitle')}</Text>
-            <TouchableOpacity onPress={() => setEditModalVisible(false)}>
-              <MaterialIcons name="close" size={22} color={Colors.light.text} />
-            </TouchableOpacity>
-          </View>
+        <SafeAreaView style={styles.modalRoot} edges={['top', 'left', 'right']}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={styles.keyboardAvoid}
+          >
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{t('transactions.editTitle')}</Text>
+              <TouchableOpacity onPress={() => setEditModalVisible(false)}>
+                <MaterialIcons name="close" size={22} color={Colors.light.text} />
+              </TouchableOpacity>
+            </View>
 
-          <ScrollView contentContainerStyle={styles.modalContent}>
+            <ScrollView
+              contentContainerStyle={styles.modalContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
             <View style={styles.segmentRow}>
               <TouchableOpacity
                 style={[styles.segmentBtn, editType === 'expense' && styles.activeExpense]}
@@ -325,22 +335,23 @@ export default function TransactionsScreen() {
             </View>
           </ScrollView>
 
-          <View style={styles.modalFooter}>
-            <Button
-              title={t('transactions.deleteThis')}
-              variant="outline"
-              onPress={() => editingTransaction && handleDelete(editingTransaction.id)}
-              style={styles.deleteTxBtn}
-            />
-            <Button
-              title={t('common.update')}
-              variant="primary"
-              loading={saving}
-              onPress={handleSaveEdit}
-              style={styles.saveTxBtn}
-            />
-          </View>
-        </View>
+            <View style={styles.modalFooter}>
+              <Button
+                title={t('transactions.deleteThis')}
+                variant="outline"
+                onPress={() => editingTransaction && handleDelete(editingTransaction.id)}
+                style={styles.deleteTxBtn}
+              />
+              <Button
+                title={t('common.update')}
+                variant="primary"
+                loading={saving}
+                onPress={handleSaveEdit}
+                style={styles.saveTxBtn}
+              />
+            </View>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
       </Modal>
     </SafeAreaView>
   );
@@ -580,6 +591,9 @@ const styles = StyleSheet.create({
     borderColor: Colors.expense,
   },
   saveTxBtn: {
+    flex: 1,
+  },
+  keyboardAvoid: {
     flex: 1,
   },
 });

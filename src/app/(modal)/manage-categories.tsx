@@ -4,7 +4,9 @@ import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -286,7 +288,7 @@ export default function ManageCategoriesModal() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {loading ? <ActivityIndicator color={Colors.primaryStrong} /> : null}
         <View style={styles.topActions}>
           <Button
@@ -412,16 +414,24 @@ export default function ManageCategoriesModal() {
         onRequestClose={() => setCategoryModalVisible(false)}
       >
         <SafeAreaView style={styles.modalRoot} edges={['top', 'left', 'right']}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>
-              {t(editingCategory ? 'categories.editCategory' : 'categories.newCategory')}
-            </Text>
-            <TouchableOpacity onPress={() => setCategoryModalVisible(false)}>
-              <MaterialIcons name="close" size={22} color={Colors.light.text} />
-            </TouchableOpacity>
-          </View>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={styles.keyboardAvoid}
+          >
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                {t(editingCategory ? 'categories.editCategory' : 'categories.newCategory')}
+              </Text>
+              <TouchableOpacity onPress={() => setCategoryModalVisible(false)}>
+                <MaterialIcons name="close" size={22} color={Colors.light.text} />
+              </TouchableOpacity>
+            </View>
 
-          <ScrollView contentContainerStyle={styles.modalContent}>
+            <ScrollView
+              contentContainerStyle={styles.modalContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
             {}
             <View style={styles.formGroup}>
               <Text style={styles.formLabel}>{t('categories.categoryName')}</Text>
@@ -482,13 +492,14 @@ export default function ManageCategoriesModal() {
             </View>
           </ScrollView>
 
-          <View style={styles.modalFooter}>
-            <Button
-              title={t('categories.saveCategory')}
-              variant="primary"
-              onPress={handleSaveCategory}
-            />
-          </View>
+            <View style={styles.modalFooter}>
+              <Button
+                title={t('categories.saveCategory')}
+                variant="primary"
+                onPress={handleSaveCategory}
+              />
+            </View>
+          </KeyboardAvoidingView>
         </SafeAreaView>
       </Modal>
 
@@ -500,14 +511,22 @@ export default function ManageCategoriesModal() {
         onRequestClose={() => setGroupModalVisible(false)}
       >
         <SafeAreaView style={styles.modalRoot} edges={['top', 'left', 'right']}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>{t('categories.newGroup')}</Text>
-            <TouchableOpacity onPress={() => setGroupModalVisible(false)}>
-              <MaterialIcons name="close" size={22} color={Colors.light.text} />
-            </TouchableOpacity>
-          </View>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={styles.keyboardAvoid}
+          >
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{t('categories.newGroup')}</Text>
+              <TouchableOpacity onPress={() => setGroupModalVisible(false)}>
+                <MaterialIcons name="close" size={22} color={Colors.light.text} />
+              </TouchableOpacity>
+            </View>
 
-          <ScrollView contentContainerStyle={styles.modalContent}>
+            <ScrollView
+              contentContainerStyle={styles.modalContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
             <View style={styles.formGroup}>
               <Text style={styles.formLabel}>{t('categories.groupName')}</Text>
               <TextInput
@@ -572,13 +591,14 @@ export default function ManageCategoriesModal() {
             />
           </ScrollView>
 
-          <View style={styles.modalFooter}>
-            <Button
-              title={t('categories.createGroup')}
-              variant="primary"
-              onPress={handleSaveGroup}
-            />
-          </View>
+            <View style={styles.modalFooter}>
+              <Button
+                title={t('categories.createGroup')}
+                variant="primary"
+                onPress={handleSaveGroup}
+              />
+            </View>
+          </KeyboardAvoidingView>
         </SafeAreaView>
       </Modal>
 
@@ -1109,5 +1129,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.light.text,
     fontWeight: '500',
+  },
+  keyboardAvoid: {
+    flex: 1,
   },
 });

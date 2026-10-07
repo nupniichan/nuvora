@@ -3,7 +3,9 @@ import { withMonthlyLimitConfirmation } from '@/features/budgets/confirm-monthly
 import React, { useCallback, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import {
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -186,7 +188,7 @@ export default function ManageGoalsModal() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Button
           title={t('goals.create')}
           variant="primary"
@@ -322,16 +324,24 @@ export default function ManageGoalsModal() {
         onRequestClose={() => setCreateModalVisible(false)}
       >
         <SafeAreaView style={styles.modalRoot} edges={['top', 'left', 'right']}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>
-              {editingGoal ? t('goals.editTitle') : t('goals.createTitle')}
-            </Text>
-            <TouchableOpacity onPress={() => setCreateModalVisible(false)}>
-              <MaterialIcons name="close" size={22} color={Colors.light.text} />
-            </TouchableOpacity>
-          </View>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={styles.keyboardAvoid}
+          >
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                {editingGoal ? t('goals.editTitle') : t('goals.createTitle')}
+              </Text>
+              <TouchableOpacity onPress={() => setCreateModalVisible(false)}>
+                <MaterialIcons name="close" size={22} color={Colors.light.text} />
+              </TouchableOpacity>
+            </View>
 
-          <ScrollView contentContainerStyle={styles.modalContent}>
+            <ScrollView
+              contentContainerStyle={styles.modalContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
 
             <View style={styles.formGroup}>
               <Text style={styles.formLabel}>{t('goals.name')}</Text>
@@ -411,15 +421,16 @@ export default function ManageGoalsModal() {
             />
           </ScrollView>
 
-          <View style={styles.modalFooter}>
-            <Button
-              title={t('goals.save')}
-              variant="primary"
-              onPress={handleSaveGoal}
-              loading={saving}
-              disabled={!funds || saving}
-            />
-          </View>
+            <View style={styles.modalFooter}>
+              <Button
+                title={t('goals.save')}
+                variant="primary"
+                onPress={handleSaveGoal}
+                loading={saving}
+                disabled={!funds || saving}
+              />
+            </View>
+          </KeyboardAvoidingView>
         </SafeAreaView>
       </Modal>
 
@@ -431,6 +442,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.light.background,
+  },
+  keyboardAvoid: {
+    flex: 1,
   },
   header: {
     flexDirection: 'row',

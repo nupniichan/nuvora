@@ -1,7 +1,7 @@
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, StyleSheet, Text } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/button';
@@ -66,20 +66,29 @@ export default function AccountSecurityScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>{t(deleting ? 'accountSecurity.deleteAccount' : 'accountSecurity.changePassword')}</Text>
-        <Card style={styles.card}>
-          <Text style={styles.description}>{t(deleting ? 'accountSecurity.deleteWarning' : 'accountSecurity.changeDescription')}</Text>
-          <Input label={t('accountSecurity.currentPassword')} secureTextEntry autoCapitalize="none" autoCorrect={false} textContentType="password" value={currentPassword} onChangeText={setCurrentPassword} editable={!busy} />
-          {!deleting && <>
-            <Input label={t('accountSecurity.newPassword')} secureTextEntry autoCapitalize="none" autoCorrect={false} textContentType="newPassword" value={newPassword} onChangeText={setNewPassword} editable={!busy} />
-            <Input label={t('accountSecurity.confirmPassword')} secureTextEntry autoCapitalize="none" autoCorrect={false} textContentType="newPassword" value={confirmation} onChangeText={setConfirmation} editable={!busy} />
-          </>}
-          {!!error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
-          <Button title={t(deleting ? 'accountSecurity.deleteAccount' : 'accountSecurity.changePassword')} variant={deleting ? 'destructive' : 'primary'} loading={busy} disabled={busy} onPress={handleSubmit} />
-          <Button title={t('common.cancel')} variant="outline" disabled={busy} onPress={() => router.replace('/(main)/more')} />
-        </Card>
-      </ScrollView>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+      >
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <Text style={styles.title}>{t(deleting ? 'accountSecurity.deleteAccount' : 'accountSecurity.changePassword')}</Text>
+          <Card style={styles.card}>
+            <Text style={styles.description}>{t(deleting ? 'accountSecurity.deleteWarning' : 'accountSecurity.changeDescription')}</Text>
+            <Input label={t('accountSecurity.currentPassword')} secureTextEntry autoCapitalize="none" autoCorrect={false} textContentType="password" value={currentPassword} onChangeText={setCurrentPassword} editable={!busy} />
+            {!deleting && <>
+              <Input label={t('accountSecurity.newPassword')} secureTextEntry autoCapitalize="none" autoCorrect={false} textContentType="newPassword" value={newPassword} onChangeText={setNewPassword} editable={!busy} />
+              <Input label={t('accountSecurity.confirmPassword')} secureTextEntry autoCapitalize="none" autoCorrect={false} textContentType="newPassword" value={confirmation} onChangeText={setConfirmation} editable={!busy} />
+            </>}
+            {!!error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
+            <Button title={t(deleting ? 'accountSecurity.deleteAccount' : 'accountSecurity.changePassword')} variant={deleting ? 'destructive' : 'primary'} loading={busy} disabled={busy} onPress={handleSubmit} />
+            <Button title={t('common.cancel')} variant="outline" disabled={busy} onPress={() => router.replace('/(main)/more')} />
+          </Card>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

@@ -2,7 +2,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/button';
@@ -43,40 +43,49 @@ export default function SetupPasswordScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <View style={styles.header}>
-          <Text style={styles.title}>{t('onboarding.createPasswordTitle')}</Text>
-          <Text style={styles.subtitle}>{t('onboarding.createPasswordSubtitle')}</Text>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.keyboardAvoid}
+      >
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.header}>
+            <Text style={styles.title}>{t('onboarding.createPasswordTitle')}</Text>
+            <Text style={styles.subtitle}>{t('onboarding.createPasswordSubtitle')}</Text>
+          </View>
+
+          <Card style={styles.card}>
+            <Input
+              label={t('onboarding.createPasswordTitle')}
+              placeholder={t('onboarding.passwordPlaceholder')}
+              secureTextEntry
+              value={password}
+              onChangeText={setPassword}
+            />
+
+            <Input
+              label={t('common.confirm')}
+              placeholder={t('onboarding.confirmPasswordPlaceholder')}
+              secureTextEntry
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              error={error ?? undefined}
+            />
+          </Card>
+
+          <Card variant="flat" style={styles.noticeCard}>
+            <MaterialIcons name="lightbulb-outline" size={24} color={Colors.primary} />
+            <Text style={styles.noticeText}>{t('onboarding.passwordTip')}</Text>
+          </Card>
+        </ScrollView>
+
+        <View style={styles.footer}>
+          <Button title={t('common.next')} onPress={handleNext} variant="primary" />
         </View>
-
-        <Card style={styles.card}>
-          <Input
-            label={t('onboarding.createPasswordTitle')}
-            placeholder={t('onboarding.passwordPlaceholder')}
-            secureTextEntry
-            value={password}
-            onChangeText={setPassword}
-          />
-
-          <Input
-            label={t('common.confirm')}
-            placeholder={t('onboarding.confirmPasswordPlaceholder')}
-            secureTextEntry
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            error={error ?? undefined}
-          />
-        </Card>
-
-        <Card variant="flat" style={styles.noticeCard}>
-          <MaterialIcons name="lightbulb-outline" size={24} color={Colors.primary} />
-          <Text style={styles.noticeText}>{t('onboarding.passwordTip')}</Text>
-        </Card>
-      </View>
-
-      <View style={styles.footer}>
-        <Button title={t('common.next')} onPress={handleNext} variant="primary" />
-      </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -86,9 +95,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.light.background,
   },
-  content: {
+  keyboardAvoid: {
     flex: 1,
+  },
+  content: {
+    flexGrow: 1,
     paddingHorizontal: 24,
+    paddingVertical: 16,
     justifyContent: 'center',
     gap: 24,
   },

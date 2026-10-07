@@ -3,6 +3,8 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -178,130 +180,139 @@ export default function AddTransactionModal() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.segmentRow}>
-          <TouchableOpacity
-            style={[styles.segmentBtn, type === 'expense' && styles.activeExpense]}
-            onPress={() => setType('expense')}
-          >
-            <Text style={[styles.segmentText, type === 'expense' && styles.activeText]}>
-              {t('transactions.expense')}
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.segmentBtn, type === 'income' && styles.activeIncome]}
-            onPress={() => setType('income')}
-          >
-            <Text style={[styles.segmentText, type === 'income' && styles.activeText]}>
-              {t('transactions.income')}
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        <MoneyInput
-          label={t('transactions.amount')}
-          currency={currency}
-          valueMinor={amountMinor}
-          onChangeMinor={setAmountMinor}
-        />
-
-        {limitWarning && (
-          <View
-            style={[
-              styles.warningBanner,
-              limitWarning.isOverLimit ? styles.dangerBanner : styles.amberBanner,
-            ]}
-          >
-            <MaterialIcons
-              name={limitWarning.isOverLimit ? 'error' : 'warning'}
-              size={18}
-              color={limitWarning.isOverLimit ? '#C62828' : '#E65100'}
-            />
-            <View style={styles.warningTextContainer}>
-              <Text
-                style={[
-                  styles.warningTitle,
-                  { color: limitWarning.isOverLimit ? '#C62828' : '#E65100' },
-                ]}
-              >
-                {limitWarning.isOverLimit
-                  ? t('transactions.limitExceeded')
-                  : t('transactions.limitReached', { percent: limitWarning.percentUsed })}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.keyboardAvoid}
+      >
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.segmentRow}>
+            <TouchableOpacity
+              style={[styles.segmentBtn, type === 'expense' && styles.activeExpense]}
+              onPress={() => setType('expense')}
+            >
+              <Text style={[styles.segmentText, type === 'expense' && styles.activeText]}>
+                {t('transactions.expense')}
               </Text>
-              <Text style={styles.warningSub}>
-                {t('transactions.limitProjection', {
-                  category: selectedCategory?.name,
-                  limit: formatMoney(limitWarning.limit, currency),
-                  projected: formatMoney(limitWarning.projectedTotal, currency),
-                })}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.segmentBtn, type === 'income' && styles.activeIncome]}
+              onPress={() => setType('income')}
+            >
+              <Text style={[styles.segmentText, type === 'income' && styles.activeText]}>
+                {t('transactions.income')}
               </Text>
+            </TouchableOpacity>
+          </View>
+
+          <MoneyInput
+            label={t('transactions.amount')}
+            currency={currency}
+            valueMinor={amountMinor}
+            onChangeMinor={setAmountMinor}
+          />
+
+          {limitWarning && (
+            <View
+              style={[
+                styles.warningBanner,
+                limitWarning.isOverLimit ? styles.dangerBanner : styles.amberBanner,
+              ]}
+            >
+              <MaterialIcons
+                name={limitWarning.isOverLimit ? 'error' : 'warning'}
+                size={18}
+                color={limitWarning.isOverLimit ? '#C62828' : '#E65100'}
+              />
+              <View style={styles.warningTextContainer}>
+                <Text
+                  style={[
+                    styles.warningTitle,
+                    { color: limitWarning.isOverLimit ? '#C62828' : '#E65100' },
+                  ]}
+                >
+                  {limitWarning.isOverLimit
+                    ? t('transactions.limitExceeded')
+                    : t('transactions.limitReached', { percent: limitWarning.percentUsed })}
+                </Text>
+                <Text style={styles.warningSub}>
+                  {t('transactions.limitProjection', {
+                    category: selectedCategory?.name,
+                    limit: formatMoney(limitWarning.limit, currency),
+                    projected: formatMoney(limitWarning.projectedTotal, currency),
+                  })}
+                </Text>
+              </View>
             </View>
-          </View>
-        )}
+          )}
 
-        <Card style={styles.fieldCard}>
-          <Text style={styles.fieldLabel}>{t('transactions.recordedDate')}</Text>
-          <View style={styles.datePresetRow}>
-            <TouchableOpacity
-              style={[styles.datePresetBtn, datePreset === 'today' && styles.activeDatePreset]}
-              onPress={() => handleDatePreset('today')}
-            >
-              <Text style={[styles.datePresetText, datePreset === 'today' && styles.activeDatePresetText]}>
-                {t('transactions.today')}
-              </Text>
-            </TouchableOpacity>
+          <Card style={styles.fieldCard}>
+            <Text style={styles.fieldLabel}>{t('transactions.recordedDate')}</Text>
+            <View style={styles.datePresetRow}>
+              <TouchableOpacity
+                style={[styles.datePresetBtn, datePreset === 'today' && styles.activeDatePreset]}
+                onPress={() => handleDatePreset('today')}
+              >
+                <Text style={[styles.datePresetText, datePreset === 'today' && styles.activeDatePresetText]}>
+                  {t('transactions.today')}
+                </Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[styles.datePresetBtn, datePreset === 'yesterday' && styles.activeDatePreset]}
-              onPress={() => handleDatePreset('yesterday')}
-            >
-              <Text style={[styles.datePresetText, datePreset === 'yesterday' && styles.activeDatePresetText]}>
-                {t('transactions.yesterday')}
-              </Text>
-            </TouchableOpacity>
-          </View>
+              <TouchableOpacity
+                style={[styles.datePresetBtn, datePreset === 'yesterday' && styles.activeDatePreset]}
+                onPress={() => handleDatePreset('yesterday')}
+              >
+                <Text style={[styles.datePresetText, datePreset === 'yesterday' && styles.activeDatePresetText]}>
+                  {t('transactions.yesterday')}
+                </Text>
+              </TouchableOpacity>
+            </View>
 
-          <DatePicker
-            mode="datetime"
-            value={date}
-            onChange={handleDateChange}
-            placeholder={t('datePicker.placeholder', { defaultValue: 'Chọn ngày...' })}
+            <DatePicker
+              mode="datetime"
+              value={date}
+              onChange={handleDateChange}
+              placeholder={t('datePicker.placeholder', { defaultValue: 'Chọn ngày...' })}
+            />
+          </Card>
+
+          <CategoryPicker
+            type={type}
+            selectedCategoryId={selectedCategoryId}
+            onSelectCategory={(catId, catObj) => {
+              setSelectedCategoryId(catId);
+              if (catObj) setSelectedCategory(catObj);
+            }}
           />
-        </Card>
 
-        <CategoryPicker
-          type={type}
-          selectedCategoryId={selectedCategoryId}
-          onSelectCategory={(catId, catObj) => {
-            setSelectedCategoryId(catId);
-            if (catObj) setSelectedCategory(catObj);
-          }}
-        />
+          <Card style={styles.fieldCard}>
+            <Text style={styles.fieldLabel}>{t('transactions.noteLabel')}</Text>
+            <TextInput
+              style={styles.noteInput}
+              placeholder={t('transactions.noteExample')}
+              placeholderTextColor={Colors.light.textSecondary}
+              value={note}
+              onChangeText={setNote}
+            />
+          </Card>
 
-        <Card style={styles.fieldCard}>
-          <Text style={styles.fieldLabel}>{t('transactions.noteLabel')}</Text>
-          <TextInput
-            style={styles.noteInput}
-            placeholder={t('transactions.noteExample')}
-            placeholderTextColor={Colors.light.textSecondary}
-            value={note}
-            onChangeText={setNote}
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+        </ScrollView>
+
+        <View style={styles.footer}>
+          <Button
+            title={t('common.save')}
+            onPress={handleSave}
+            variant="primary"
+            loading={loading}
+            disabled={!activeAccount}
           />
-        </Card>
-
-        {error ? <Text style={styles.errorText}>{error}</Text> : null}
-      </ScrollView>
-
-      <View style={styles.footer}>
-        <Button
-          title={t('common.save')}
-          onPress={handleSave}
-          variant="primary"
-          loading={loading}
-          disabled={!activeAccount}
-        />
-      </View>
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -310,6 +321,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.light.background,
+  },
+  keyboardAvoid: {
+    flex: 1,
   },
   header: {
     flexDirection: 'row',
