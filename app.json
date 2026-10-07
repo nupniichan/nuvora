@@ -23,6 +23,7 @@
         "monochromeImage": "./assets/images/adaptive-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
+      "softwareKeyboardLayoutMode": "pan",
       "package": "com.nupniichan.nuvora"
     },
     "web": {
