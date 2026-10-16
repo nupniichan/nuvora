@@ -208,7 +208,7 @@ export default function ManageBudgetModal() {
       </View>
 
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior="padding"
         style={styles.keyboardAvoid}
       >
         <ScrollView

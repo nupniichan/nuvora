@@ -2,12 +2,13 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { KeyboardAwareView } from '@/components/ui/keyboard-aware-view';
 import { Colors } from '@/constants/theme';
 import { validatePassword } from '@/shared/validators';
 
@@ -43,15 +44,7 @@ export default function SetupPasswordScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.keyboardAvoid}
-      >
-        <ScrollView
-          contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
+      <KeyboardAwareView contentContainerStyle={styles.content}>
           <View style={styles.header}>
             <Text style={styles.title}>{t('onboarding.createPasswordTitle')}</Text>
             <Text style={styles.subtitle}>{t('onboarding.createPasswordSubtitle')}</Text>
@@ -80,12 +73,11 @@ export default function SetupPasswordScreen() {
             <MaterialIcons name="lightbulb-outline" size={24} color={Colors.primary} />
             <Text style={styles.noticeText}>{t('onboarding.passwordTip')}</Text>
           </Card>
-        </ScrollView>
 
-        <View style={styles.footer}>
-          <Button title={t('common.next')} onPress={handleNext} variant="primary" />
-        </View>
-      </KeyboardAvoidingView>
+          <View style={styles.footer}>
+            <Button title={t('common.next')} onPress={handleNext} variant="primary" />
+          </View>
+      </KeyboardAwareView>
     </SafeAreaView>
   );
 }
@@ -95,9 +87,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.light.background,
   },
-  keyboardAvoid: {
-    flex: 1,
-  },
+
   content: {
     flexGrow: 1,
     paddingHorizontal: 24,

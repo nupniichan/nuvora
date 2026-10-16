@@ -67,7 +67,7 @@ export default function AccountSecurityScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior="padding"
         style={{ flex: 1 }}
       >
         <ScrollView

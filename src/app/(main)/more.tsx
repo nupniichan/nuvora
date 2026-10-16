@@ -1,9 +1,3 @@
-import { MaterialIcons } from '@expo/vector-icons';
-import { useFocusEffect, useRouter } from 'expo-router';
-import React, { useCallback, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { CurrencySwitchCard } from '@/components/ui/currency-switch-card';
@@ -23,6 +17,12 @@ import {
   setPreferredGmt,
 } from '@/services/timezone/timezone-service';
 import { formatDateDisplay } from '@/shared/date-utils';
+import { MaterialIcons } from '@expo/vector-icons';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function MoreScreen() {
   const { t, i18n } = useTranslation();
@@ -69,7 +69,7 @@ export default function MoreScreen() {
 
         <CurrencySwitchCard />
 
-        {}
+        { }
         <Card style={styles.sectionCard}>
           <Text style={styles.sectionHeader}>{t('settings.security')}</Text>
           <Button title={t('accountSecurity.changePassword')} variant="outline" onPress={() => router.push({ pathname: '/(modal)/account-security', params: { action: 'password' } })} />
@@ -95,7 +95,7 @@ export default function MoreScreen() {
           />
         </Card>
 
-        {}
+        { }
         <Card style={styles.sectionCard}>
           <Text style={styles.sectionHeader}>{t('settings.categoriesManagement')}</Text>
           <Text style={styles.sectionDesc}>{t('settings.categoriesDescription')}</Text>
@@ -170,8 +170,8 @@ export default function MoreScreen() {
                 {preferredGmt === SYSTEM_TIMEZONE_VALUE
                   ? `${t('settings.systemDefaultTimezone')} (${getSystemGmtString()})`
                   : (TIMEZONE_OPTIONS.find((o) => o.key === preferredGmt)
-                      ? `${preferredGmt} - ${currentLang === 'vi' ? TIMEZONE_OPTIONS.find((o) => o.key === preferredGmt)?.nameVi : TIMEZONE_OPTIONS.find((o) => o.key === preferredGmt)?.nameEn}`
-                      : preferredGmt)}
+                    ? `${preferredGmt} - ${currentLang === 'vi' ? TIMEZONE_OPTIONS.find((o) => o.key === preferredGmt)?.nameVi : TIMEZONE_OPTIONS.find((o) => o.key === preferredGmt)?.nameEn}`
+                    : preferredGmt)}
               </Text>
             </View>
             <View style={styles.langValueContainer}>
@@ -189,7 +189,7 @@ export default function MoreScreen() {
         {/* About Card */}
         <Card variant="flat" style={styles.aboutCard}>
           <Text style={styles.appTitle}>Nuvora</Text>
-          <Text style={styles.appVersion}>1.0.0 · {t('settings.localFirstTagline')}</Text>
+          <Text style={styles.appVersion}>1.0.1 · {t('settings.localFirstTagline')}</Text>
           <Text style={styles.appDesc}>{t('settings.privacyDescription')}</Text>
         </Card>
 

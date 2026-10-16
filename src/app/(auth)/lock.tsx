@@ -3,9 +3,6 @@ import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -15,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { KeyboardAwareView } from '@/components/ui/keyboard-aware-view';
 import { LockHeroScenery, LockStatus } from '@/components/scenery';
 import { useSplash } from '@/components/splash/splash-context';
 import { Colors } from '@/constants/theme';
@@ -88,15 +86,7 @@ export default function LockScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.keyboardAvoid}
-      >
-        <ScrollView
-          contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
+      <KeyboardAwareView contentContainerStyle={styles.content}>
           <View style={styles.heroSection}>
             <LockHeroScenery
               status={lockStatus}
@@ -143,8 +133,7 @@ export default function LockScreen() {
               variant="outline"
             />
           ) : null}
-        </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardAwareView>
     </SafeAreaView>
   );
 }
@@ -154,9 +143,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.light.background,
   },
-  keyboardAvoid: {
-    flex: 1,
-  },
+
   content: {
     flexGrow: 1,
     width: '100%',

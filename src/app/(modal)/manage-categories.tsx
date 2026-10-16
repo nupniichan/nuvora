@@ -415,7 +415,7 @@ export default function ManageCategoriesModal() {
       >
         <SafeAreaView style={styles.modalRoot} edges={['top', 'left', 'right']}>
           <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            behavior="padding"
             style={styles.keyboardAvoid}
           >
             <View style={styles.modalHeader}>
@@ -512,7 +512,7 @@ export default function ManageCategoriesModal() {
       >
         <SafeAreaView style={styles.modalRoot} edges={['top', 'left', 'right']}>
           <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            behavior="padding"
             style={styles.keyboardAvoid}
           >
             <View style={styles.modalHeader}>
