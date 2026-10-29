@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 import { useRouter, useSegments } from 'expo-router';
 
-import { isAppUnlocked, lockApp } from '@/services/security/auth-service';
+import { isAppUnlocked } from '@/services/security/auth-service';
 import { isKeyEnvelopeInitialized } from '@/services/security/key-manager';
 
 export function useAutoLock(): void {
@@ -25,17 +25,6 @@ export function useAutoLock(): void {
       appStateRef.current = nextAppState;
 
       if (nextAppState === 'background') {
-        if (isAppUnlocked()) {
-          lockApp();
-          try {
-            if (router.canDismiss?.()) {
-              router.dismissAll();
-            }
-            router.replace('/(auth)/lock');
-          } catch {
-
-          }
-        }
         return;
       }
 

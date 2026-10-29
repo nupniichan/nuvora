@@ -59,7 +59,7 @@ jest.mock('expo-localization', () => ({
   getLocales: jest.fn().mockReturnValue([{ languageCode: 'vi' }]),
 }));
 
-describe('Security & Auto-lock', () => {
+describe('Security & Manual Lock', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     lockApp();
@@ -72,13 +72,9 @@ describe('Security & Auto-lock', () => {
     expect(closeDatabase).toHaveBeenCalled();
   });
 
-  test('AppState change to background triggers lockApp', () => {
+  test('background transition does not automatically register lock listener in auth-service', () => {
     const handlers: ((state: string) => void)[] = (globalThis as any).__mockAppStateHandlers || [];
-    expect(handlers.length).toBeGreaterThan(0);
-    handlers.forEach((fn) => fn('background'));
-    expect(getActiveDek()).toBeNull();
-    expect(isAppUnlocked()).toBe(false);
-    expect(closeDatabase).toHaveBeenCalled();
+    expect(handlers.length).toBe(0);
   });
 });
 

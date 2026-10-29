@@ -1,4 +1,4 @@
-import { AppState, AppStateStatus, Platform } from 'react-native';
+import { Platform } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
 
 import { closeDatabase, deleteDatabase, initDatabase } from '@/database/database';
@@ -16,16 +16,6 @@ import {
 
 let activeDekInMemory: string | null = null;
 let isUnlockedState: boolean = false;
-
-if (typeof AppState?.addEventListener === 'function') {
-  AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
-    if (nextAppState === 'background') {
-      if (isAppUnlocked()) {
-        lockApp();
-      }
-    }
-  });
-}
 
 export async function isBiometricsAvailable(): Promise<boolean> {
   if (Platform.OS === 'web') {

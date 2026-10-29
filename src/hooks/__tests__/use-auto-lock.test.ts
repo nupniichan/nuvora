@@ -103,16 +103,16 @@ describe('useAutoLock hook', () => {
     if (hookHarness) hookHarness.cleanup();
   });
 
-  test('locks app and redirects to lock screen when entering background from unlocked state', async () => {
+  test('does not lock app or redirect when entering background from unlocked state', async () => {
     mockIsUnlocked = true;
     expect(appStateChangeHandlers.length).toBeGreaterThan(0);
 
     await appStateChangeHandlers[0]('background');
 
-    expect(mockLockApp).toHaveBeenCalled();
-    expect(mockCanDismiss).toHaveBeenCalled();
-    expect(mockDismissAll).toHaveBeenCalled();
-    expect(mockReplace).toHaveBeenCalledWith('/(auth)/lock');
+    expect(mockLockApp).not.toHaveBeenCalled();
+    expect(mockCanDismiss).not.toHaveBeenCalled();
+    expect(mockDismissAll).not.toHaveBeenCalled();
+    expect(mockReplace).not.toHaveBeenCalled();
   });
 
   test('does not redirect if app was already locked when entering background', async () => {
@@ -125,28 +125,30 @@ describe('useAutoLock hook', () => {
   });
 
   test('redirects to lock screen upon becoming active if locked and not in auth group', async () => {
-
-    mockIsUnlocked = true;
-    await appStateChangeHandlers[0]('background');
-    mockReplace.mockClear();
-
     mockIsUnlocked = false;
     mockSegments = ['(main)'];
     hookHarness.rerender();
+    await appStateChangeHandlers[0]('background');
     await appStateChangeHandlers[0]('active');
 
     expect(mockReplace).toHaveBeenCalledWith('/(auth)/lock');
   });
 
   test('does not redirect upon becoming active if user is already on auth screen', async () => {
-
-    mockIsUnlocked = true;
-    await appStateChangeHandlers[0]('background');
-    mockReplace.mockClear();
-
     mockIsUnlocked = false;
     mockSegments = ['(auth)'];
     hookHarness.rerender();
+    await appStateChangeHandlers[0]('background');
+    await appStateChangeHandlers[0]('active');
+
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
+
+  test('does not redirect upon becoming active if app is unlocked', async () => {
+    mockIsUnlocked = true;
+    mockSegments = ['(main)'];
+    hookHarness.rerender();
+    await appStateChangeHandlers[0]('background');
     await appStateChangeHandlers[0]('active');
 
     expect(mockReplace).not.toHaveBeenCalled();
