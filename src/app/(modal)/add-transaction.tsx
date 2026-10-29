@@ -20,10 +20,11 @@ import { CategoryPicker } from '@/components/ui/category-picker';
 import { DatePicker } from '@/components/ui/date-picker';
 import { MoneyInput } from '@/components/ui/money-input';
 import { Colors } from '@/constants/theme';
-import { AccountRow, EntryType } from '@/database/types';
+import { AccountRow, EntryType, FundRow } from '@/database/types';
 import { getDefaultAccount } from '@/features/accounts/account-queries';
 import { checkSpendingLimit } from '@/features/budgets/budget-queries';
 import { CategoryWithGroup } from '@/features/categories/category-queries';
+import { getAllFunds } from '@/features/funds/fund-queries';
 import { useSafeBack } from '@/hooks/use-safe-back';
 import { createTransaction } from '@/features/transactions/transaction-queries';
 import { withMonthlyLimitConfirmation } from '@/features/budgets/confirm-monthly-limit';
@@ -39,13 +40,16 @@ import { extractDatePart, parseISODate } from '@/shared/date-utils';
 import { formatMoney } from '@/shared/money';
 
 export default function AddTransactionModal() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = i18n.resolvedLanguage === 'en' ? 'en-US' : 'vi-VN';
   const router = useRouter();
   const closeModal = useSafeBack('/(main)/transactions');
 
   const [type, setType] = useState<EntryType>('expense');
   const [amountMinor, setAmountMinor] = useState<number>(0);
   const [activeAccount, setActiveAccount] = useState<AccountRow | null>(null);
+  const [funds, setFunds] = useState<FundRow[]>([]);
+  const [selectedFundId, setSelectedFundId] = useState<string | null>(null); // null = wallet
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<CategoryWithGroup | null>(null);
   const [note, setNote] = useState<string>('');
@@ -80,6 +84,7 @@ export default function AddTransactionModal() {
 
   useEffect(() => {
     getDefaultAccount().then(setActiveAccount).catch(() => setError(t('transactions.saveError')));
+    getAllFunds(false).then(setFunds).catch(() => undefined);
   }, [t]);
 
   useEffect(() => {
@@ -140,6 +145,28 @@ export default function AddTransactionModal() {
       setError(t('transactions.amountRequired'));
       return;
     }
+
+    // Check non-negative balance constraint
+    if (type === 'expense') {
+      if (selectedFundId) {
+        const chosenFund = funds.find((f) => f.id === selectedFundId);
+        if (chosenFund && amountMinor > chosenFund.balance) {
+          setError(
+            t('transactions.insufficientFundAlert', {
+              name: chosenFund.name,
+              balance: formatMoney(chosenFund.balance, currency, locale),
+            })
+          );
+          return;
+        }
+      } else {
+        if (amountMinor > activeAccount.balance) {
+          setError(t('transactions.insufficientWalletAlert'));
+          return;
+        }
+      }
+    }
+
     setLoading(true);
     setError(null);
     try {
@@ -147,16 +174,21 @@ export default function AddTransactionModal() {
         setError(t('monthlyLimit.invalidDate'));
         return;
       }
-      const saved = await withMonthlyLimitConfirmation((monthlyLimitApproval) => createTransaction({
-        type,
-        amount: amountMinor,
-        currency,
-        accountId: activeAccount.id,
-        categoryId: selectedCategoryId || undefined,
-        note: note || undefined,
-        date,
-        monthlyLimitApproval,
-      }), t);
+      const saved = await withMonthlyLimitConfirmation(
+        (monthlyLimitApproval) =>
+          createTransaction({
+            type,
+            amount: amountMinor,
+            currency,
+            accountId: activeAccount.id,
+            fundId: selectedFundId || undefined,
+            categoryId: selectedCategoryId || undefined,
+            note: note || undefined,
+            date,
+            monthlyLimitApproval,
+          }),
+        t
+      );
 
       if (saved) {
         if (router.canDismiss?.()) {
@@ -181,7 +213,7 @@ export default function AddTransactionModal() {
       </View>
 
       <KeyboardAvoidingView
-        behavior="padding"
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.keyboardAvoid}
       >
         <ScrollView
@@ -216,6 +248,95 @@ export default function AddTransactionModal() {
             onChangeMinor={setAmountMinor}
           />
 
+          {/* Money Source / Destination (Wallet vs Funds) */}
+          {funds.length > 0 && (
+            <Card style={styles.fieldCard}>
+              <Text style={styles.fieldLabel}>
+                {t(type === 'expense' ? 'transactions.moneySource' : 'transactions.moneyDestination')}
+              </Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.sourcesScrollRow}
+              >
+                {/* Option 1: Wallet */}
+                <TouchableOpacity
+                  style={[
+                    styles.sourceCard,
+                    selectedFundId === null && styles.sourceCardActive,
+                  ]}
+                  onPress={() => setSelectedFundId(null)}
+                >
+                  <View style={[styles.sourceIconBadge, { backgroundColor: Colors.primary }]}>
+                    <MaterialIcons name="account-balance-wallet" size={16} color={Colors.primaryStrong} />
+                  </View>
+                  <View style={styles.sourceTextGroup}>
+                    <Text
+                      style={[
+                        styles.sourceName,
+                        selectedFundId === null && styles.sourceNameActive,
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {t('funds.sourceWallet')}
+                    </Text>
+                    <Text style={styles.sourceBalance}>
+                      {formatMoney(activeAccount?.balance ?? 0, currency, locale)}
+                    </Text>
+                  </View>
+                  {selectedFundId === null && (
+                    <MaterialIcons name="check" size={16} color={Colors.primaryStrong} />
+                  )}
+                </TouchableOpacity>
+
+                {/* Option 2..N: Active Funds */}
+                {funds.map((f) => {
+                  const isSelected = selectedFundId === f.id;
+                  return (
+                    <TouchableOpacity
+                      key={f.id}
+                      style={[
+                        styles.sourceCard,
+                        isSelected && styles.sourceCardActive,
+                      ]}
+                      onPress={() => setSelectedFundId(f.id)}
+                    >
+                      <View
+                        style={[
+                          styles.sourceIconBadge,
+                          { backgroundColor: f.color || Colors.primaryDark },
+                        ]}
+                      >
+                        <MaterialIcons
+                          name={(f.icon as any) || 'savings'}
+                          size={16}
+                          color="#FFFFFF"
+                        />
+                      </View>
+                      <View style={styles.sourceTextGroup}>
+                        <Text
+                          style={[
+                            styles.sourceName,
+                            isSelected && styles.sourceNameActive,
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {f.name}
+                        </Text>
+                        <Text style={styles.sourceBalance}>
+                          {formatMoney(f.balance, f.currency, locale)}
+                        </Text>
+                      </View>
+                      {isSelected && (
+                        <MaterialIcons name="check" size={16} color={Colors.primaryStrong} />
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </Card>
+          )}
+
           {limitWarning && (
             <View
               style={[
@@ -242,8 +363,8 @@ export default function AddTransactionModal() {
                 <Text style={styles.warningSub}>
                   {t('transactions.limitProjection', {
                     category: selectedCategory?.name,
-                    limit: formatMoney(limitWarning.limit, currency),
-                    projected: formatMoney(limitWarning.projectedTotal, currency),
+                    limit: formatMoney(limitWarning.limit, currency, locale),
+                    projected: formatMoney(limitWarning.projectedTotal, currency, locale),
                   })}
                 </Text>
               </View>
@@ -257,7 +378,12 @@ export default function AddTransactionModal() {
                 style={[styles.datePresetBtn, datePreset === 'today' && styles.activeDatePreset]}
                 onPress={() => handleDatePreset('today')}
               >
-                <Text style={[styles.datePresetText, datePreset === 'today' && styles.activeDatePresetText]}>
+                <Text
+                  style={[
+                    styles.datePresetText,
+                    datePreset === 'today' && styles.activeDatePresetText,
+                  ]}
+                >
                   {t('transactions.today')}
                 </Text>
               </TouchableOpacity>
@@ -266,7 +392,12 @@ export default function AddTransactionModal() {
                 style={[styles.datePresetBtn, datePreset === 'yesterday' && styles.activeDatePreset]}
                 onPress={() => handleDatePreset('yesterday')}
               >
-                <Text style={[styles.datePresetText, datePreset === 'yesterday' && styles.activeDatePresetText]}>
+                <Text
+                  style={[
+                    styles.datePresetText,
+                    datePreset === 'yesterday' && styles.activeDatePresetText,
+                  ]}
+                >
                   {t('transactions.yesterday')}
                 </Text>
               </TouchableOpacity>
@@ -346,6 +477,7 @@ const styles = StyleSheet.create({
   content: {
     padding: 20,
     gap: 16,
+    paddingBottom: 30,
   },
   segmentRow: {
     flexDirection: 'row',
@@ -374,6 +506,47 @@ const styles = StyleSheet.create({
   activeText: {
     color: Colors.light.text,
     fontWeight: '700',
+  },
+  sourcesScrollRow: {
+    gap: 8,
+    paddingVertical: 4,
+  },
+  sourceCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+    backgroundColor: Colors.light.backgroundElement,
+  },
+  sourceCardActive: {
+    borderColor: Colors.primaryStrong,
+    backgroundColor: '#FFFFFF',
+  },
+  sourceIconBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sourceTextGroup: {
+    gap: 2,
+  },
+  sourceName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.light.text,
+  },
+  sourceNameActive: {
+    color: Colors.primaryStrong,
+  },
+  sourceBalance: {
+    fontSize: 11,
+    color: Colors.light.textSecondary,
   },
   warningBanner: {
     flexDirection: 'row',

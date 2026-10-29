@@ -33,6 +33,7 @@ export interface BackupPayload {
   automation_occurrences: any[];
   financial_goals?: any[];
   goal_contributions?: any[];
+  funds?: any[];
 }
 
 export interface RestoreResult {
@@ -64,6 +65,7 @@ export async function createEncryptedBackup(password: string): Promise<string> {
     automationOccurrences,
     financialGoals,
     goalContributions,
+    funds,
   ] = await Promise.all([
     db.getAllAsync('SELECT * FROM app_settings;'),
     db.getAllAsync('SELECT * FROM accounts;'),
@@ -76,6 +78,7 @@ export async function createEncryptedBackup(password: string): Promise<string> {
     db.getAllAsync('SELECT * FROM automation_occurrences;'),
     db.getAllAsync('SELECT * FROM financial_goals;'),
     db.getAllAsync('SELECT * FROM goal_contributions;'),
+    db.getAllAsync('SELECT * FROM funds;'),
   ]);
 
   const payload: BackupPayload = {
@@ -90,6 +93,7 @@ export async function createEncryptedBackup(password: string): Promise<string> {
     automation_occurrences: automationOccurrences,
     financial_goals: financialGoals,
     goal_contributions: goalContributions,
+    funds,
   };
 
   const payloadStr = JSON.stringify(payload);
@@ -167,6 +171,7 @@ export async function restoreFromEncryptedBackup(
     await db.runAsync('DELETE FROM recurring_rules;');
     await db.runAsync('DELETE FROM categories;');
     await db.runAsync('DELETE FROM category_groups;');
+    await db.runAsync('DELETE FROM funds;');
     await db.runAsync('DELETE FROM accounts;');
     await db.runAsync('DELETE FROM app_settings;');
 
@@ -181,6 +186,13 @@ export async function restoreFromEncryptedBackup(
         `INSERT INTO accounts (id, name, type, currency, balance, icon, color, sort_order, is_archived, created_at, updated_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
         [a.id, a.name, a.type, a.currency, a.balance, a.icon, a.color, a.sort_order, a.is_archived, a.created_at, a.updated_at]
+      );
+    }
+    for (const f of payload.funds || []) {
+      await db.runAsync(
+        `INSERT INTO funds (id, name, description, icon, color, target_amount, balance, currency, sort_order, is_deleted, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+        [f.id, f.name, f.description, f.icon, f.color, f.target_amount, f.balance, f.currency, f.sort_order, f.is_deleted, f.created_at, f.updated_at]
       );
     }
     for (const cg of payload.category_groups || []) {
@@ -220,9 +232,9 @@ export async function restoreFromEncryptedBackup(
     }
     for (const tx of payload.transactions || []) {
       await db.runAsync(
-        `INSERT INTO transactions (id, type, amount, currency, account_id, to_account_id, category_id, recurring_rule_id, occurrence_id, note, date, status, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
-        [tx.id, tx.type, tx.amount, tx.currency, tx.account_id, tx.to_account_id, tx.category_id, tx.recurring_rule_id, tx.occurrence_id, tx.note, tx.date, tx.status, tx.created_at, tx.updated_at]
+        `INSERT INTO transactions (id, type, amount, currency, account_id, to_account_id, fund_id, to_fund_id, category_id, recurring_rule_id, occurrence_id, note, date, status, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+        [tx.id, tx.type, tx.amount, tx.currency, tx.account_id, tx.to_account_id, tx.fund_id || null, tx.to_fund_id || null, tx.category_id, tx.recurring_rule_id, tx.occurrence_id, tx.note, tx.date, tx.status, tx.created_at, tx.updated_at]
       );
     }
     for (const goal of payload.financial_goals || []) {

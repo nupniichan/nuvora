@@ -1,5 +1,6 @@
 import { MIGRATION_001_INITIAL } from './001_initial';
 import { MIGRATION_002_GOALS_AND_LIMITS } from './002_goals_and_limits';
+import { MIGRATION_003_FUNDS } from './003_funds';
 
 export interface Migration {
   version: number;
@@ -10,6 +11,7 @@ export interface Migration {
 export const ALL_MIGRATIONS: Migration[] = [
   MIGRATION_001_INITIAL,
   MIGRATION_002_GOALS_AND_LIMITS,
+  MIGRATION_003_FUNDS,
 ];
 
 export async function runMigrations(db: any): Promise<void> {

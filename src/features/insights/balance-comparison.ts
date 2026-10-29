@@ -53,8 +53,11 @@ export function buildBalanceComparisons(
       if (tx.currency !== account.currency) continue;
       let effect = 0;
       if (tx.account_id === account.id) {
-        if (tx.type === 'income') effect += tx.amount;
-        if (tx.type === 'expense' || tx.type === 'transfer') effect -= tx.amount;
+        if (tx.type === 'income' && !tx.fund_id) effect += tx.amount;
+        if (tx.type === 'expense' && !tx.fund_id) effect -= tx.amount;
+        if (tx.type === 'fund_deposit') effect -= tx.amount;
+        if (tx.type === 'fund_withdrawal') effect += tx.amount;
+        if (tx.type === 'transfer') effect -= tx.amount;
       }
       if (tx.type === 'transfer' && tx.to_account_id === account.id) effect += tx.amount;
       if (!effect) continue;

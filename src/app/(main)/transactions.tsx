@@ -73,7 +73,7 @@ export default function TransactionsScreen() {
   );
 
   const openEditModal = (transaction: TransactionRow) => {
-    if (transaction.type === 'transfer' || isGoalCompletionTransaction(transaction.id)) return;
+    if ((transaction.type !== 'income' && transaction.type !== 'expense') || isGoalCompletionTransaction(transaction.id)) return;
     setEditingTransaction(transaction);
     setEditType(transaction.type);
     setEditAmount(typeof transaction.amount === 'number' && !isNaN(transaction.amount) ? transaction.amount : 0);
@@ -184,7 +184,7 @@ export default function TransactionsScreen() {
           const category = categories.find((c) => c.id === item.category_id);
 
           return (
-            <TouchableOpacity onPress={() => openEditModal(item)} disabled={item.type === 'transfer' || isGoalCompletionTransaction(item.id)} activeOpacity={0.8}>
+            <TouchableOpacity onPress={() => openEditModal(item)} disabled={(item.type !== 'income' && item.type !== 'expense') || isGoalCompletionTransaction(item.id)} activeOpacity={0.8}>
               <Card style={styles.txCard}>
                 <View style={styles.txRow}>
                   <View style={styles.txIconBadge}>
@@ -227,7 +227,7 @@ export default function TransactionsScreen() {
                   </Text>
 
                   <View style={styles.quickActions}>
-                    {item.type !== 'transfer' && !isGoalCompletionTransaction(item.id) && (
+                    {(item.type === 'income' || item.type === 'expense') && !isGoalCompletionTransaction(item.id) && (
                       <TouchableOpacity
                         style={styles.actionIconBtn}
                         accessibilityRole="button"
@@ -264,7 +264,7 @@ export default function TransactionsScreen() {
       >
         <SafeAreaView style={styles.modalRoot} edges={['top', 'left', 'right']}>
           <KeyboardAvoidingView
-            behavior="padding"
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             style={styles.keyboardAvoid}
           >
             <View style={styles.modalHeader}>

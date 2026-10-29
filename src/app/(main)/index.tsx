@@ -23,7 +23,8 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { DailyExpenseChart } from '@/components/ui/insight-charts';
 import { MonthlyLimitCard } from '@/components/ui/monthly-limit-card';
 import { Colors, MaxContentWidth } from '@/constants/theme';
-import { TransactionRow } from '@/database/types';
+import { FundRow, TransactionRow } from '@/database/types';
+import { getAllFunds, getAssetSummary } from '@/features/funds/fund-queries';
 import { getAllAccounts, getDefaultAccount } from '@/features/accounts/account-queries';
 import {
   getMonthlySnapshot,
@@ -80,6 +81,13 @@ export default function DashboardScreen() {
   const [pendingOccurrences, setPendingOccurrences] = useState<PendingOccurrenceWithRule[]>([]);
   const [upcomingForecast, setUpcomingForecast] = useState<UpcomingForecastItem[]>([]);
   const [backupReminderStatus, setBackupReminderStatus] = useState<BackupReminderStatus | null>(null);
+  const [funds, setFunds] = useState<FundRow[]>([]);
+  const [assetSummary, setAssetSummary] = useState<{
+    walletBalance: number;
+    fundsBalance: number;
+    totalAssets: number;
+    currency: string;
+  } | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
   const loadData = useCallback(async () => {
@@ -90,6 +98,12 @@ export default function DashboardScreen() {
       await processRecurringCatchUp();
 
       const accounts = await getAllAccounts();
+      const [allFunds, summary] = await Promise.all([
+        getAllFunds(false),
+        getAssetSummary(),
+      ]);
+      setFunds(allFunds);
+      setAssetSummary(summary);
       const transactions = await getTransactions();
       setRecentTransactions(transactions.filter((tx) => tx.status === 'confirmed').slice(0, 5));
       setBalanceComparisons(buildBalanceComparisons(accounts, transactions));
@@ -231,8 +245,8 @@ export default function DashboardScreen() {
           <BalanceCardScenery />
           <View style={styles.balanceTop}>
             <View style={styles.balanceHeading}>
-              <MaterialIcons name="account-balance-wallet" size={18} color={Colors.primaryStrong} />
-              <Text style={styles.balanceLabel}>{t('dashboard.totalBalance')}</Text>
+              <MaterialIcons name="account-balance" size={18} color={Colors.primaryStrong} />
+              <Text style={styles.balanceLabel}>{t('dashboard.totalAssets')}</Text>
             </View>
           </View>
           {balanceComparisons.map((comparison) => {
@@ -250,7 +264,11 @@ export default function DashboardScreen() {
             return (
               <View key={comparison.currency} style={styles.balanceCurrencyBlock}>
                 <Text style={[styles.balanceAmount, compact && styles.compactBalanceAmount]}>
-                  {formatMoney(comparison.balance, comparison.currency, locale)}
+                  {formatMoney(
+                    comparison.balance + (assetSummary && assetSummary.currency === comparison.currency ? assetSummary.fundsBalance : 0),
+                    comparison.currency,
+                    locale
+                  )}
                 </Text>
                 <View style={styles.balanceChangeRow} accessibilityLiveRegion="polite">
                   <MaterialIcons
@@ -275,6 +293,46 @@ export default function DashboardScreen() {
           {balanceLoadError && balanceComparisons.length > 0 && (
             <Text style={styles.balanceChangeText}>{t('dashboard.balanceLoadError')}</Text>
           )}
+
+          {balanceComparisons.length > 0 && (
+            <View style={styles.balanceSplitRow}>
+              <View style={styles.balanceSplitItem}>
+                <View style={styles.splitIconRow}>
+                  <MaterialIcons name="account-balance-wallet" size={14} color={Colors.primaryStrong} />
+                  <Text style={styles.balanceSplitLabel}>{t('dashboard.walletBalance')}</Text>
+                </View>
+                <Text style={styles.balanceSplitValue}>
+                  {formatMoney(
+                    assetSummary?.walletBalance ?? balanceComparisons[0]?.balance ?? 0,
+                    balanceComparisons[0]?.currency || 'VND',
+                    locale
+                  )}
+                </Text>
+              </View>
+
+              <View style={styles.balanceSplitDivider} />
+
+              <TouchableOpacity
+                style={styles.balanceSplitItem}
+                onPress={() => router.push('/(modal)/manage-funds' as any)}
+                accessibilityRole="button"
+                activeOpacity={0.75}
+              >
+                <View style={styles.splitIconRow}>
+                  <MaterialIcons name="savings" size={14} color={Colors.primaryStrong} />
+                  <Text style={styles.balanceSplitLabel}>{t('dashboard.fundsBalance')}</Text>
+                  <MaterialIcons name="chevron-right" size={14} color={Colors.primaryStrong} />
+                </View>
+                <Text style={styles.balanceSplitValue}>
+                  {formatMoney(
+                    assetSummary?.fundsBalance ?? 0,
+                    balanceComparisons[0]?.currency || 'VND',
+                    locale
+                  )}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
           <View style={styles.balanceComparisonFooter}>
             <Text style={styles.balanceComparisonLabel}>
               {t(comparisonPeriod === 'month' ? 'dashboard.balanceVsMonth' : 'dashboard.balanceVsYear')}
@@ -297,12 +355,13 @@ export default function DashboardScreen() {
         <View style={styles.shortcuts}>
           {([
             { icon: 'add', label: t('transactions.quickAdd'), route: '/(modal)/add-transaction', color: Colors.primary, ink: Colors.primaryStrong },
+            { icon: 'savings', label: t('funds.shortcut'), route: '/(modal)/manage-funds', color: Colors.light.backgroundElement, ink: Colors.light.textSecondary },
             { icon: 'donut-small', label: t('navigation.plans'), route: '/(main)/budgets', color: Colors.light.backgroundElement, ink: Colors.light.textSecondary },
             { icon: 'tune', label: t('monthlyLimit.shortcut'), route: '/(modal)/manage-budget', color: Colors.light.backgroundElement, ink: Colors.light.textSecondary },
             { icon: 'outlined-flag', label: t('dashboard.goals'), route: '/(modal)/manage-goals', color: Colors.light.backgroundElement, ink: Colors.light.textSecondary },
             { icon: 'event-repeat', label: t('dashboard.recurringShortcut'), route: '/(modal)/manage-recurring', color: Colors.light.backgroundElement, ink: Colors.light.textSecondary },
           ] as const).map((action) => (
-            <TouchableOpacity key={action.route} accessibilityRole="button" style={styles.shortcut} onPress={() => router.push(action.route)} activeOpacity={0.75}>
+            <TouchableOpacity key={action.route} accessibilityRole="button" style={styles.shortcut} onPress={() => router.push(action.route as any)} activeOpacity={0.75}>
               <View style={[styles.shortcutIcon, compact && styles.compactShortcutIcon, { backgroundColor: action.color }]}>
                 <MaterialIcons name={action.icon} size={24} color={action.ink} />
               </View>
@@ -428,6 +487,72 @@ export default function DashboardScreen() {
             )}
           </View>
         )}
+
+        {/* Funds Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionHeading}>
+              <Text style={styles.sectionTitle}>{t('dashboard.myFunds')}</Text>
+              <Text style={styles.sectionSubtitle}>{t('funds.fundsCount', { count: funds.length })}</Text>
+            </View>
+            <TouchableOpacity onPress={() => router.push('/(modal)/manage-funds' as any)}>
+              <Text style={styles.seeAll}>{t('dashboard.details')} →</Text>
+            </TouchableOpacity>
+          </View>
+
+          {funds.length === 0 ? (
+            <TouchableOpacity
+              accessibilityRole="button"
+              activeOpacity={0.85}
+              onPress={() => router.push('/(modal)/manage-funds' as any)}
+            >
+              <Card variant="flat" style={styles.fundPrompt}>
+                <View style={styles.fundPromptIcon}>
+                  <MaterialIcons name="savings" size={28} color={Colors.primaryStrong} />
+                </View>
+                <View style={styles.fundDashInfo}>
+                  <Text style={styles.fundPromptTitle}>{t('funds.emptyTitle')}</Text>
+                  <Text style={styles.fundPromptDescription}>{t('funds.emptyDescription')}</Text>
+                </View>
+                <MaterialIcons name="arrow-forward" size={20} color={Colors.primaryStrong} />
+              </Card>
+            </TouchableOpacity>
+          ) : (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.fundsScroll}>
+              {funds.map((fund) => {
+                const hasTarget = fund.target_amount !== null && fund.target_amount > 0;
+                const pct = hasTarget ? Math.min(100, Math.floor((fund.balance / fund.target_amount!) * 100)) : null;
+                return (
+                  <TouchableOpacity
+                    key={fund.id}
+                    activeOpacity={0.85}
+                    onPress={() => router.push('/(modal)/manage-funds' as any)}
+                  >
+                    <Card style={styles.dashFundCard}>
+                      <View style={styles.dashFundTop}>
+                        <View style={[styles.dashFundIconBadge, { backgroundColor: fund.color || Colors.primaryDark }]}>
+                          <MaterialIcons name={(fund.icon as any) || 'savings'} size={18} color="#FFF" />
+                        </View>
+                        <Text style={styles.dashFundName} numberOfLines={1}>{fund.name}</Text>
+                      </View>
+                      <Text style={styles.dashFundBalance}>{formatMoney(fund.balance, fund.currency, locale)}</Text>
+                      {pct !== null ? (
+                        <View style={styles.dashFundProgress}>
+                          <View style={styles.dashFundBarBg}>
+                            <View style={[styles.dashFundBarFill, { width: `${pct}%`, backgroundColor: pct >= 100 ? Colors.income : fund.color || Colors.primaryDark }]} />
+                          </View>
+                          <Text style={styles.dashFundPct}>{pct}%</Text>
+                        </View>
+                      ) : (
+                        <Text style={styles.dashFundNoTarget}>{t('funds.noTarget')}</Text>
+                      )}
+                    </Card>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          )}
+        </View>
 
         {activeGoals.length === 0 ? (
           <TouchableOpacity accessibilityRole="button" activeOpacity={0.85} onPress={() => router.push('/(modal)/manage-goals')}>
@@ -919,4 +1044,129 @@ const styles = StyleSheet.create({
   goalPromptIcon: { width: 50, height: 50, borderRadius: 18, backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
   goalPromptTitle: { fontSize: 15, fontWeight: '700', color: Colors.light.text },
   goalPromptDescription: { fontSize: 12, lineHeight: 18, color: Colors.light.textSecondary, marginTop: 3 },
+  balanceSplitRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF99',
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginTop: 6,
+  },
+  balanceSplitItem: {
+    flex: 1,
+    gap: 3,
+  },
+  splitIconRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  balanceSplitLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: Colors.primaryStrong,
+  },
+  balanceSplitValue: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: Colors.light.text,
+  },
+  balanceSplitDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: Colors.light.border,
+    marginHorizontal: 8,
+  },
+  fundsScroll: {
+    gap: 12,
+    paddingVertical: 4,
+  },
+  dashFundCard: {
+    width: 160,
+    padding: 14,
+    borderRadius: 14,
+    gap: 8,
+  },
+  dashFundTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  dashFundIconBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dashFundName: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.light.text,
+  },
+  dashFundBalance: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: Colors.light.text,
+  },
+  dashFundProgress: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  dashFundBarBg: {
+    flex: 1,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.light.backgroundElement,
+    overflow: 'hidden',
+  },
+  dashFundBarFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  dashFundPct: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: Colors.light.textSecondary,
+  },
+  dashFundNoTarget: {
+    fontSize: 11,
+    color: Colors.light.textSecondary,
+  },
+  fundPrompt: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    padding: 18,
+    backgroundColor: Colors.light.surface,
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+  },
+  fundPromptIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 18,
+    backgroundColor: Colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fundDashInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  fundPromptTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: Colors.light.text,
+  },
+  fundPromptDescription: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: Colors.light.textSecondary,
+    marginTop: 3,
+  },
 });

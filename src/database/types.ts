@@ -46,8 +46,23 @@ export interface CategoryRow {
 
 export type EntryType = 'income' | 'expense';
 
-export type TransactionType = EntryType | 'transfer';
+export type TransactionType = EntryType | 'transfer' | 'fund_deposit' | 'fund_withdrawal' | 'fund_transfer';
 export type TransactionStatus = 'confirmed' | 'planned';
+
+export interface FundRow {
+  id: string;
+  name: string;
+  description: string | null;
+  icon: string | null;
+  color: string | null;
+  target_amount: number | null;
+  balance: number;
+  currency: string;
+  sort_order: number;
+  is_deleted: number;
+  created_at: string;
+  updated_at: string;
+}
 
 export interface TransactionRow {
   id: string;
@@ -56,6 +71,8 @@ export interface TransactionRow {
   currency: string;
   account_id: string;
   to_account_id: string | null;
+  fund_id?: string | null;
+  to_fund_id?: string | null;
   category_id: string | null;
   recurring_rule_id: string | null;
   occurrence_id: string | null;
@@ -134,6 +151,8 @@ export interface RecurringRuleRow {
   currency: string;
   account_id: string;
   to_account_id: string | null;
+  fund_id?: string | null;
+  to_fund_id?: string | null;
   category_id: string | null;
   frequency: RecurrenceFrequency;
   interval: number;

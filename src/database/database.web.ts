@@ -21,6 +21,7 @@ class WebSQLiteDatabase {
     financial_goals: [],
     goal_contributions: [],
     audit_logs: [],
+    funds: [],
   };
 
   constructor(loadStorage = true) {
@@ -306,6 +307,9 @@ class WebSQLiteDatabase {
       if (/is_archived\s*=\s*0/i.test(trimmed)) {
         rows = rows.filter((r) => !r.is_archived || r.is_archived === 0);
       }
+      if (/is_deleted\s*=\s*0/i.test(trimmed)) {
+        rows = rows.filter((r) => !r.is_deleted || r.is_deleted === 0);
+      }
       if (/is_active\s*=\s*1/i.test(trimmed)) {
         rows = rows.filter((r) => r.is_active === 1);
       }
@@ -313,7 +317,19 @@ class WebSQLiteDatabase {
         const targetBudgetId = params[pIdx++];
         rows = rows.filter((r) => r.budget_id === targetBudgetId);
       }
-      if (/id\s*=\s*\?/i.test(trimmed)) {
+      if (/occurrence_id\s*=\s*\?/i.test(trimmed)) {
+        const occId = params[pIdx++];
+        rows = rows.filter((r) => r.occurrence_id === occId);
+      }
+      if (/group_id\s*=\s*\?/i.test(trimmed)) {
+        const grpId = params[pIdx++];
+        rows = rows.filter((r) => r.group_id === grpId);
+      }
+      if (/goal_id\s*=\s*\?/i.test(trimmed)) {
+        const gId = params[pIdx++];
+        rows = rows.filter((r) => r.goal_id === gId);
+      }
+      if (/(?:^|\s|\.)id\s*=\s*\?/i.test(trimmed)) {
         const targetId = params[pIdx++];
         rows = rows.filter((r) => r.id === targetId);
       }
@@ -321,6 +337,15 @@ class WebSQLiteDatabase {
         const accId1 = params[pIdx++];
         const accId2 = params[pIdx++];
         rows = rows.filter((r) => r.account_id === accId1 || r.to_account_id === accId2);
+      }
+      if (/\(fund_id\s*=\s*\?\s*OR\s*to_fund_id\s*=\s*\?\)/i.test(trimmed)) {
+        const fId1 = params[pIdx++];
+        const fId2 = params[pIdx++];
+        rows = rows.filter((r) => r.fund_id === fId1 || r.to_fund_id === fId2);
+      }
+      if (/fund_id\s*=\s*\?/i.test(trimmed) && !/to_fund_id/i.test(trimmed)) {
+        const fId = params[pIdx++];
+        rows = rows.filter((r) => r.fund_id === fId);
       }
       if (/category_id\s*=\s*\?/i.test(trimmed)) {
         const catId = params[pIdx++];
@@ -358,7 +383,7 @@ class WebSQLiteDatabase {
     }
 
     if (/ORDER\s+BY/i.test(trimmed)) {
-      if (/sort_order\s+ASC,\s*(?:c\.)?name\s+ASC/i.test(trimmed)) {
+      if (/sort_order\s+ASC/i.test(trimmed)) {
         rows.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || (a.name || a.category_name || '').localeCompare(b.name || b.category_name || ''));
       } else if (/created_at\s+DESC/i.test(trimmed)) {
         rows.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));

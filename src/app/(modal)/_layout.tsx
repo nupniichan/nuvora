@@ -9,6 +9,7 @@ export default function ModalLayout() {
       <Stack.Screen name="manage-budget" />
       <Stack.Screen name="manage-categories" />
       <Stack.Screen name="manage-goals" />
+      <Stack.Screen name="manage-funds" />
       <Stack.Screen name="manage-recurring" />
       <Stack.Screen name="backup-restore" />
     </Stack></SessionGuard>

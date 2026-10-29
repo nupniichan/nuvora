@@ -1,12 +1,13 @@
 import { getDatabase, withGoalTransaction } from '@/database/database';
 import { runGoalWrite } from '@/database/goal-write';
-import { TransactionRow, TransactionType } from '@/database/types';
+import { FundRow, TransactionRow, TransactionType } from '@/database/types';
 import { generateUUID } from '@/shared/uuid';
 import { requireMonthlyLimitApproval } from '@/features/budgets/monthly-limits';
 import { formatDateTimeISO } from '@/shared/date-utils';
 
 export interface TransactionFilter {
   accountId?: string;
+  fundId?: string;
   categoryId?: string;
   type?: TransactionType;
   startDate?: string;
@@ -22,6 +23,10 @@ export async function getTransactions(filter: TransactionFilter = {}): Promise<T
   if (filter.accountId) {
     conditions.push('(account_id = ? OR to_account_id = ?)');
     params.push(filter.accountId, filter.accountId);
+  }
+  if (filter.fundId) {
+    conditions.push('(fund_id = ? OR to_fund_id = ?)');
+    params.push(filter.fundId, filter.fundId);
   }
   if (filter.categoryId) {
     conditions.push('category_id = ?');
@@ -61,6 +66,8 @@ async function createTransactionOnce(data: {
   amount: number;
   currency: string;
   accountId: string;
+  fundId?: string | null;
+  toFundId?: string | null;
   categoryId?: string;
   recurringRuleId?: string;
   occurrenceId?: string;
@@ -68,12 +75,22 @@ async function createTransactionOnce(data: {
   date: string;
   monthlyLimitApproval?: string;
 }): Promise<TransactionRow> {
-  if (data.type !== 'income' && data.type !== 'expense') {
+  if (
+    data.type === 'transfer' ||
+    (data.type !== 'income' &&
+      data.type !== 'expense' &&
+      data.type !== 'fund_deposit' &&
+      data.type !== 'fund_withdrawal' &&
+      data.type !== 'fund_transfer')
+  ) {
     throw new Error('Transfers are no longer supported.');
   }
   const db = getDatabase();
   if (data.occurrenceId) {
-    const existing = await db.getFirstAsync<TransactionRow>('SELECT * FROM transactions WHERE occurrence_id = ?;', [data.occurrenceId]);
+    const existing = await db.getFirstAsync<TransactionRow>(
+      'SELECT * FROM transactions WHERE occurrence_id = ?;',
+      [data.occurrenceId]
+    );
     if (existing) return existing;
   }
   const id = generateUUID();
@@ -81,11 +98,14 @@ async function createTransactionOnce(data: {
   const txDate = data.date.includes('T') ? data.date : formatDateTimeISO(data.date);
 
   await db.withTransactionAsync(async () => {
-    await requireMonthlyLimitApproval({ ...data, date: txDate, operation: `create:${data.accountId}` }, data.monthlyLimitApproval);
+    await requireMonthlyLimitApproval(
+      { ...data, date: txDate, operation: `create:${data.accountId}` },
+      data.monthlyLimitApproval
+    );
 
     await db.runAsync(
-      `INSERT INTO transactions (id, type, amount, currency, account_id, to_account_id, category_id, recurring_rule_id, occurrence_id, note, date, status, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmed', ?, ?);`,
+      `INSERT INTO transactions (id, type, amount, currency, account_id, to_account_id, fund_id, to_fund_id, category_id, recurring_rule_id, occurrence_id, note, date, status, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmed', ?, ?);`,
       [
         id,
         data.type,
@@ -93,6 +113,8 @@ async function createTransactionOnce(data: {
         data.currency,
         data.accountId,
         null,
+        data.fundId || null,
+        data.toFundId || null,
         data.categoryId || null,
         data.recurringRuleId || null,
         data.occurrenceId || null,
@@ -104,16 +126,79 @@ async function createTransactionOnce(data: {
     );
 
     if (data.type === 'income') {
-      await db.runAsync(
-        'UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?;',
-        [data.amount, now, data.accountId]
-      );
+      if (data.fundId) {
+        await db.runAsync('UPDATE funds SET balance = balance + ?, updated_at = ? WHERE id = ?;', [
+          data.amount,
+          now,
+          data.fundId,
+        ]);
+      } else {
+        await db.runAsync('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?;', [
+          data.amount,
+          now,
+          data.accountId,
+        ]);
+      }
     } else if (data.type === 'expense') {
-      await db.runAsync(
-        'UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?;',
-        [data.amount, now, data.accountId]
-      );
+      if (data.fundId) {
+        const fund = await db.getFirstAsync<FundRow>('SELECT * FROM funds WHERE id = ?;', [data.fundId]);
+        if (!fund || fund.is_deleted) throw new Error('FUND_NOT_FOUND');
+        if (fund.balance < data.amount) throw new Error('INSUFFICIENT_FUND_BALANCE');
+        await db.runAsync('UPDATE funds SET balance = balance - ?, updated_at = ? WHERE id = ?;', [
+          data.amount,
+          now,
+          data.fundId,
+        ]);
+      } else {
+        await db.runAsync('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?;', [
+          data.amount,
+          now,
+          data.accountId,
+        ]);
+      }
+    } else if (data.type === 'fund_deposit') {
+      await db.runAsync('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?;', [
+        data.amount,
+        now,
+        data.accountId,
+      ]);
+      if (data.toFundId) {
+        await db.runAsync('UPDATE funds SET balance = balance + ?, updated_at = ? WHERE id = ?;', [
+          data.amount,
+          now,
+          data.toFundId,
+        ]);
+      }
+    } else if (data.type === 'fund_withdrawal') {
+      if (data.fundId) {
+        await db.runAsync('UPDATE funds SET balance = balance - ?, updated_at = ? WHERE id = ?;', [
+          data.amount,
+          now,
+          data.fundId,
+        ]);
+      }
+      await db.runAsync('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?;', [
+        data.amount,
+        now,
+        data.accountId,
+      ]);
+    } else if (data.type === 'fund_transfer') {
+      if (data.fundId) {
+        await db.runAsync('UPDATE funds SET balance = balance - ?, updated_at = ? WHERE id = ?;', [
+          data.amount,
+          now,
+          data.fundId,
+        ]);
+      }
+      if (data.toFundId) {
+        await db.runAsync('UPDATE funds SET balance = balance + ?, updated_at = ? WHERE id = ?;', [
+          data.amount,
+          now,
+          data.toFundId,
+        ]);
+      }
     }
+
     if (data.occurrenceId) {
       await db.runAsync(
         "UPDATE automation_occurrences SET status = 'confirmed', transaction_id = ?, processed_at = ? WHERE id = ?;",
@@ -137,11 +222,21 @@ export async function deleteTransaction(id: string): Promise<void> {
   if (isGoalCompletionTransaction(id)) {
     return runGoalWrite(async () => {
       await withGoalTransaction(async (txn) => {
-        const entry = await txn.getFirstAsync<TransactionRow>('SELECT * FROM transactions WHERE id = ?;', [id]);
+        const entry = await txn.getFirstAsync<TransactionRow>(
+          'SELECT * FROM transactions WHERE id = ?;',
+          [id]
+        );
         if (!entry) return;
         const now = new Date().toISOString();
-        await txn.runAsync('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?;', [entry.amount, now, entry.account_id]);
-        await txn.runAsync("UPDATE financial_goals SET status = 'active', current_amount = 0, updated_at = ? WHERE id = ?;", [now, id.slice('goal-completion:'.length)]);
+        await txn.runAsync('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?;', [
+          entry.amount,
+          now,
+          entry.account_id,
+        ]);
+        await txn.runAsync(
+          "UPDATE financial_goals SET status = 'active', current_amount = 0, updated_at = ? WHERE id = ?;",
+          [now, id.slice('goal-completion:'.length)]
+        );
         await txn.runAsync('DELETE FROM goal_contributions WHERE transaction_id = ?;', [id]);
         await txn.runAsync('DELETE FROM transactions WHERE id = ?;', [id]);
       });
@@ -155,31 +250,87 @@ export async function deleteTransaction(id: string): Promise<void> {
 
   await db.withTransactionAsync(async () => {
     if (tx.type === 'income') {
-      await db.runAsync(
-        'UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?;',
-        [tx.amount, now, tx.account_id]
-      );
+      if (tx.fund_id) {
+        await db.runAsync('UPDATE funds SET balance = balance - ?, updated_at = ? WHERE id = ?;', [
+          tx.amount,
+          now,
+          tx.fund_id,
+        ]);
+      } else {
+        await db.runAsync('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?;', [
+          tx.amount,
+          now,
+          tx.account_id,
+        ]);
+      }
     } else if (tx.type === 'expense') {
-      await db.runAsync(
-        'UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?;',
-        [tx.amount, now, tx.account_id]
-      );
+      if (tx.fund_id) {
+        await db.runAsync('UPDATE funds SET balance = balance + ?, updated_at = ? WHERE id = ?;', [
+          tx.amount,
+          now,
+          tx.fund_id,
+        ]);
+      } else {
+        await db.runAsync('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?;', [
+          tx.amount,
+          now,
+          tx.account_id,
+        ]);
+      }
+    } else if (tx.type === 'fund_deposit' && tx.to_fund_id) {
+      await db.runAsync('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?;', [
+        tx.amount,
+        now,
+        tx.account_id,
+      ]);
+      await db.runAsync('UPDATE funds SET balance = balance - ?, updated_at = ? WHERE id = ?;', [
+        tx.amount,
+        now,
+        tx.to_fund_id,
+      ]);
+    } else if (tx.type === 'fund_withdrawal' && tx.fund_id) {
+      await db.runAsync('UPDATE funds SET balance = balance + ?, updated_at = ? WHERE id = ?;', [
+        tx.amount,
+        now,
+        tx.fund_id,
+      ]);
+      await db.runAsync('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?;', [
+        tx.amount,
+        now,
+        tx.account_id,
+      ]);
+    } else if (tx.type === 'fund_transfer' && tx.fund_id && tx.to_fund_id) {
+      await db.runAsync('UPDATE funds SET balance = balance + ?, updated_at = ? WHERE id = ?;', [
+        tx.amount,
+        now,
+        tx.fund_id,
+      ]);
+      await db.runAsync('UPDATE funds SET balance = balance - ?, updated_at = ? WHERE id = ?;', [
+        tx.amount,
+        now,
+        tx.to_fund_id,
+      ]);
     } else if (tx.type === 'transfer' && tx.to_account_id) {
-      await db.runAsync(
-        'UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?;',
-        [tx.amount, now, tx.account_id]
-      );
-      await db.runAsync(
-        'UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?;',
-        [tx.amount, now, tx.to_account_id]
-      );
+      await db.runAsync('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?;', [
+        tx.amount,
+        now,
+        tx.account_id,
+      ]);
+      await db.runAsync('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?;', [
+        tx.amount,
+        now,
+        tx.to_account_id,
+      ]);
     }
 
     await db.runAsync('DELETE FROM transactions WHERE id = ?;', [id]);
   });
 }
 
-export function updateTransaction(id: string, data: Parameters<typeof updateTransactionOnce>[1]): Promise<TransactionRow> {
+export function updateTransaction(
+  id: string,
+  data: Parameters<typeof updateTransactionOnce>[1]
+): Promise<TransactionRow> {
   return runGoalWrite(() => updateTransactionOnce(id, data));
 }
 
@@ -190,6 +341,7 @@ async function updateTransactionOnce(
     amount?: number;
     currency?: string;
     accountId?: string;
+    fundId?: string | null;
     categoryId?: string | null;
     note?: string | null;
     date?: string;
@@ -201,60 +353,110 @@ async function updateTransactionOnce(
   const oldTx = await getTransactionById(id);
   if (!oldTx) throw new Error('Giao dịch không tồn tại');
 
-  if (oldTx.type === 'transfer' || (data.type !== undefined && data.type !== 'income' && data.type !== 'expense')) {
+  if (
+    oldTx.type === 'transfer' ||
+    (data.type !== undefined && data.type !== 'income' && data.type !== 'expense')
+  ) {
     throw new Error('Transfers are no longer supported.');
   }
 
   const now = new Date().toISOString();
 
   await db.withTransactionAsync(async () => {
-    await requireMonthlyLimitApproval({
-      type: data.type ?? oldTx.type, date: data.date ?? oldTx.date,
-      currency: data.currency ?? oldTx.currency, amount: data.amount ?? oldTx.amount,
-      excludeTransactionId: id, operation: `update:${id}`,
-    }, data.monthlyLimitApproval);
+    await requireMonthlyLimitApproval(
+      {
+        type: data.type ?? oldTx.type,
+        date: data.date ?? oldTx.date,
+        currency: data.currency ?? oldTx.currency,
+        amount: data.amount ?? oldTx.amount,
+        excludeTransactionId: id,
+        operation: `update:${id}`,
+      },
+      data.monthlyLimitApproval
+    );
 
+    // Revert old effect
     if (oldTx.type === 'income') {
-      await db.runAsync('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?;', [
-        oldTx.amount,
-        now,
-        oldTx.account_id,
-      ]);
+      if (oldTx.fund_id) {
+        await db.runAsync('UPDATE funds SET balance = balance - ?, updated_at = ? WHERE id = ?;', [
+          oldTx.amount,
+          now,
+          oldTx.fund_id,
+        ]);
+      } else {
+        await db.runAsync('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?;', [
+          oldTx.amount,
+          now,
+          oldTx.account_id,
+        ]);
+      }
     } else if (oldTx.type === 'expense') {
-      await db.runAsync('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?;', [
-        oldTx.amount,
-        now,
-        oldTx.account_id,
-      ]);
+      if (oldTx.fund_id) {
+        await db.runAsync('UPDATE funds SET balance = balance + ?, updated_at = ? WHERE id = ?;', [
+          oldTx.amount,
+          now,
+          oldTx.fund_id,
+        ]);
+      } else {
+        await db.runAsync('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?;', [
+          oldTx.amount,
+          now,
+          oldTx.account_id,
+        ]);
+      }
     }
 
     const newType = data.type !== undefined ? data.type : oldTx.type;
     const newAmount = data.amount !== undefined ? data.amount : oldTx.amount;
     const newCurrency = data.currency !== undefined ? data.currency : oldTx.currency;
     const newAccountId = data.accountId !== undefined ? data.accountId : oldTx.account_id;
+    const newFundId = data.fundId !== undefined ? data.fundId : oldTx.fund_id;
     const newCategoryId = data.categoryId !== undefined ? data.categoryId : oldTx.category_id;
     const newNote = data.note !== undefined ? data.note : oldTx.note;
-    const newDate = data.date !== undefined
-      ? (data.date.includes('T') ? data.date : formatDateTimeISO(data.date))
-      : oldTx.date;
+    const newDate =
+      data.date !== undefined
+        ? data.date.includes('T')
+          ? data.date
+          : formatDateTimeISO(data.date)
+        : oldTx.date;
 
+    // Apply new effect
     if (newType === 'income') {
-      await db.runAsync('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?;', [
-        newAmount,
-        now,
-        newAccountId,
-      ]);
+      if (newFundId) {
+        await db.runAsync('UPDATE funds SET balance = balance + ?, updated_at = ? WHERE id = ?;', [
+          newAmount,
+          now,
+          newFundId,
+        ]);
+      } else {
+        await db.runAsync('UPDATE accounts SET balance = balance + ?, updated_at = ? WHERE id = ?;', [
+          newAmount,
+          now,
+          newAccountId,
+        ]);
+      }
     } else if (newType === 'expense') {
-      await db.runAsync('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?;', [
-        newAmount,
-        now,
-        newAccountId,
-      ]);
+      if (newFundId) {
+        const fund = await db.getFirstAsync<FundRow>('SELECT * FROM funds WHERE id = ?;', [newFundId]);
+        if (!fund || fund.is_deleted) throw new Error('FUND_NOT_FOUND');
+        if (fund.balance < newAmount) throw new Error('INSUFFICIENT_FUND_BALANCE');
+        await db.runAsync('UPDATE funds SET balance = balance - ?, updated_at = ? WHERE id = ?;', [
+          newAmount,
+          now,
+          newFundId,
+        ]);
+      } else {
+        await db.runAsync('UPDATE accounts SET balance = balance - ?, updated_at = ? WHERE id = ?;', [
+          newAmount,
+          now,
+          newAccountId,
+        ]);
+      }
     }
 
     await db.runAsync(
       `UPDATE transactions
-       SET type = ?, amount = ?, currency = ?, account_id = ?, to_account_id = ?,
+       SET type = ?, amount = ?, currency = ?, account_id = ?, to_account_id = ?, fund_id = ?,
            category_id = ?, note = ?, date = ?, updated_at = ?
        WHERE id = ?;`,
       [
@@ -263,6 +465,7 @@ async function updateTransactionOnce(
         newCurrency,
         newAccountId,
         null,
+        newFundId || null,
         newCategoryId || null,
         newNote || null,
         newDate,
