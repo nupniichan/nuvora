@@ -189,7 +189,7 @@ export default function MoreScreen() {
         {/* About Card */}
         <Card variant="flat" style={styles.aboutCard}>
           <Text style={styles.appTitle}>Nuvora</Text>
-          <Text style={styles.appVersion}>1.0.1 · {t('settings.localFirstTagline')}</Text>
+          <Text style={styles.appVersion}>1.1.0 · {t('settings.localFirstTagline')}</Text>
           <Text style={styles.appDesc}>{t('settings.privacyDescription')}</Text>
         </Card>
 
