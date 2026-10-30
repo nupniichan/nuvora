@@ -1,5 +1,5 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Modal,
@@ -37,6 +37,96 @@ export interface DatePickerProps {
   style?: StyleProp<ViewStyle>;
 }
 
+function parseDateString(val?: string | null): string {
+  if (val && val.trim()) {
+    const trimmed = val.trim();
+    if (/^\d{4}-\d{2}-\d{2}/.test(trimmed)) {
+      return trimmed.split('T')[0].split(' ')[0];
+    }
+  }
+  return formatDateISO(new Date());
+}
+
+function parseTimeString(val?: string | null): { hour: number; minute: number } {
+  if (val && val.trim()) {
+    let timePart = '';
+    const trimmed = val.trim();
+    if (trimmed.includes('T')) {
+      timePart = trimmed.split('T')[1]?.slice(0, 5) || '';
+    } else if (trimmed.includes(':')) {
+      const parts = trimmed.split(/\s+/);
+      timePart = (parts.length > 1 ? parts[1] : parts[0]).slice(0, 5);
+    }
+    if (timePart) {
+      const [h, m] = timePart.split(':').map((num) => parseInt(num, 10));
+      if (!isNaN(h) && !isNaN(m)) {
+        return {
+          hour: Math.max(0, Math.min(23, h)),
+          minute: Math.max(0, Math.min(59, m)),
+        };
+      }
+    }
+  }
+  const now = new Date();
+  return { hour: now.getHours(), minute: now.getMinutes() };
+}
+
+function useHoldRepeat(action: () => void) {
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isHeldRef = useRef(false);
+  const actionRef = useRef(action);
+
+  useEffect(() => {
+    actionRef.current = action;
+  }, [action]);
+
+  const clear = useCallback(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      clear();
+    };
+  }, [clear]);
+
+  const handlePressIn = useCallback(() => {
+    isHeldRef.current = false;
+    clear();
+    timerRef.current = setTimeout(() => {
+      isHeldRef.current = true;
+      intervalRef.current = setInterval(() => {
+        actionRef.current();
+      }, 75);
+    }, 350);
+  }, [clear]);
+
+  const handlePressOut = useCallback(() => {
+    clear();
+  }, [clear]);
+
+  const handlePress = useCallback(() => {
+    if (!isHeldRef.current) {
+      actionRef.current();
+    }
+    isHeldRef.current = false;
+  }, []);
+
+  return {
+    onPressIn: handlePressIn,
+    onPressOut: handlePressOut,
+    onPress: handlePress,
+  };
+}
+
 export function DatePicker({
   value,
   onChange,
@@ -56,25 +146,8 @@ export function DatePicker({
 
   const [isOpen, setIsOpen] = useState(false);
 
-  const initialDateString = useMemo(() => {
-    if (value && value.trim()) {
-      return value.includes('T') ? value.split('T')[0] : value.split(' ')[0];
-    }
-    return formatDateISO(new Date());
-  }, [value]);
-
-  const initialTime = useMemo(() => {
-    if (value && value.includes('T')) {
-      const timePart = value.split('T')[1]?.slice(0, 5) || '12:00';
-      const [hours, minutes] = timePart.split(':').map((num) => parseInt(num, 10));
-      return {
-        hour: isNaN(hours) ? 12 : Math.max(0, Math.min(23, hours)),
-        minute: isNaN(minutes) ? 0 : Math.max(0, Math.min(59, minutes)),
-      };
-    }
-    const current = new Date();
-    return { hour: current.getHours(), minute: current.getMinutes() };
-  }, [value]);
+  const initialDateString = useMemo(() => parseDateString(value), [value]);
+  const initialTime = useMemo(() => parseTimeString(value), [value]);
 
   const [selectedDate, setSelectedDate] = useState<string>(initialDateString);
   const [selectedHour, setSelectedHour] = useState<number>(initialTime.hour);
@@ -93,46 +166,70 @@ export function DatePicker({
   const yesterdayDateString = useMemo(() => addDays(todayDateString, -1), [todayDateString]);
   const sevenDaysAgoDateString = useMemo(() => addDays(todayDateString, -7), [todayDateString]);
 
+  const minDateOnly = useMemo(() => {
+    if (!minDate) return undefined;
+    return minDate.includes('T') ? minDate.split('T')[0] : minDate.split(' ')[0];
+  }, [minDate]);
+
+  const maxDateOnly = useMemo(() => {
+    if (!maxDate) return undefined;
+    return maxDate.includes('T') ? maxDate.split('T')[0] : maxDate.split(' ')[0];
+  }, [maxDate]);
+
+  const minYear = minDateOnly ? parseInt(minDateOnly.split('-')[0], 10) : 1900;
+  const minMonth = minDateOnly ? parseInt(minDateOnly.split('-')[1], 10) : 1;
+  const maxYear = maxDateOnly ? parseInt(maxDateOnly.split('-')[0], 10) : 2100;
+  const maxMonth = maxDateOnly ? parseInt(maxDateOnly.split('-')[1], 10) : 12;
+
+  const canPrevMonth = useMemo(() => {
+    if (!minDateOnly) return viewYear > 1900;
+    const currentMetric = viewYear * 12 + viewMonth;
+    const minMetric = minYear * 12 + minMonth;
+    return currentMetric > minMetric;
+  }, [minDateOnly, viewYear, viewMonth, minYear, minMonth]);
+
+  const canNextMonth = useMemo(() => {
+    if (!maxDateOnly) return viewYear < 2100;
+    const currentMetric = viewYear * 12 + viewMonth;
+    const maxMetric = maxYear * 12 + maxMonth;
+    return currentMetric < maxMetric;
+  }, [maxDateOnly, viewYear, viewMonth, maxYear, maxMonth]);
+
   const handleOpen = useCallback(() => {
     if (disabled) return;
-    const current = value && value.trim()
-      ? (value.includes('T') ? value.split('T')[0] : value.split(' ')[0])
-      : todayDateString;
+    const current = parseDateString(value);
     const parsed = parseISODate(current);
     setSelectedDate(current);
     setViewYear(isNaN(parsed.year) ? new Date().getFullYear() : parsed.year);
     setViewMonth(isNaN(parsed.month) ? new Date().getMonth() + 1 : parsed.month);
     setPickerView('calendar');
-    if (value && value.includes('T')) {
-      const timePart = value.split('T')[1]?.slice(0, 5) || '12:00';
-      const [hours, minutes] = timePart.split(':').map((num) => parseInt(num, 10));
-      setSelectedHour(isNaN(hours) ? 12 : Math.max(0, Math.min(23, hours)));
-      setSelectedMinute(isNaN(minutes) ? 0 : Math.max(0, Math.min(59, minutes)));
-    } else {
-      const now = new Date();
-      setSelectedHour(now.getHours());
-      setSelectedMinute(now.getMinutes());
-    }
+
+    const parsedTime = parseTimeString(value);
+    setSelectedHour(parsedTime.hour);
+    setSelectedMinute(parsedTime.minute);
+
     setIsOpen(true);
-  }, [disabled, value, todayDateString]);
+  }, [disabled, value]);
 
   const handlePrevMonth = useCallback(() => {
+    if (!canPrevMonth) return;
     if (viewMonth === 1) {
       setViewMonth(12);
-      setViewYear((prev) => Math.max(1900, prev - 1));
+      setViewYear((prev) => Math.max(minYear, prev - 1));
     } else {
       setViewMonth((prev) => prev - 1);
     }
-  }, [viewMonth]);
+  }, [canPrevMonth, viewMonth, minYear]);
 
   const handleNextMonth = useCallback(() => {
+    if (!canNextMonth) return;
     if (viewMonth === 12) {
       setViewMonth(1);
-      setViewYear((prev) => Math.min(2100, prev + 1));
+      setViewYear((prev) => Math.min(maxYear, prev + 1));
     } else {
       setViewMonth((prev) => prev + 1);
     }
-  }, [viewMonth]);
+  }, [canNextMonth, viewMonth, maxYear]);
 
   const handleSelectDay = useCallback((dateStr: string) => {
     setSelectedDate(dateStr);
@@ -143,13 +240,44 @@ export function DatePicker({
     }
   }, []);
 
+  const handleIncrementHour = useCallback(() => {
+    setSelectedHour((prev) => (prev >= 23 ? 0 : prev + 1));
+  }, []);
+
+  const handleDecrementHour = useCallback(() => {
+    setSelectedHour((prev) => (prev <= 0 ? 23 : prev - 1));
+  }, []);
+
+  const handleIncrementMinute = useCallback(() => {
+    setSelectedMinute((prev) => (prev >= 59 ? 0 : prev + 1));
+  }, []);
+
+  const handleDecrementMinute = useCallback(() => {
+    setSelectedMinute((prev) => (prev <= 0 ? 59 : prev - 1));
+  }, []);
+
+  const handleSetTimeToNow = useCallback(() => {
+    const now = new Date();
+    setSelectedHour(now.getHours());
+    setSelectedMinute(now.getMinutes());
+  }, []);
+
+  const hourIncProps = useHoldRepeat(handleIncrementHour);
+  const hourDecProps = useHoldRepeat(handleDecrementHour);
+  const minIncProps = useHoldRepeat(handleIncrementMinute);
+  const minDecProps = useHoldRepeat(handleDecrementMinute);
+
   const handleConfirm = useCallback(() => {
+    const formattedHour = String(selectedHour).padStart(2, '0');
+    const formattedMinute = String(selectedMinute).padStart(2, '0');
     let finalValue = selectedDate;
+
     if (mode === 'datetime') {
-      const formattedHour = String(selectedHour).padStart(2, '0');
-      const formattedMinute = String(selectedMinute).padStart(2, '0');
       finalValue = `${selectedDate}T${formattedHour}:${formattedMinute}:00`;
+    } else if (mode === 'time') {
+      finalValue = `${formattedHour}:${formattedMinute}:00`;
     }
+
     onChange(finalValue);
     setIsOpen(false);
   }, [selectedDate, mode, selectedHour, selectedMinute, onChange]);
@@ -189,8 +317,28 @@ export function DatePicker({
   ], [t]);
 
   const displayString = useMemo(() => {
-    return value ? formatDateDisplay(value, locale) : '';
-  }, [value, locale]);
+    if (!value) return '';
+    if (mode === 'time') {
+      if (value.includes('T')) {
+        return value.split('T')[1]?.slice(0, 5) || value;
+      }
+      return value.slice(0, 5);
+    }
+    return formatDateDisplay(value, locale);
+  }, [value, locale, mode]);
+
+  const isTodayDisabled = Boolean(
+    (minDateOnly && todayDateString < minDateOnly) ||
+    (maxDateOnly && todayDateString > maxDateOnly)
+  );
+  const isYesterdayDisabled = Boolean(
+    (minDateOnly && yesterdayDateString < minDateOnly) ||
+    (maxDateOnly && yesterdayDateString > maxDateOnly)
+  );
+  const isSevenDaysAgoDisabled = Boolean(
+    (minDateOnly && sevenDaysAgoDateString < minDateOnly) ||
+    (maxDateOnly && sevenDaysAgoDateString > maxDateOnly)
+  );
 
   return (
     <View style={[styles.container, style]}>
@@ -207,7 +355,7 @@ export function DatePicker({
         disabled={disabled}
       >
         <MaterialIcons
-          name="event"
+          name={mode === 'time' ? 'access-time' : 'event'}
           size={20}
           color={value ? Colors.primaryDark : Colors.light.textSecondary}
           style={styles.leftIcon}
@@ -220,7 +368,11 @@ export function DatePicker({
           ]}
           numberOfLines={1}
         >
-          {displayString || placeholder || t('datePicker.placeholder', { defaultValue: 'Chọn ngày...' })}
+          {displayString ||
+            placeholder ||
+            (mode === 'time'
+              ? t('datePicker.selectTime', { defaultValue: 'Chọn giờ...' })
+              : t('datePicker.placeholder', { defaultValue: 'Chọn ngày...' }))}
         </Text>
 
         <View style={styles.rightActions}>
@@ -255,10 +407,16 @@ export function DatePicker({
           <Pressable style={styles.modalCard} onPress={(event) => event.stopPropagation()}>
             <View style={styles.modalHeader}>
               <View style={styles.modalTitleRow}>
-                <MaterialIcons name="calendar-month" size={22} color={Colors.primaryDark} />
+                <MaterialIcons
+                  name={mode === 'time' ? 'access-time' : 'calendar-month'}
+                  size={22}
+                  color={Colors.primaryDark}
+                />
                 <Text style={styles.modalTitle}>
                   {mode === 'datetime'
                     ? t('datePicker.selectDateTime', { defaultValue: 'Chọn ngày & giờ' })
+                    : mode === 'time'
+                    ? t('datePicker.selectTime', { defaultValue: 'Chọn giờ' })
                     : t('datePicker.selectDate', { defaultValue: 'Chọn ngày' })}
                 </Text>
               </View>
@@ -270,205 +428,274 @@ export function DatePicker({
               </TouchableOpacity>
             </View>
 
-            <View style={styles.presetContainer}>
-              <TouchableOpacity
-                style={[
-                  styles.presetChip,
-                  selectedDate === todayDateString && styles.presetChipActive,
-                ]}
-                onPress={() => handleSelectDay(todayDateString)}
-              >
-                <Text
+            {mode !== 'time' && (
+              <View style={styles.presetContainer}>
+                <TouchableOpacity
                   style={[
-                    styles.presetText,
-                    selectedDate === todayDateString && styles.presetTextActive,
+                    styles.presetChip,
+                    selectedDate === todayDateString && styles.presetChipActive,
+                    isTodayDisabled && styles.presetChipDisabled,
                   ]}
+                  disabled={isTodayDisabled}
+                  onPress={() => handleSelectDay(todayDateString)}
                 >
-                  {t('datePicker.today', { defaultValue: 'Hôm nay' })}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.presetChip,
-                  selectedDate === yesterdayDateString && styles.presetChipActive,
-                ]}
-                onPress={() => handleSelectDay(yesterdayDateString)}
-              >
-                <Text
-                  style={[
-                    styles.presetText,
-                    selectedDate === yesterdayDateString && styles.presetTextActive,
-                  ]}
-                >
-                  {t('datePicker.yesterday', { defaultValue: 'Hôm qua' })}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.presetChip,
-                  selectedDate === sevenDaysAgoDateString && styles.presetChipActive,
-                ]}
-                onPress={() => handleSelectDay(sevenDaysAgoDateString)}
-              >
-                <Text
-                  style={[
-                    styles.presetText,
-                    selectedDate === sevenDaysAgoDateString && styles.presetTextActive,
-                  ]}
-                >
-                  {t('datePicker.sevenDaysAgo', { defaultValue: '7 ngày trước' })}
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.navRow}>
-              <TouchableOpacity
-                style={styles.navArrowBtn}
-                onPress={handlePrevMonth}
-              >
-                <MaterialIcons name="chevron-left" size={24} color={Colors.light.text} />
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.monthYearSelector}
-                onPress={() =>
-                  setPickerView((prev) =>
-                    prev === 'calendar' ? 'month-year' : 'calendar'
-                  )
-                }
-              >
-                <Text style={styles.monthYearText}>
-                  {monthNames[viewMonth - 1]} {viewYear}
-                </Text>
-                <MaterialIcons
-                  name={pickerView === 'month-year' ? 'arrow-drop-up' : 'arrow-drop-down'}
-                  size={20}
-                  color={Colors.primaryDark}
-                />
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.navArrowBtn}
-                onPress={handleNextMonth}
-              >
-                <MaterialIcons name="chevron-right" size={24} color={Colors.light.text} />
-              </TouchableOpacity>
-            </View>
-
-            {pickerView === 'month-year' ? (
-              <View style={styles.monthYearGridContainer}>
-                <View style={styles.yearControlRow}>
-                  <TouchableOpacity
-                    style={styles.yearStepBtn}
-                    onPress={() => setViewYear((prev) => Math.max(1900, prev - 1))}
+                  <Text
+                    style={[
+                      styles.presetText,
+                      selectedDate === todayDateString && styles.presetTextActive,
+                      isTodayDisabled && styles.presetTextDisabled,
+                    ]}
                   >
-                    <MaterialIcons name="remove" size={18} color={Colors.light.text} />
-                  </TouchableOpacity>
-                  <Text style={styles.yearDisplayTitle}>{viewYear}</Text>
-                  <TouchableOpacity
-                    style={styles.yearStepBtn}
-                    onPress={() => setViewYear((prev) => Math.min(2100, prev + 1))}
+                    {t('datePicker.today', { defaultValue: 'Hôm nay' })}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.presetChip,
+                    selectedDate === yesterdayDateString && styles.presetChipActive,
+                    isYesterdayDisabled && styles.presetChipDisabled,
+                  ]}
+                  disabled={isYesterdayDisabled}
+                  onPress={() => handleSelectDay(yesterdayDateString)}
+                >
+                  <Text
+                    style={[
+                      styles.presetText,
+                      selectedDate === yesterdayDateString && styles.presetTextActive,
+                      isYesterdayDisabled && styles.presetTextDisabled,
+                    ]}
                   >
-                    <MaterialIcons name="add" size={18} color={Colors.light.text} />
-                  </TouchableOpacity>
-                </View>
+                    {t('datePicker.yesterday', { defaultValue: 'Hôm qua' })}
+                  </Text>
+                </TouchableOpacity>
 
-                <View style={styles.monthsGrid}>
-                  {monthNames.map((monthTitle, index) => {
-                    const monthNumber = index + 1;
-                    const isSelectedMonth = monthNumber === viewMonth;
-                    return (
-                      <TouchableOpacity
-                        key={monthNumber}
-                        style={[
-                          styles.monthGridItem,
-                          isSelectedMonth && styles.monthGridItemActive,
-                        ]}
-                        onPress={() => {
-                          setViewMonth(monthNumber);
-                          setPickerView('calendar');
-                        }}
-                      >
-                        <Text
-                          style={[
-                            styles.monthGridText,
-                            isSelectedMonth && styles.monthGridTextActive,
-                          ]}
-                        >
-                          {monthTitle}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
-            ) : (
-              <View style={styles.calendarContainer}>
-                <View style={styles.weekdaysRow}>
-                  {weekdays.map((weekdayTitle, index) => (
-                    <Text
-                      key={index}
-                      style={[
-                        styles.weekdayText,
-                        index === 0 && styles.sundayText,
-                      ]}
-                    >
-                      {weekdayTitle}
-                    </Text>
-                  ))}
-                </View>
-
-                <View style={styles.daysGrid}>
-                  {calendarDays.map((calendarItem, index) => {
-                    const isSelected = calendarItem.dateStr === selectedDate;
-                    const isDisabled = Boolean(
-                      (minDate && calendarItem.dateStr < minDate) ||
-                      (maxDate && calendarItem.dateStr > maxDate)
-                    );
-
-                    return (
-                      <TouchableOpacity
-                        key={`${calendarItem.dateStr}-${index}`}
-                        style={[
-                          styles.dayCell,
-                          isSelected && styles.selectedDayCell,
-                          calendarItem.isToday && !isSelected && styles.todayCell,
-                          isDisabled && styles.disabledDayCell,
-                        ]}
-                        disabled={isDisabled}
-                        onPress={() => handleSelectDay(calendarItem.dateStr)}
-                      >
-                        <Text
-                          style={[
-                            styles.dayText,
-                            !calendarItem.isCurrentMonth && styles.outsideMonthText,
-                            calendarItem.isToday && !isSelected && styles.todayText,
-                            isSelected && styles.selectedDayText,
-                            isDisabled && styles.disabledDayText,
-                          ]}
-                        >
-                          {calendarItem.day}
-                        </Text>
-                        {calendarItem.isToday && !isSelected && <View style={styles.todayDot} />}
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
+                <TouchableOpacity
+                  style={[
+                    styles.presetChip,
+                    selectedDate === sevenDaysAgoDateString && styles.presetChipActive,
+                    isSevenDaysAgoDisabled && styles.presetChipDisabled,
+                  ]}
+                  disabled={isSevenDaysAgoDisabled}
+                  onPress={() => handleSelectDay(sevenDaysAgoDateString)}
+                >
+                  <Text
+                    style={[
+                      styles.presetText,
+                      selectedDate === sevenDaysAgoDateString && styles.presetTextActive,
+                      isSevenDaysAgoDisabled && styles.presetTextDisabled,
+                    ]}
+                  >
+                    {t('datePicker.sevenDaysAgo', { defaultValue: '7 ngày trước' })}
+                  </Text>
+                </TouchableOpacity>
               </View>
             )}
 
-            {mode === 'datetime' && (
+            {mode !== 'time' && (
+              <>
+                <View style={styles.navRow}>
+                  <TouchableOpacity
+                    style={[styles.navArrowBtn, !canPrevMonth && styles.navArrowBtnDisabled]}
+                    disabled={!canPrevMonth}
+                    onPress={handlePrevMonth}
+                  >
+                    <MaterialIcons
+                      name="chevron-left"
+                      size={24}
+                      color={canPrevMonth ? Colors.light.text : Colors.light.border}
+                    />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.monthYearSelector}
+                    onPress={() =>
+                      setPickerView((prev) =>
+                        prev === 'calendar' ? 'month-year' : 'calendar'
+                      )
+                    }
+                  >
+                    <Text style={styles.monthYearText}>
+                      {monthNames[viewMonth - 1]} {viewYear}
+                    </Text>
+                    <MaterialIcons
+                      name={pickerView === 'month-year' ? 'arrow-drop-up' : 'arrow-drop-down'}
+                      size={20}
+                      color={Colors.primaryDark}
+                    />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.navArrowBtn, !canNextMonth && styles.navArrowBtnDisabled]}
+                    disabled={!canNextMonth}
+                    onPress={handleNextMonth}
+                  >
+                    <MaterialIcons
+                      name="chevron-right"
+                      size={24}
+                      color={canNextMonth ? Colors.light.text : Colors.light.border}
+                    />
+                  </TouchableOpacity>
+                </View>
+
+                {pickerView === 'month-year' ? (
+                  <View style={styles.monthYearGridContainer}>
+                    <View style={styles.yearControlRow}>
+                      <TouchableOpacity
+                        style={[
+                          styles.yearStepBtn,
+                          viewYear <= minYear && styles.navArrowBtnDisabled,
+                        ]}
+                        disabled={viewYear <= minYear}
+                        onPress={() => setViewYear((prev) => Math.max(minYear, prev - 1))}
+                      >
+                        <MaterialIcons
+                          name="remove"
+                          size={18}
+                          color={viewYear <= minYear ? Colors.light.border : Colors.light.text}
+                        />
+                      </TouchableOpacity>
+                      <Text style={styles.yearDisplayTitle}>{viewYear}</Text>
+                      <TouchableOpacity
+                        style={[
+                          styles.yearStepBtn,
+                          viewYear >= maxYear && styles.navArrowBtnDisabled,
+                        ]}
+                        disabled={viewYear >= maxYear}
+                        onPress={() => setViewYear((prev) => Math.min(maxYear, prev + 1))}
+                      >
+                        <MaterialIcons
+                          name="add"
+                          size={18}
+                          color={viewYear >= maxYear ? Colors.light.border : Colors.light.text}
+                        />
+                      </TouchableOpacity>
+                    </View>
+
+                    <View style={styles.monthsGrid}>
+                      {monthNames.map((monthTitle, index) => {
+                        const monthNumber = index + 1;
+                        const isSelectedMonth = monthNumber === viewMonth;
+                        const isMonthDisabled =
+                          (viewYear === minYear && monthNumber < minMonth) ||
+                          (viewYear === maxYear && monthNumber > maxMonth);
+
+                        return (
+                          <TouchableOpacity
+                            key={monthNumber}
+                            style={[
+                              styles.monthGridItem,
+                              isSelectedMonth && styles.monthGridItemActive,
+                              isMonthDisabled && styles.monthGridItemDisabled,
+                            ]}
+                            disabled={isMonthDisabled}
+                            onPress={() => {
+                              setViewMonth(monthNumber);
+                              setPickerView('calendar');
+                            }}
+                          >
+                            <Text
+                              style={[
+                                styles.monthGridText,
+                                isSelectedMonth && styles.monthGridTextActive,
+                                isMonthDisabled && styles.monthGridTextDisabled,
+                              ]}
+                            >
+                              {monthTitle}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+                ) : (
+                  <View style={styles.calendarContainer}>
+                    <View style={styles.weekdaysRow}>
+                      {weekdays.map((weekdayTitle, index) => (
+                        <Text
+                          key={index}
+                          style={[
+                            styles.weekdayText,
+                            index === 0 && styles.sundayText,
+                          ]}
+                        >
+                          {weekdayTitle}
+                        </Text>
+                      ))}
+                    </View>
+
+                    <View style={styles.daysGrid}>
+                      {calendarDays.map((calendarItem, index) => {
+                        const isSelected = calendarItem.dateStr === selectedDate;
+                        const isDisabled = Boolean(
+                          (minDateOnly && calendarItem.dateStr < minDateOnly) ||
+                          (maxDateOnly && calendarItem.dateStr > maxDateOnly)
+                        );
+
+                        return (
+                          <TouchableOpacity
+                            key={`${calendarItem.dateStr}-${index}`}
+                            style={[
+                              styles.dayCell,
+                              isSelected && styles.selectedDayCell,
+                              calendarItem.isToday && !isSelected && styles.todayCell,
+                              isDisabled && styles.disabledDayCell,
+                            ]}
+                            disabled={isDisabled}
+                            onPress={() => handleSelectDay(calendarItem.dateStr)}
+                          >
+                            <Text
+                              style={[
+                                styles.dayText,
+                                !calendarItem.isCurrentMonth && styles.outsideMonthText,
+                                calendarItem.isToday && !isSelected && styles.todayText,
+                                isSelected && styles.selectedDayText,
+                                isDisabled && styles.disabledDayText,
+                              ]}
+                            >
+                              {calendarItem.day}
+                            </Text>
+                            {calendarItem.isToday && !isSelected && <View style={styles.todayDot} />}
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+                )}
+              </>
+            )}
+
+            {(mode === 'datetime' || mode === 'time') && (
               <View style={styles.timeSection}>
-                <Text style={styles.timeLabel}>
-                  {t('datePicker.time', { defaultValue: 'Thời gian' })}
-                </Text>
+                <View style={styles.timeLeftCol}>
+                  <View style={styles.timeLabelRow}>
+                    <MaterialIcons name="access-time" size={16} color={Colors.light.textSecondary} />
+                    <Text style={styles.timeLabel}>
+                      {t('datePicker.time', { defaultValue: 'Thời gian' })}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.timeNowBtn}
+                    onPress={handleSetTimeToNow}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('datePicker.now', { defaultValue: 'Hiện tại' })}
+                  >
+                    <MaterialIcons name="schedule" size={12} color={Colors.primaryDark} />
+                    <Text style={styles.timeNowText}>
+                      {t('datePicker.now', { defaultValue: 'Hiện tại' })}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
                 <View style={styles.timeControlRow}>
+                  {/* Hour stepper */}
                   <View style={styles.timeStepper}>
                     <TouchableOpacity
                       style={styles.timeStepBtn}
-                      onPress={() => setSelectedHour((prev) => (prev > 0 ? prev - 1 : 23))}
+                      hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('datePicker.decrementHour', { defaultValue: 'Giảm giờ' })}
+                      {...hourDecProps}
                     >
                       <MaterialIcons name="remove" size={16} color={Colors.light.text} />
                     </TouchableOpacity>
@@ -477,7 +704,10 @@ export function DatePicker({
                     </Text>
                     <TouchableOpacity
                       style={styles.timeStepBtn}
-                      onPress={() => setSelectedHour((prev) => (prev < 23 ? prev + 1 : 0))}
+                      hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('datePicker.incrementHour', { defaultValue: 'Tăng giờ' })}
+                      {...hourIncProps}
                     >
                       <MaterialIcons name="add" size={16} color={Colors.light.text} />
                     </TouchableOpacity>
@@ -485,10 +715,14 @@ export function DatePicker({
 
                   <Text style={styles.timeSeparator}>:</Text>
 
+                  {/* Minute stepper */}
                   <View style={styles.timeStepper}>
                     <TouchableOpacity
                       style={styles.timeStepBtn}
-                      onPress={() => setSelectedMinute((prev) => (prev > 0 ? prev - 5 : 55))}
+                      hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('datePicker.decrementMinute', { defaultValue: 'Giảm phút' })}
+                      {...minDecProps}
                     >
                       <MaterialIcons name="remove" size={16} color={Colors.light.text} />
                     </TouchableOpacity>
@@ -497,7 +731,10 @@ export function DatePicker({
                     </Text>
                     <TouchableOpacity
                       style={styles.timeStepBtn}
-                      onPress={() => setSelectedMinute((prev) => (prev < 55 ? prev + 5 : 0))}
+                      hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('datePicker.incrementMinute', { defaultValue: 'Tăng phút' })}
+                      {...minIncProps}
                     >
                       <MaterialIcons name="add" size={16} color={Colors.light.text} />
                     </TouchableOpacity>
@@ -509,13 +746,18 @@ export function DatePicker({
             <View style={styles.modalFooter}>
               <View style={styles.selectedSummaryRow}>
                 <Text style={styles.selectedSummaryLabel}>
-                  {t('datePicker.selectDate', { defaultValue: 'Ngày đã chọn' })}:
+                  {mode === 'time'
+                    ? `${t('datePicker.selectTime', { defaultValue: 'Giờ đã chọn' })}:`
+                    : `${t('datePicker.selectDate', { defaultValue: 'Ngày đã chọn' })}:`}
                 </Text>
                 <Text style={styles.selectedSummaryValue}>
-                  {formatDateDisplay(selectedDate, locale)}
-                  {mode === 'datetime'
-                    ? ` ${String(selectedHour).padStart(2, '0')}:${String(selectedMinute).padStart(2, '0')}`
-                    : ''}
+                  {mode === 'time'
+                    ? `${String(selectedHour).padStart(2, '0')}:${String(selectedMinute).padStart(2, '0')}`
+                    : `${formatDateDisplay(selectedDate, locale)}${
+                        mode === 'datetime'
+                          ? ` ${String(selectedHour).padStart(2, '0')}:${String(selectedMinute).padStart(2, '0')}`
+                          : ''
+                      }`}
                 </Text>
               </View>
 
@@ -667,6 +909,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.primaryDark,
   },
+  presetChipDisabled: {
+    opacity: 0.35,
+  },
   presetText: {
     fontSize: 12,
     fontWeight: '600',
@@ -675,6 +920,9 @@ const styles = StyleSheet.create({
   presetTextActive: {
     color: Colors.primaryDark,
     fontWeight: '700',
+  },
+  presetTextDisabled: {
+    color: Colors.light.textSecondary,
   },
   navRow: {
     flexDirection: 'row',
@@ -687,6 +935,9 @@ const styles = StyleSheet.create({
     padding: 6,
     borderRadius: 8,
     backgroundColor: Colors.light.backgroundElement,
+  },
+  navArrowBtnDisabled: {
+    opacity: 0.3,
   },
   monthYearSelector: {
     flexDirection: 'row',
@@ -807,6 +1058,9 @@ const styles = StyleSheet.create({
   monthGridItemActive: {
     backgroundColor: Colors.primaryDark,
   },
+  monthGridItemDisabled: {
+    opacity: 0.3,
+  },
   monthGridText: {
     fontSize: 13,
     fontWeight: '600',
@@ -815,6 +1069,9 @@ const styles = StyleSheet.create({
   monthGridTextActive: {
     color: '#FFFFFF',
     fontWeight: '700',
+  },
+  monthGridTextDisabled: {
+    color: Colors.light.border,
   },
   timeSection: {
     flexDirection: 'row',
@@ -826,10 +1083,33 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 14,
   },
+  timeLeftCol: {
+    gap: 4,
+  },
+  timeLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   timeLabel: {
     fontSize: 14,
     fontWeight: '600',
     color: Colors.light.text,
+  },
+  timeNowBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 3,
+    paddingVertical: 2,
+    paddingHorizontal: 6,
+    borderRadius: 6,
+    backgroundColor: Colors.primaryLight,
+  },
+  timeNowText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: Colors.primaryDark,
   },
   timeControlRow: {
     flexDirection: 'row',
@@ -843,17 +1123,21 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: Colors.light.border,
-    paddingHorizontal: 4,
+    paddingHorizontal: 2,
   },
   timeStepBtn: {
-    padding: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   timeValueText: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '700',
     color: Colors.light.text,
-    minWidth: 26,
+    minWidth: 30,
     textAlign: 'center',
+    fontVariant: ['tabular-nums'],
   },
   timeSeparator: {
     fontSize: 16,
