@@ -1,12 +1,12 @@
+import { useTheme } from '@/hooks/use-theme';
+import { createTimezonePickerModalStyles } from './timezone-picker-modal.styles';
 import { MaterialIcons } from '@expo/vector-icons';
 import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   FlatList,
   Modal,
-  Platform,
   Pressable,
-  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
@@ -34,6 +34,8 @@ export function TimezonePickerModal({
   onSelect,
   onClose,
 }: TimezonePickerModalProps) {
+  const theme = useTheme();
+  const styles = createTimezonePickerModalStyles(theme);
   const { t, i18n } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const isVi = (i18n.language || 'vi').startsWith('vi');
@@ -180,163 +182,3 @@ export function TimezonePickerModal({
     </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 16,
-  },
-  modalCard: {
-    width: '100%',
-    maxWidth: 480,
-    maxHeight: '85%',
-    backgroundColor: Colors.light.surface,
-    borderRadius: 20,
-    paddingTop: 20,
-    paddingBottom: 16,
-    paddingHorizontal: 18,
-    gap: 12,
-    ...Platform.select({
-      web: { boxShadow: '0 8px 30px rgba(0,0,0,0.18)' },
-      default: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.16,
-        shadowRadius: 16,
-        elevation: 8,
-      },
-    }),
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  headerTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: Colors.light.text,
-  },
-  closeBtn: {
-    padding: 4,
-  },
-  subtitle: {
-    fontSize: 13,
-    color: Colors.light.textSecondary,
-    lineHeight: 18,
-    marginTop: -4,
-  },
-  searchBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.light.backgroundElement,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    gap: 8,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 14,
-    color: Colors.light.text,
-    padding: 0,
-  },
-  systemCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 12,
-    borderRadius: 14,
-    backgroundColor: Colors.primaryLight,
-    borderWidth: 1.5,
-    borderColor: 'transparent',
-    gap: 12,
-  },
-  systemTextContainer: {
-    flex: 1,
-    gap: 2,
-  },
-  systemTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.primaryStrong,
-  },
-  systemDesc: {
-    fontSize: 12,
-    color: Colors.light.textSecondary,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: Colors.light.border,
-    marginVertical: 2,
-  },
-  listContent: {
-    paddingBottom: 10,
-    gap: 4,
-  },
-  itemRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    gap: 12,
-  },
-  itemRowSelected: {
-    backgroundColor: Colors.primaryLight,
-    borderColor: Colors.primary,
-  },
-  itemInfo: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  badge: {
-    backgroundColor: Colors.light.backgroundElement,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-  },
-  badgeSelected: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primaryDark,
-  },
-  badgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: Colors.light.text,
-  },
-  badgeTextSelected: {
-    color: Colors.primaryStrong,
-  },
-  itemName: {
-    flex: 1,
-    fontSize: 13,
-    fontWeight: '500',
-    color: Colors.light.text,
-  },
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 32,
-    gap: 8,
-  },
-  emptyText: {
-    fontSize: 13,
-    color: Colors.light.textSecondary,
-  },
-});

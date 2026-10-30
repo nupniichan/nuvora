@@ -1,11 +1,10 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Modal,
   Pressable,
   StyleProp,
-  StyleSheet,
   Text,
   TouchableOpacity,
   View,
@@ -14,6 +13,8 @@ import {
 
 import { Button } from '@/components/ui/button';
 import { Colors } from '@/constants/theme';
+import { useHoldRepeat } from '@/hooks/use-hold-repeat';
+import { useTheme } from '@/hooks/use-theme';
 import {
   addDays,
   formatDateDisplay,
@@ -21,6 +22,10 @@ import {
   getCalendarMatrix,
   parseISODate,
 } from '@/shared/date-utils';
+
+import { CalendarMatrix } from './date-picker/calendar-matrix';
+import { createDatePickerStyles } from './date-picker/date-picker.styles';
+import { TimePickerWheel } from './date-picker/time-picker-wheel';
 
 export interface DatePickerProps {
   value?: string | null;
@@ -71,62 +76,6 @@ function parseTimeString(val?: string | null): { hour: number; minute: number } 
   return { hour: now.getHours(), minute: now.getMinutes() };
 }
 
-function useHoldRepeat(action: () => void) {
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const isHeldRef = useRef(false);
-  const actionRef = useRef(action);
-
-  useEffect(() => {
-    actionRef.current = action;
-  }, [action]);
-
-  const clear = useCallback(() => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      clear();
-    };
-  }, [clear]);
-
-  const handlePressIn = useCallback(() => {
-    isHeldRef.current = false;
-    clear();
-    timerRef.current = setTimeout(() => {
-      isHeldRef.current = true;
-      intervalRef.current = setInterval(() => {
-        actionRef.current();
-      }, 75);
-    }, 350);
-  }, [clear]);
-
-  const handlePressOut = useCallback(() => {
-    clear();
-  }, [clear]);
-
-  const handlePress = useCallback(() => {
-    if (!isHeldRef.current) {
-      actionRef.current();
-    }
-    isHeldRef.current = false;
-  }, []);
-
-  return {
-    onPressIn: handlePressIn,
-    onPressOut: handlePressOut,
-    onPress: handlePress,
-  };
-}
-
 export function DatePicker({
   value,
   onChange,
@@ -142,6 +91,8 @@ export function DatePicker({
   style,
 }: DatePickerProps) {
   const { t, i18n } = useTranslation();
+  const theme = useTheme();
+  const styles = createDatePickerStyles(theme);
   const locale = i18n.language || 'vi';
 
   const [isOpen, setIsOpen] = useState(false);
@@ -291,30 +242,36 @@ export function DatePicker({
     return getCalendarMatrix(viewYear, viewMonth, todayDateString);
   }, [viewYear, viewMonth, todayDateString]);
 
-  const weekdays = useMemo(() => [
-    t('datePicker.weekdays.sun', { defaultValue: 'CN' }),
-    t('datePicker.weekdays.mon', { defaultValue: 'T2' }),
-    t('datePicker.weekdays.tue', { defaultValue: 'T3' }),
-    t('datePicker.weekdays.wed', { defaultValue: 'T4' }),
-    t('datePicker.weekdays.thu', { defaultValue: 'T5' }),
-    t('datePicker.weekdays.fri', { defaultValue: 'T6' }),
-    t('datePicker.weekdays.sat', { defaultValue: 'T7' }),
-  ], [t]);
+  const weekdays = useMemo(
+    () => [
+      t('datePicker.weekdays.sun', { defaultValue: 'CN' }),
+      t('datePicker.weekdays.mon', { defaultValue: 'T2' }),
+      t('datePicker.weekdays.tue', { defaultValue: 'T3' }),
+      t('datePicker.weekdays.wed', { defaultValue: 'T4' }),
+      t('datePicker.weekdays.thu', { defaultValue: 'T5' }),
+      t('datePicker.weekdays.fri', { defaultValue: 'T6' }),
+      t('datePicker.weekdays.sat', { defaultValue: 'T7' }),
+    ],
+    [t]
+  );
 
-  const monthNames = useMemo(() => [
-    t('datePicker.months.1', { defaultValue: 'Tháng 1' }),
-    t('datePicker.months.2', { defaultValue: 'Tháng 2' }),
-    t('datePicker.months.3', { defaultValue: 'Tháng 3' }),
-    t('datePicker.months.4', { defaultValue: 'Tháng 4' }),
-    t('datePicker.months.5', { defaultValue: 'Tháng 5' }),
-    t('datePicker.months.6', { defaultValue: 'Tháng 6' }),
-    t('datePicker.months.7', { defaultValue: 'Tháng 7' }),
-    t('datePicker.months.8', { defaultValue: 'Tháng 8' }),
-    t('datePicker.months.9', { defaultValue: 'Tháng 9' }),
-    t('datePicker.months.10', { defaultValue: 'Tháng 10' }),
-    t('datePicker.months.11', { defaultValue: 'Tháng 11' }),
-    t('datePicker.months.12', { defaultValue: 'Tháng 12' }),
-  ], [t]);
+  const monthNames = useMemo(
+    () => [
+      t('datePicker.months.1', { defaultValue: 'Tháng 1' }),
+      t('datePicker.months.2', { defaultValue: 'Tháng 2' }),
+      t('datePicker.months.3', { defaultValue: 'Tháng 3' }),
+      t('datePicker.months.4', { defaultValue: 'Tháng 4' }),
+      t('datePicker.months.5', { defaultValue: 'Tháng 5' }),
+      t('datePicker.months.6', { defaultValue: 'Tháng 6' }),
+      t('datePicker.months.7', { defaultValue: 'Tháng 7' }),
+      t('datePicker.months.8', { defaultValue: 'Tháng 8' }),
+      t('datePicker.months.9', { defaultValue: 'Tháng 9' }),
+      t('datePicker.months.10', { defaultValue: 'Tháng 10' }),
+      t('datePicker.months.11', { defaultValue: 'Tháng 11' }),
+      t('datePicker.months.12', { defaultValue: 'Tháng 12' }),
+    ],
+    [t]
+  );
 
   const displayString = useMemo(() => {
     if (!value) return '';
@@ -329,15 +286,15 @@ export function DatePicker({
 
   const isTodayDisabled = Boolean(
     (minDateOnly && todayDateString < minDateOnly) ||
-    (maxDateOnly && todayDateString > maxDateOnly)
+      (maxDateOnly && todayDateString > maxDateOnly)
   );
   const isYesterdayDisabled = Boolean(
     (minDateOnly && yesterdayDateString < minDateOnly) ||
-    (maxDateOnly && yesterdayDateString > maxDateOnly)
+      (maxDateOnly && yesterdayDateString > maxDateOnly)
   );
   const isSevenDaysAgoDisabled = Boolean(
     (minDateOnly && sevenDaysAgoDateString < minDateOnly) ||
-    (maxDateOnly && sevenDaysAgoDateString > maxDateOnly)
+      (maxDateOnly && sevenDaysAgoDateString > maxDateOnly)
   );
 
   return (
@@ -357,17 +314,11 @@ export function DatePicker({
         <MaterialIcons
           name={mode === 'time' ? 'access-time' : 'event'}
           size={20}
-          color={value ? Colors.primaryDark : Colors.light.textSecondary}
+          color={value ? Colors.primaryDark : theme.textSecondary}
           style={styles.leftIcon}
         />
 
-        <Text
-          style={[
-            styles.inputText,
-            !value && styles.placeholderText,
-          ]}
-          numberOfLines={1}
-        >
+        <Text style={[styles.inputText, !value && styles.placeholderText]} numberOfLines={1}>
           {displayString ||
             placeholder ||
             (mode === 'time'
@@ -384,10 +335,10 @@ export function DatePicker({
               }}
               style={styles.clearBtn}
             >
-              <MaterialIcons name="close" size={16} color={Colors.light.textSecondary} />
+              <MaterialIcons name="close" size={16} color={theme.textSecondary} />
             </TouchableOpacity>
           )}
-          <MaterialIcons name="arrow-drop-down" size={22} color={Colors.light.textSecondary} />
+          <MaterialIcons name="arrow-drop-down" size={22} color={theme.textSecondary} />
         </View>
       </TouchableOpacity>
 
@@ -397,12 +348,7 @@ export function DatePicker({
         <Text style={styles.helperText}>{helperText}</Text>
       ) : null}
 
-      <Modal
-        visible={isOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setIsOpen(false)}
-      >
+      <Modal visible={isOpen} transparent animationType="fade" onRequestClose={() => setIsOpen(false)}>
         <Pressable style={styles.modalOverlay} onPress={() => setIsOpen(false)}>
           <Pressable style={styles.modalCard} onPress={(event) => event.stopPropagation()}>
             <View style={styles.modalHeader}>
@@ -420,11 +366,8 @@ export function DatePicker({
                     : t('datePicker.selectDate', { defaultValue: 'Chọn ngày' })}
                 </Text>
               </View>
-              <TouchableOpacity
-                style={styles.modalCloseBtn}
-                onPress={() => setIsOpen(false)}
-              >
-                <MaterialIcons name="close" size={20} color={Colors.light.text} />
+              <TouchableOpacity style={styles.modalCloseBtn} onPress={() => setIsOpen(false)}>
+                <MaterialIcons name="close" size={20} color={theme.text} />
               </TouchableOpacity>
             </View>
 
@@ -503,16 +446,14 @@ export function DatePicker({
                     <MaterialIcons
                       name="chevron-left"
                       size={24}
-                      color={canPrevMonth ? Colors.light.text : Colors.light.border}
+                      color={canPrevMonth ? theme.text : theme.border}
                     />
                   </TouchableOpacity>
 
                   <TouchableOpacity
                     style={styles.monthYearSelector}
                     onPress={() =>
-                      setPickerView((prev) =>
-                        prev === 'calendar' ? 'month-year' : 'calendar'
-                      )
+                      setPickerView((prev) => (prev === 'calendar' ? 'month-year' : 'calendar'))
                     }
                   >
                     <Text style={styles.monthYearText}>
@@ -533,7 +474,7 @@ export function DatePicker({
                     <MaterialIcons
                       name="chevron-right"
                       size={24}
-                      color={canNextMonth ? Colors.light.text : Colors.light.border}
+                      color={canNextMonth ? theme.text : theme.border}
                     />
                   </TouchableOpacity>
                 </View>
@@ -542,32 +483,26 @@ export function DatePicker({
                   <View style={styles.monthYearGridContainer}>
                     <View style={styles.yearControlRow}>
                       <TouchableOpacity
-                        style={[
-                          styles.yearStepBtn,
-                          viewYear <= minYear && styles.navArrowBtnDisabled,
-                        ]}
+                        style={[styles.yearStepBtn, viewYear <= minYear && styles.navArrowBtnDisabled]}
                         disabled={viewYear <= minYear}
                         onPress={() => setViewYear((prev) => Math.max(minYear, prev - 1))}
                       >
                         <MaterialIcons
                           name="remove"
                           size={18}
-                          color={viewYear <= minYear ? Colors.light.border : Colors.light.text}
+                          color={viewYear <= minYear ? theme.border : theme.text}
                         />
                       </TouchableOpacity>
                       <Text style={styles.yearDisplayTitle}>{viewYear}</Text>
                       <TouchableOpacity
-                        style={[
-                          styles.yearStepBtn,
-                          viewYear >= maxYear && styles.navArrowBtnDisabled,
-                        ]}
+                        style={[styles.yearStepBtn, viewYear >= maxYear && styles.navArrowBtnDisabled]}
                         disabled={viewYear >= maxYear}
                         onPress={() => setViewYear((prev) => Math.min(maxYear, prev + 1))}
                       >
                         <MaterialIcons
                           name="add"
                           size={18}
-                          color={viewYear >= maxYear ? Colors.light.border : Colors.light.text}
+                          color={viewYear >= maxYear ? theme.border : theme.text}
                         />
                       </TouchableOpacity>
                     </View>
@@ -609,138 +544,32 @@ export function DatePicker({
                     </View>
                   </View>
                 ) : (
-                  <View style={styles.calendarContainer}>
-                    <View style={styles.weekdaysRow}>
-                      {weekdays.map((weekdayTitle, index) => (
-                        <Text
-                          key={index}
-                          style={[
-                            styles.weekdayText,
-                            index === 0 && styles.sundayText,
-                          ]}
-                        >
-                          {weekdayTitle}
-                        </Text>
-                      ))}
-                    </View>
-
-                    <View style={styles.daysGrid}>
-                      {calendarDays.map((calendarItem, index) => {
-                        const isSelected = calendarItem.dateStr === selectedDate;
-                        const isDisabled = Boolean(
-                          (minDateOnly && calendarItem.dateStr < minDateOnly) ||
-                          (maxDateOnly && calendarItem.dateStr > maxDateOnly)
-                        );
-
-                        return (
-                          <TouchableOpacity
-                            key={`${calendarItem.dateStr}-${index}`}
-                            style={[
-                              styles.dayCell,
-                              isSelected && styles.selectedDayCell,
-                              calendarItem.isToday && !isSelected && styles.todayCell,
-                              isDisabled && styles.disabledDayCell,
-                            ]}
-                            disabled={isDisabled}
-                            onPress={() => handleSelectDay(calendarItem.dateStr)}
-                          >
-                            <Text
-                              style={[
-                                styles.dayText,
-                                !calendarItem.isCurrentMonth && styles.outsideMonthText,
-                                calendarItem.isToday && !isSelected && styles.todayText,
-                                isSelected && styles.selectedDayText,
-                                isDisabled && styles.disabledDayText,
-                              ]}
-                            >
-                              {calendarItem.day}
-                            </Text>
-                            {calendarItem.isToday && !isSelected && <View style={styles.todayDot} />}
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </View>
-                  </View>
+                  <CalendarMatrix
+                    calendarDays={calendarDays}
+                    weekdays={weekdays}
+                    selectedDate={selectedDate}
+                    minDateOnly={minDateOnly}
+                    maxDateOnly={maxDateOnly}
+                    onSelectDay={handleSelectDay}
+                    styles={styles}
+                  />
                 )}
               </>
             )}
 
             {(mode === 'datetime' || mode === 'time') && (
-              <View style={styles.timeSection}>
-                <View style={styles.timeLeftCol}>
-                  <View style={styles.timeLabelRow}>
-                    <MaterialIcons name="access-time" size={16} color={Colors.light.textSecondary} />
-                    <Text style={styles.timeLabel}>
-                      {t('datePicker.time', { defaultValue: 'Thời gian' })}
-                    </Text>
-                  </View>
-                  <TouchableOpacity
-                    style={styles.timeNowBtn}
-                    onPress={handleSetTimeToNow}
-                    accessibilityRole="button"
-                    accessibilityLabel={t('datePicker.now', { defaultValue: 'Hiện tại' })}
-                  >
-                    <MaterialIcons name="schedule" size={12} color={Colors.primaryDark} />
-                    <Text style={styles.timeNowText}>
-                      {t('datePicker.now', { defaultValue: 'Hiện tại' })}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.timeControlRow}>
-                  {/* Hour stepper */}
-                  <View style={styles.timeStepper}>
-                    <TouchableOpacity
-                      style={styles.timeStepBtn}
-                      hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
-                      accessibilityRole="button"
-                      accessibilityLabel={t('datePicker.decrementHour', { defaultValue: 'Giảm giờ' })}
-                      {...hourDecProps}
-                    >
-                      <MaterialIcons name="remove" size={16} color={Colors.light.text} />
-                    </TouchableOpacity>
-                    <Text style={styles.timeValueText}>
-                      {String(selectedHour).padStart(2, '0')}
-                    </Text>
-                    <TouchableOpacity
-                      style={styles.timeStepBtn}
-                      hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
-                      accessibilityRole="button"
-                      accessibilityLabel={t('datePicker.incrementHour', { defaultValue: 'Tăng giờ' })}
-                      {...hourIncProps}
-                    >
-                      <MaterialIcons name="add" size={16} color={Colors.light.text} />
-                    </TouchableOpacity>
-                  </View>
-
-                  <Text style={styles.timeSeparator}>:</Text>
-
-                  {/* Minute stepper */}
-                  <View style={styles.timeStepper}>
-                    <TouchableOpacity
-                      style={styles.timeStepBtn}
-                      hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
-                      accessibilityRole="button"
-                      accessibilityLabel={t('datePicker.decrementMinute', { defaultValue: 'Giảm phút' })}
-                      {...minDecProps}
-                    >
-                      <MaterialIcons name="remove" size={16} color={Colors.light.text} />
-                    </TouchableOpacity>
-                    <Text style={styles.timeValueText}>
-                      {String(selectedMinute).padStart(2, '0')}
-                    </Text>
-                    <TouchableOpacity
-                      style={styles.timeStepBtn}
-                      hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
-                      accessibilityRole="button"
-                      accessibilityLabel={t('datePicker.incrementMinute', { defaultValue: 'Tăng phút' })}
-                      {...minIncProps}
-                    >
-                      <MaterialIcons name="add" size={16} color={Colors.light.text} />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </View>
+              <TimePickerWheel
+                selectedHour={selectedHour}
+                selectedMinute={selectedMinute}
+                onSetTimeToNow={handleSetTimeToNow}
+                hourIncProps={hourIncProps}
+                hourDecProps={hourDecProps}
+                minIncProps={minIncProps}
+                minDecProps={minDecProps}
+                styles={styles}
+                theme={theme}
+                t={t}
+              />
             )}
 
             <View style={styles.modalFooter}>
@@ -762,20 +591,14 @@ export function DatePicker({
               </View>
 
               <View style={styles.footerButtons}>
-                <TouchableOpacity
-                  style={styles.cancelButton}
-                  onPress={() => setIsOpen(false)}
-                >
+                <TouchableOpacity style={styles.cancelButton} onPress={() => setIsOpen(false)}>
                   <Text style={styles.cancelButtonText}>
                     {t('common.cancel', { defaultValue: 'Hủy' })}
                   </Text>
                 </TouchableOpacity>
 
                 {allowClear && (
-                  <TouchableOpacity
-                    style={styles.clearButton}
-                    onPress={handleClear}
-                  >
+                  <TouchableOpacity style={styles.clearButton} onPress={handleClear}>
                     <Text style={styles.clearButtonText}>
                       {t('datePicker.clear', { defaultValue: 'Xóa' })}
                     </Text>
@@ -796,401 +619,3 @@ export function DatePicker({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    gap: 6,
-    alignSelf: 'stretch',
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: Colors.light.text,
-  },
-  inputButton: {
-    height: 48,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.light.surface,
-  },
-  inputDisabled: {
-    opacity: 0.6,
-    backgroundColor: Colors.light.backgroundElement,
-  },
-  inputError: {
-    borderColor: Colors.error,
-  },
-  leftIcon: {
-    marginRight: 10,
-  },
-  inputText: {
-    flex: 1,
-    fontSize: 15,
-    fontWeight: '600',
-    color: Colors.light.text,
-  },
-  placeholderText: {
-    fontWeight: '400',
-    color: Colors.light.textSecondary,
-  },
-  rightActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  clearBtn: {
-    padding: 4,
-  },
-  errorText: {
-    fontSize: 12,
-    color: Colors.error,
-  },
-  helperText: {
-    fontSize: 12,
-    color: Colors.light.textSecondary,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(15, 16, 25, 0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 16,
-  },
-  modalCard: {
-    width: '100%',
-    maxWidth: 380,
-    backgroundColor: Colors.light.surface,
-    borderRadius: 20,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 24,
-    elevation: 8,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 14,
-  },
-  modalTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  modalTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: Colors.light.text,
-  },
-  modalCloseBtn: {
-    padding: 4,
-  },
-  presetContainer: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 14,
-  },
-  presetChip: {
-    flex: 1,
-    paddingVertical: 7,
-    borderRadius: 8,
-    backgroundColor: Colors.light.backgroundElement,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  presetChipActive: {
-    backgroundColor: Colors.primaryLight,
-    borderWidth: 1,
-    borderColor: Colors.primaryDark,
-  },
-  presetChipDisabled: {
-    opacity: 0.35,
-  },
-  presetText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: Colors.light.textSecondary,
-  },
-  presetTextActive: {
-    color: Colors.primaryDark,
-    fontWeight: '700',
-  },
-  presetTextDisabled: {
-    color: Colors.light.textSecondary,
-  },
-  navRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-    paddingHorizontal: 4,
-  },
-  navArrowBtn: {
-    padding: 6,
-    borderRadius: 8,
-    backgroundColor: Colors.light.backgroundElement,
-  },
-  navArrowBtnDisabled: {
-    opacity: 0.3,
-  },
-  monthYearSelector: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    backgroundColor: Colors.light.backgroundElement,
-  },
-  monthYearText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: Colors.light.text,
-  },
-  calendarContainer: {
-    marginBottom: 12,
-  },
-  weekdaysRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: 6,
-  },
-  weekdayText: {
-    width: 38,
-    textAlign: 'center',
-    fontSize: 12,
-    fontWeight: '600',
-    color: Colors.light.textSecondary,
-  },
-  sundayText: {
-    color: Colors.expense,
-  },
-  daysGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-around',
-    rowGap: 4,
-  },
-  dayCell: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  selectedDayCell: {
-    backgroundColor: Colors.primaryDark,
-  },
-  todayCell: {
-    borderWidth: 1.5,
-    borderColor: Colors.primaryDark,
-  },
-  disabledDayCell: {
-    opacity: 0.25,
-  },
-  dayText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.light.text,
-  },
-  outsideMonthText: {
-    color: Colors.light.border,
-  },
-  todayText: {
-    color: Colors.primaryDark,
-    fontWeight: '700',
-  },
-  selectedDayText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-  },
-  disabledDayText: {
-    color: Colors.light.textSecondary,
-  },
-  todayDot: {
-    position: 'absolute',
-    bottom: 3,
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: Colors.primaryDark,
-  },
-  monthYearGridContainer: {
-    paddingVertical: 8,
-    marginBottom: 12,
-  },
-  yearControlRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 16,
-    marginBottom: 14,
-  },
-  yearStepBtn: {
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: Colors.light.backgroundElement,
-  },
-  yearDisplayTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: Colors.light.text,
-  },
-  monthsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    justifyContent: 'space-between',
-  },
-  monthGridItem: {
-    width: '30%',
-    paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: Colors.light.backgroundElement,
-    alignItems: 'center',
-  },
-  monthGridItemActive: {
-    backgroundColor: Colors.primaryDark,
-  },
-  monthGridItemDisabled: {
-    opacity: 0.3,
-  },
-  monthGridText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.light.text,
-  },
-  monthGridTextActive: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-  },
-  monthGridTextDisabled: {
-    color: Colors.light.border,
-  },
-  timeSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    backgroundColor: Colors.light.backgroundElement,
-    borderRadius: 12,
-    marginBottom: 14,
-  },
-  timeLeftCol: {
-    gap: 4,
-  },
-  timeLabelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  timeLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.light.text,
-  },
-  timeNowBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    gap: 3,
-    paddingVertical: 2,
-    paddingHorizontal: 6,
-    borderRadius: 6,
-    backgroundColor: Colors.primaryLight,
-  },
-  timeNowText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: Colors.primaryDark,
-  },
-  timeControlRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  timeStepper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.light.surface,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-    paddingHorizontal: 2,
-  },
-  timeStepBtn: {
-    paddingVertical: 6,
-    paddingHorizontal: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  timeValueText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Colors.light.text,
-    minWidth: 30,
-    textAlign: 'center',
-    fontVariant: ['tabular-nums'],
-  },
-  timeSeparator: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Colors.light.text,
-  },
-  modalFooter: {
-    borderTopWidth: 1,
-    borderTopColor: Colors.light.border,
-    paddingTop: 12,
-    gap: 12,
-  },
-  selectedSummaryRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  selectedSummaryLabel: {
-    fontSize: 13,
-    color: Colors.light.textSecondary,
-  },
-  selectedSummaryValue: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.primaryDark,
-  },
-  footerButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    gap: 8,
-  },
-  cancelButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-  },
-  cancelButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.light.textSecondary,
-  },
-  clearButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-  },
-  clearButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.error,
-  },
-  confirmBtn: {
-    paddingHorizontal: 20,
-  },
-});

@@ -1,25 +1,26 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Animated,
   ScrollView,
-  StyleSheet,
-  Text,
+    Text,
   TouchableOpacity,
   View,
 } from 'react-native';
 
 import { Card } from '@/components/ui/card';
 import { Colors } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
+import { createFinancialCalendarStyles } from './financial-calendar/financial-calendar.styles';
 import {
   CalendarDayData,
   MonthSummary,
   getCalendarMonthData,
   getYearMonthlySummaries,
 } from '@/features/insights/calendar-data';
-import { formatDateDisplay, formatYMD, getCalendarMatrix } from '@/shared/date-utils';
+import { formatDateDisplay, getCalendarMatrix } from '@/shared/date-utils';
 import { formatMoney } from '@/shared/money';
 
 type CalendarSubView = 'grid' | 'day' | 'month';
@@ -41,6 +42,8 @@ interface Props {
 
 export function FinancialCalendar({ year, month, currency, onPrevMonth, onNextMonth }: Props) {
   const { t, i18n } = useTranslation();
+  const theme = useTheme();
+  const styles = createFinancialCalendarStyles(theme);
   const locale = i18n.resolvedLanguage === 'en' ? 'en' : 'vi';
 
   const [subView, setSubView] = useState<CalendarSubView>('grid');
@@ -50,33 +53,30 @@ export function FinancialCalendar({ year, month, currency, onPrevMonth, onNextMo
   const [loadError, setLoadError] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const requestId = useRef(0);
-  const detailAnim = useRef(new Animated.Value(0)).current;
-
-  const loadData = useCallback(async () => {
-    const req = ++requestId.current;
-    setLoading(true);
-    setLoadError(false);
-    try {
-      const [dayData, yearData] = await Promise.all([
-        getCalendarMonthData(year, month, currency),
-        getYearMonthlySummaries(year, currency),
-      ]);
-      if (req !== requestId.current) return;
-      setDayMap(dayData);
-      setMonthSummaries(yearData);
-      setSelectedDate(null);
-    } catch {
-      if (req !== requestId.current) return;
-      setLoadError(true);
-    } finally {
-      if (req === requestId.current) setLoading(false);
-    }
-  }, [year, month, currency]);
+  const [detailAnim] = useState(() => new Animated.Value(0));
 
   useEffect(() => {
-    loadData();
-    return () => { requestId.current++; };
-  }, [loadData]);
+    let active = true;
+    const req = ++requestId.current;
+    Promise.resolve().then(async () => {
+      try {
+        const [dayData, yearData] = await Promise.all([
+          getCalendarMonthData(year, month, currency),
+          getYearMonthlySummaries(year, currency),
+        ]);
+        if (!active || req !== requestId.current) return;
+        setDayMap(dayData);
+        setMonthSummaries(yearData);
+        setSelectedDate(null);
+      } catch {
+        if (!active || req !== requestId.current) return;
+        setLoadError(true);
+      } finally {
+        if (active && req === requestId.current) setLoading(false);
+      }
+    });
+    return () => { active = false; };
+  }, [year, month, currency]);
 
   useEffect(() => {
     if (selectedDate) {
@@ -421,340 +421,3 @@ export function FinancialCalendar({ year, month, currency, onPrevMonth, onNextMo
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  root: {
-    gap: 8,
-  },
-  subViewToggle: {
-    flexDirection: 'row',
-    backgroundColor: Colors.light.backgroundElement,
-    borderRadius: 12,
-    padding: 3,
-    gap: 3,
-  },
-  subViewBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    paddingVertical: 7,
-    borderRadius: 10,
-  },
-  subViewBtnActive: {
-    backgroundColor: Colors.light.surface,
-    shadowColor: Colors.primaryDark,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  subViewLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: Colors.light.textSecondary,
-  },
-  subViewLabelActive: {
-    color: Colors.primaryStrong,
-  },
-  loadingContainer: {
-    paddingVertical: 40,
-    alignItems: 'center',
-  },
-  errorContainer: {
-    paddingVertical: 20,
-    alignItems: 'center',
-  },
-  errorText: {
-    fontSize: 13,
-    color: Colors.expense,
-    textAlign: 'center',
-  },
-  weekdayRow: {
-    flexDirection: 'row',
-    marginBottom: 2,
-  },
-  weekdayCell: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 4,
-  },
-  weekdayLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: Colors.light.textSecondary,
-    textTransform: 'uppercase',
-  },
-  sundayLabel: {
-    color: Colors.expense,
-  },
-  calendarGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  dayCell: {
-    width: `${100 / 7}%`,
-    minHeight: 62,
-    padding: 3,
-    alignItems: 'center',
-    borderRadius: 8,
-    gap: 1,
-  },
-  dayCellToday: {
-    backgroundColor: Colors.primaryLight,
-  },
-  dayCellSelected: {
-    backgroundColor: Colors.primary,
-  },
-  dayNumber: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: Colors.light.text,
-    lineHeight: 18,
-  },
-  dayNumberOtherMonth: {
-    color: Colors.light.border,
-    fontWeight: '500',
-  },
-  dayNumberToday: {
-    color: Colors.primaryStrong,
-  },
-  dayNumberSelected: {
-    color: Colors.primaryStrong,
-  },
-  dayNumberSunday: {
-    color: Colors.expense,
-  },
-  dotRow: {
-    flexDirection: 'row',
-    gap: 2,
-    justifyContent: 'center',
-  },
-  dot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-  },
-  incomeDot: {
-    backgroundColor: Colors.income,
-  },
-  expenseDot: {
-    backgroundColor: Colors.expense,
-  },
-  amountBadges: {
-    gap: 1,
-    alignItems: 'center',
-    width: '100%',
-  },
-  incomeAmount: {
-    fontSize: 8.5,
-    fontWeight: '700',
-    color: Colors.income,
-    textAlign: 'center',
-  },
-  expenseAmount: {
-    fontSize: 8.5,
-    fontWeight: '700',
-    color: Colors.expense,
-    textAlign: 'center',
-  },
-  legend: {
-    flexDirection: 'row',
-    gap: 16,
-    justifyContent: 'center',
-    paddingVertical: 4,
-  },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  legendLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: Colors.light.textSecondary,
-  },
-  detailPanel: {
-    marginTop: 4,
-  },
-  detailCard: {
-    padding: 16,
-    gap: 12,
-  },
-  detailHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  detailDateLabel: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: Colors.light.text,
-  },
-  closeBtn: {
-    padding: 4,
-  },
-  daySummaryRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  daySumItem: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 3,
-  },
-  daySumLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: Colors.light.textSecondary,
-    textAlign: 'center',
-  },
-  daySumValue: {
-    fontSize: 13,
-    fontWeight: '800',
-    textAlign: 'center',
-    fontVariant: ['tabular-nums'],
-  },
-  daySumDivider: {
-    width: 1,
-    backgroundColor: Colors.light.border,
-    alignSelf: 'stretch',
-  },
-  detailDivider: {
-    height: 1,
-    backgroundColor: Colors.light.backgroundElement,
-  },
-  txList: {
-    maxHeight: 260,
-  },
-  txRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.light.backgroundElement,
-  },
-  txIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  txInfo: {
-    flex: 1,
-    gap: 2,
-  },
-  txName: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: Colors.light.text,
-  },
-  txNote: {
-    fontSize: 11,
-    color: Colors.light.textSecondary,
-  },
-  txAmount: {
-    fontSize: 13,
-    fontWeight: '800',
-    fontVariant: ['tabular-nums'],
-    flexShrink: 0,
-  },
-  emptyDay: {
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 32,
-  },
-  emptyDayText: {
-    fontSize: 13,
-    color: Colors.light.textSecondary,
-    textAlign: 'center',
-  },
-  dayListCard: {
-    padding: 12,
-    gap: 8,
-  },
-  dayListHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  dayListDate: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: Colors.light.text,
-  },
-  dayListNet: {
-    fontSize: 14,
-    fontWeight: '800',
-    fontVariant: ['tabular-nums'],
-  },
-  dayListMeta: {
-    flexDirection: 'row',
-    gap: 10,
-    flexWrap: 'wrap',
-  },
-  dayListMetaText: {
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  monthCard: {
-    padding: 10,
-  },
-  monthCardCurrent: {
-    borderLeftWidth: 3,
-    borderLeftColor: Colors.primaryDark,
-  },
-  monthCardRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  monthCardLabel: {
-    width: 36,
-    fontSize: 12,
-    fontWeight: '700',
-    color: Colors.light.textSecondary,
-  },
-  monthCardLabelCurrent: {
-    color: Colors.primaryStrong,
-  },
-  monthBarsContainer: {
-    flex: 1,
-    gap: 3,
-  },
-  monthBarTrack: {
-    height: 7,
-    backgroundColor: Colors.light.backgroundElement,
-    borderRadius: 3.5,
-    overflow: 'hidden',
-  },
-  monthBar: {
-    height: '100%',
-    borderRadius: 3.5,
-    minWidth: 2,
-  },
-  incomeBar: {
-    backgroundColor: Colors.income,
-  },
-  expenseBar: {
-    backgroundColor: Colors.expense,
-  },
-  monthAmounts: {
-    width: 72,
-    alignItems: 'flex-end',
-    gap: 1,
-  },
-  monthAmountText: {
-    fontSize: 11,
-    fontWeight: '700',
-    fontVariant: ['tabular-nums'],
-  },
-  monthAmountEmpty: {
-    fontSize: 11,
-    color: Colors.light.border,
-  },
-});

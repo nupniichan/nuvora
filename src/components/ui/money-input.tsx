@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -28,13 +28,19 @@ export function MoneyInput({
   const [textValue, setTextValue] = useState<string>(() =>
     formatMinorForInput(valueMinor, currency, locale)
   );
+  const [prevValueMinor, setPrevValueMinor] = useState(valueMinor);
+  const [prevCurrency, setPrevCurrency] = useState(currency);
+  const [prevLocale, setPrevLocale] = useState(locale);
 
-  useEffect(() => {
+  if (valueMinor !== prevValueMinor || currency !== prevCurrency || locale !== prevLocale) {
+    setPrevValueMinor(valueMinor);
+    setPrevCurrency(currency);
+    setPrevLocale(locale);
     const currentParsed = parseAndFormatInput(textValue, currency, locale);
     if (currentParsed.minor !== valueMinor) {
       setTextValue(formatMinorForInput(valueMinor, currency, locale));
     }
-  }, [valueMinor, currency, locale]);
+  }
 
   const handleChangeText = (text: string) => {
     const { formatted, minor } = parseAndFormatInput(text, currency, locale);
