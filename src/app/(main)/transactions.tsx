@@ -1,3 +1,5 @@
+import { useTheme } from '@/hooks/use-theme';
+import { createTransactionsStyles } from './transactions.styles';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
@@ -8,7 +10,6 @@ import {
   Modal,
   Platform,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
@@ -22,7 +23,7 @@ import { CategoryPicker } from '@/components/ui/category-picker';
 import { DatePicker } from '@/components/ui/date-picker';
 import { EmptyState } from '@/components/ui/empty-state';
 import { MoneyInput } from '@/components/ui/money-input';
-import { Colors, MaxContentWidth } from '@/constants/theme';
+import { Colors } from '@/constants/theme';
 import { EntryType, TransactionRow } from '@/database/types';
 import { CategoryWithGroup, getAllCategories } from '@/features/categories/category-queries';
 import {
@@ -39,6 +40,8 @@ import { withMonthlyLimitConfirmation } from '@/features/budgets/confirm-monthly
 import { isValidTransactionDate } from '@/features/budgets/monthly-limits';
 
 export default function TransactionsScreen() {
+  const theme = useTheme();
+  const styles = createTransactionsStyles(theme);
   const { t, i18n } = useTranslation();
   const locale = i18n.resolvedLanguage === 'en' ? 'en' : 'vi';
   const router = useRouter();
@@ -356,244 +359,3 @@ export default function TransactionsScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.light.background,
-  },
-  header: {
-    width: '100%',
-    maxWidth: MaxContentWidth,
-    alignSelf: 'center',
-    padding: 20,
-    gap: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.light.border,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  eyebrow: {
-    color: Colors.primaryDark,
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1.6,
-    marginBottom: 2,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: Colors.light.text,
-  },
-  addButton: {
-    minHeight: 42,
-    maxWidth: 170,
-    paddingHorizontal: 14,
-    borderRadius: 14,
-    backgroundColor: Colors.primary,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-  },
-  addButtonText: {
-    color: Colors.light.text,
-    fontSize: 13,
-    fontWeight: '800',
-    flexShrink: 1,
-  },
-  filterRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 4,
-    padding: 4,
-    borderRadius: 18,
-    backgroundColor: Colors.light.backgroundElement,
-  },
-  filterChip: {
-    flexGrow: 1,
-    alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: Colors.light.backgroundElement,
-  },
-  activeFilterChip: {
-    backgroundColor: Colors.primary,
-  },
-  filterText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.light.textSecondary,
-  },
-  activeFilterText: {
-    color: '#1A1C2E',
-    fontWeight: '700',
-  },
-  listContent: {
-    padding: 20,
-    gap: 10,
-    paddingBottom: 40,
-    width: '100%',
-    maxWidth: MaxContentWidth,
-    alignSelf: 'center',
-  },
-  txCard: {
-    padding: 16,
-    gap: 10,
-  },
-  txRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  txIconBadge: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
-    backgroundColor: Colors.light.backgroundElement,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  txInfo: {
-    flex: 1,
-    gap: 4,
-  },
-  txNote: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.light.text,
-  },
-  txDate: {
-    fontSize: 11,
-    color: Colors.light.textSecondary,
-  },
-  txAmount: {
-    fontSize: 16,
-    fontWeight: '800',
-    flexShrink: 1,
-    fontVariant: ['tabular-nums'],
-  },
-  incomeText: {
-    color: Colors.income,
-  },
-  expenseText: {
-    color: Colors.expense,
-  },
-  transferText: {
-    color: Colors.transfer,
-  },
-  quickActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-    marginLeft: 4,
-  },
-  actionIconBtn: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  txFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-    borderTopWidth: 1,
-    borderTopColor: Colors.light.backgroundElement,
-    paddingTop: 4,
-  },
-  modalRoot: {
-    flex: 1,
-    backgroundColor: Colors.light.background,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 18,
-    paddingBottom: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.light.border,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: Colors.light.text,
-  },
-  modalContent: {
-    padding: 20,
-    gap: 16,
-  },
-  segmentRow: {
-    flexDirection: 'row',
-    backgroundColor: Colors.light.backgroundElement,
-    borderRadius: 12,
-    padding: 4,
-    gap: 4,
-  },
-  segmentBtn: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: 'center',
-    borderRadius: 10,
-  },
-  segmentText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.light.textSecondary,
-  },
-  activeExpense: {
-    backgroundColor: Colors.primary,
-  },
-  activeIncome: {
-    backgroundColor: Colors.primary,
-  },
-  activeText: {
-    color: Colors.light.text,
-    fontWeight: '700',
-  },
-  formGroup: {
-    gap: 8,
-  },
-  formLabel: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: Colors.light.textSecondary,
-    textTransform: 'uppercase',
-  },
-  textInput: {
-    backgroundColor: Colors.light.backgroundElement,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
-    color: Colors.light.text,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-  },
-  modalFooter: {
-    flexDirection: 'row',
-    gap: 10,
-    padding: 20,
-    borderTopWidth: 1,
-    borderTopColor: Colors.light.border,
-    backgroundColor: Colors.light.background,
-  },
-  deleteTxBtn: {
-    flex: 1,
-    borderColor: Colors.expense,
-  },
-  saveTxBtn: {
-    flex: 1,
-  },
-  keyboardAvoid: {
-    flex: 1,
-  },
-});

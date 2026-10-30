@@ -7,7 +7,6 @@ import { useTranslation } from 'react-i18next';
 import {
   RefreshControl,
   ScrollView,
-  StyleSheet,
   Text,
   TouchableOpacity,
   useWindowDimensions,
@@ -15,22 +14,21 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { BalanceCardScenery } from '@/components/scenery';
 import { BackupReminderCard } from '@/components/backup/backup-reminder-card';
 import { Card } from '@/components/ui/card';
 import { CategoryBreakdownChart } from '@/components/ui/charts';
 import { EmptyState } from '@/components/ui/empty-state';
 import { DailyExpenseChart } from '@/components/ui/insight-charts';
 import { MonthlyLimitCard } from '@/components/ui/monthly-limit-card';
-import { Colors, MaxContentWidth } from '@/constants/theme';
+import { Colors } from '@/constants/theme';
 import { FundRow, TransactionRow } from '@/database/types';
-import { getAllFunds, getAssetSummary } from '@/features/funds/fund-queries';
 import { getAllAccounts, getDefaultAccount } from '@/features/accounts/account-queries';
 import {
   getMonthlySnapshot,
   GOAL_COMPLETION_CATEGORY_ID,
   MonthlySnapshot,
 } from '@/features/budgets/budget-queries';
+import { getAllFunds, getAssetSummary } from '@/features/funds/fund-queries';
 import {
   FinancialGoalWithProgress,
   getAllGoals,
@@ -47,6 +45,7 @@ import {
   skipOccurrence,
 } from '@/features/recurring/recurring-queries';
 import { getTransactions } from '@/features/transactions/transaction-queries';
+import { useTheme } from '@/hooks/use-theme';
 import {
   BackupReminderStatus,
   checkBackupReminderStatus,
@@ -54,6 +53,10 @@ import {
 } from '@/services/backup/backup-reminder';
 import { formatDateDisplay, formatDateISO } from '@/shared/date-utils';
 import { formatMoney } from '@/shared/money';
+
+import { DashboardQuickActions } from './components/dashboard-quick-actions';
+import { NetWorthCard } from './components/net-worth-card';
+import { createDashboardStyles } from './dashboard.styles';
 
 interface UpcomingForecastItem {
   ruleId: string;
@@ -66,6 +69,8 @@ interface UpcomingForecastItem {
 
 export default function DashboardScreen() {
   const { t, i18n } = useTranslation();
+  const theme = useTheme();
+  const styles = createDashboardStyles(theme);
   const router = useRouter();
   const { width } = useWindowDimensions();
   const compact = width < 380;
@@ -83,38 +88,42 @@ export default function DashboardScreen() {
   const [backupReminderStatus, setBackupReminderStatus] = useState<BackupReminderStatus | null>(null);
   const [funds, setFunds] = useState<FundRow[]>([]);
   const [assetSummary, setAssetSummary] = useState<{
+    totalAssets: number;
     walletBalance: number;
     fundsBalance: number;
-    totalAssets: number;
     currency: string;
   } | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
-      setBalanceLoadError(false);
-      const defaultAccount = await getDefaultAccount();
-
       await processRecurringCatchUp();
+
+      const defaultAccount = await getDefaultAccount();
+      if (!defaultAccount) {
+        return;
+      }
 
       const accounts = await getAllAccounts();
       const [allFunds, summary] = await Promise.all([
-        getAllFunds(false),
+        getAllFunds(),
         getAssetSummary(),
       ]);
       setFunds(allFunds);
       setAssetSummary(summary);
+
       const transactions = await getTransactions();
-      setRecentTransactions(transactions.filter((tx) => tx.status === 'confirmed').slice(0, 5));
-      setBalanceComparisons(buildBalanceComparisons(accounts, transactions));
+      const recent = transactions.slice(0, 5);
+      setRecentTransactions(recent);
 
       const now = new Date();
       const monthlySnapshot = await getMonthlySnapshot(now.getFullYear(), now.getMonth() + 1, defaultAccount.currency);
       setSnapshot(monthlySnapshot);
-      setHistory(await getSpendingHistory(now.getFullYear(), now.getMonth() + 1, monthlySnapshot.currency));
+      const spendingHistory = await getSpendingHistory(now.getFullYear(), now.getMonth() + 1, defaultAccount.currency);
+      setHistory(spendingHistory);
 
       const goals = await getAllGoals('active');
-      setActiveGoals(goals.slice(0, 2));
+      setActiveGoals(goals);
 
       const pending = await getPendingOccurrences();
       setPendingOccurrences(pending);
@@ -123,68 +132,83 @@ export default function DashboardScreen() {
         const reminderStatus = await checkBackupReminderStatus();
         setBackupReminderStatus(reminderStatus);
       } catch {
-        // ignore reminder check failure
+        setBackupReminderStatus(null);
       }
 
-      const allRules = await getAllRecurringRules();
-      const today = new Date();
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      const next30Days = new Date(today);
-      next30Days.setDate(next30Days.getDate() + 30);
+      const rules = await getAllRecurringRules();
+      const today = formatDateISO(now);
+      const nextWeek = new Date(now);
+      nextWeek.setDate(nextWeek.getDate() + 7);
+      const toDate = formatDateISO(nextWeek);
+      const forecast: UpcomingForecastItem[] = [];
 
-      const fromStr = formatDateISO(tomorrow);
-      const toStr = formatDateISO(next30Days);
-
-      const forecastList: UpcomingForecastItem[] = [];
-      for (const rule of allRules) {
+      for (const rule of rules) {
         if (!rule.is_active) continue;
-        const dueDates = calculateDueOccurrences(
-          {
-            frequency: rule.frequency as any,
-            interval: rule.interval,
-            day_of_month: rule.day_of_month,
-            day_of_week: rule.day_of_week,
-            month_end_behavior: rule.month_end_behavior as any,
-            start_date: rule.start_date,
-            end_date: rule.end_date,
-          },
-          fromStr,
-          toStr
-        );
-        for (const dueDate of dueDates) {
-          forecastList.push({
+        const due = calculateDueOccurrences(rule, today, toDate);
+        for (const date of due) {
+          forecast.push({
             ruleId: rule.id,
             ruleName: rule.name,
             type: rule.type,
             amount: rule.amount,
             currency: rule.currency,
-            date: dueDate,
+            date,
           });
         }
       }
-      forecastList.sort((a, b) => a.date.localeCompare(b.date));
-      setUpcomingForecast(forecastList.slice(0, 5));
-    } catch (error) {
-      setBalanceLoadError(true);
-      console.error('Failed to load dashboard data', error);
+
+      forecast.sort((a, b) => a.date.localeCompare(b.date));
+      setUpcomingForecast(forecast.slice(0, 3));
+
+      try {
+        const comparisons = await buildBalanceComparisons(accounts, transactions);
+        setBalanceComparisons(comparisons);
+        setBalanceLoadError(false);
+      } catch {
+        setBalanceComparisons([]);
+        setBalanceLoadError(true);
+      }
+    } catch {
+      // Handled silently
     }
   }, []);
 
   useFocusEffect(
     useCallback(() => {
-      void loadData();
+      loadData();
     }, [loadData])
   );
 
-  const handleRefresh = async () => {
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await loadData();
     setRefreshing(false);
+  }, [loadData]);
+
+  const handleConfirmOccurrence = async (occurrenceId: string) => {
+    try {
+      const saved = await withMonthlyLimitConfirmation(
+        (monthlyLimitApproval) => confirmOccurrence(occurrenceId, monthlyLimitApproval),
+        t
+      );
+      if (!saved) return;
+      await loadData();
+    } catch (e: any) {
+      alertMessage(t('common.error'), e.message);
+    }
+  };
+
+  const handleSkipOccurrence = async (occurrenceId: string) => {
+    try {
+      await skipOccurrence(occurrenceId);
+      await loadData();
+    } catch (e: any) {
+      alertMessage(t('common.error'), e.message);
+    }
   };
 
   const handleBackupPress = () => {
-    router.push('/(modal)/backup-restore' as any);
+    router.push('/(modal)/backup-restore');
   };
 
   const handleDismissReminder = async () => {
@@ -192,30 +216,18 @@ export default function DashboardScreen() {
     setBackupReminderStatus(null);
   };
 
-  const handleConfirmOccurrence = async (id: string) => {
-    try {
-      await withMonthlyLimitConfirmation((approval) => confirmOccurrence(id, approval), t);
-      await loadData();
-    } catch {
-      alertMessage(t('common.error'), t('transactions.saveError'));
-    }
-  };
-
-  const handleSkipOccurrence = async (id: string) => {
-    await skipOccurrence(id);
-    await loadData();
-  };
-
-  const monthLabel = new Intl.DateTimeFormat(i18n.resolvedLanguage === 'en' ? 'en-US' : 'vi-VN', {
-    month: 'long', year: 'numeric',
+  const monthLabel = new Intl.DateTimeFormat(locale, {
+    month: 'long',
+    year: 'numeric',
   }).format(new Date());
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={Colors.primary} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primaryDark} />
         }
       >
         <View style={styles.header}>
@@ -229,7 +241,7 @@ export default function DashboardScreen() {
             accessibilityLabel={t('settings.title')}
             onPress={() => router.push('/(main)/more')}
           >
-            <MaterialIcons name="settings" size={20} color={Colors.light.text} />
+            <MaterialIcons name="settings" size={20} color={theme.text} />
           </TouchableOpacity>
         </View>
 
@@ -241,134 +253,20 @@ export default function DashboardScreen() {
           />
         )}
 
-        <Card style={styles.balanceCard}>
-          <BalanceCardScenery />
-          <View style={styles.balanceTop}>
-            <View style={styles.balanceHeading}>
-              <MaterialIcons name="account-balance" size={18} color={Colors.primaryStrong} />
-              <Text style={styles.balanceLabel}>{t('dashboard.totalAssets')}</Text>
-            </View>
-          </View>
-          {balanceComparisons.map((comparison) => {
-            const change = comparison[comparisonPeriod];
-            const amount = change.amount;
-            const color = amount === null || amount === 0
-              ? Colors.primaryStrong : amount > 0 ? Colors.income : Colors.expense;
-            const percent = change.percent === null ? null : new Intl.NumberFormat(
-              locale,
-              { style: 'percent', maximumFractionDigits: 1 },
-            ).format(Math.abs(change.percent) / 100);
-            const changeKey = amount !== null && amount > 0
-              ? percent === null ? 'dashboard.balanceIncreased' : 'dashboard.balanceIncreasedWithPercent'
-              : percent === null ? 'dashboard.balanceDecreased' : 'dashboard.balanceDecreasedWithPercent';
-            return (
-              <View key={comparison.currency} style={styles.balanceCurrencyBlock}>
-                <Text style={[styles.balanceAmount, compact && styles.compactBalanceAmount]}>
-                  {formatMoney(
-                    comparison.balance + (assetSummary && assetSummary.currency === comparison.currency ? assetSummary.fundsBalance : 0),
-                    comparison.currency,
-                    locale
-                  )}
-                </Text>
-                <View style={styles.balanceChangeRow} accessibilityLiveRegion="polite">
-                  <MaterialIcons
-                    name={amount === null ? 'info-outline' : amount > 0 ? 'trending-up' : amount < 0 ? 'trending-down' : 'remove'}
-                    size={18}
-                    color={color}
-                  />
-                  <Text style={[styles.balanceChangeText, { color }]}>
-                    {amount === null
-                      ? t('dashboard.balanceNoHistory')
-                      : amount === 0
-                        ? t('dashboard.balanceUnchanged')
-                        : t(changeKey, { amount: formatMoney(Math.abs(amount), comparison.currency, locale), percent })}
-                  </Text>
-                </View>
-              </View>
-            );
-          })}
-          {balanceComparisons.length === 0 && (
-            <Text style={styles.balanceChangeText}>{t(balanceLoadError ? 'dashboard.balanceLoadError' : 'common.loading')}</Text>
-          )}
-          {balanceLoadError && balanceComparisons.length > 0 && (
-            <Text style={styles.balanceChangeText}>{t('dashboard.balanceLoadError')}</Text>
-          )}
+        <NetWorthCard
+          balanceComparisons={balanceComparisons}
+          balanceLoadError={balanceLoadError}
+          assetSummary={assetSummary}
+          comparisonPeriod={comparisonPeriod}
+          setComparisonPeriod={setComparisonPeriod}
+          locale={locale}
+          compact={compact}
+          styles={styles}
+          theme={theme}
+          t={t}
+        />
 
-          {balanceComparisons.length > 0 && (
-            <View style={styles.balanceSplitRow}>
-              <View style={styles.balanceSplitItem}>
-                <View style={styles.splitIconRow}>
-                  <MaterialIcons name="account-balance-wallet" size={14} color={Colors.primaryStrong} />
-                  <Text style={styles.balanceSplitLabel}>{t('dashboard.walletBalance')}</Text>
-                </View>
-                <Text style={styles.balanceSplitValue}>
-                  {formatMoney(
-                    assetSummary?.walletBalance ?? balanceComparisons[0]?.balance ?? 0,
-                    balanceComparisons[0]?.currency || 'VND',
-                    locale
-                  )}
-                </Text>
-              </View>
-
-              <View style={styles.balanceSplitDivider} />
-
-              <TouchableOpacity
-                style={styles.balanceSplitItem}
-                onPress={() => router.push('/(modal)/manage-funds' as any)}
-                accessibilityRole="button"
-                activeOpacity={0.75}
-              >
-                <View style={styles.splitIconRow}>
-                  <MaterialIcons name="savings" size={14} color={Colors.primaryStrong} />
-                  <Text style={styles.balanceSplitLabel}>{t('dashboard.fundsBalance')}</Text>
-                  <MaterialIcons name="chevron-right" size={14} color={Colors.primaryStrong} />
-                </View>
-                <Text style={styles.balanceSplitValue}>
-                  {formatMoney(
-                    assetSummary?.fundsBalance ?? 0,
-                    balanceComparisons[0]?.currency || 'VND',
-                    locale
-                  )}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          )}
-          <View style={styles.balanceComparisonFooter}>
-            <Text style={styles.balanceComparisonLabel}>
-              {t(comparisonPeriod === 'month' ? 'dashboard.balanceVsMonth' : 'dashboard.balanceVsYear')}
-            </Text>
-            <TouchableOpacity
-              accessibilityRole="button"
-              accessibilityLabel={t(comparisonPeriod === 'month' ? 'dashboard.switchToYear' : 'dashboard.switchToMonth')}
-              onPress={() => setComparisonPeriod((period) => period === 'month' ? 'year' : 'month')}
-              activeOpacity={0.75}
-              style={styles.balanceSwitch}
-            >
-              <MaterialIcons name="swap-horiz" size={18} color={Colors.primaryStrong} />
-              <Text style={styles.balanceSwitchText}>
-                {t(comparisonPeriod === 'month' ? 'dashboard.previousMonth' : 'dashboard.previousYear')}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </Card>
-
-        <View style={styles.shortcuts}>
-          {([
-            { icon: 'add', label: t('transactions.quickAdd'), route: '/(modal)/add-transaction', color: Colors.primary, ink: Colors.primaryStrong },
-            { icon: 'savings', label: t('funds.shortcut'), route: '/(modal)/manage-funds', color: Colors.light.backgroundElement, ink: Colors.light.textSecondary },
-            { icon: 'donut-small', label: t('navigation.plans'), route: '/(main)/budgets', color: Colors.light.backgroundElement, ink: Colors.light.textSecondary },
-            { icon: 'tune', label: t('monthlyLimit.shortcut'), route: '/(modal)/manage-budget', color: Colors.light.backgroundElement, ink: Colors.light.textSecondary },
-            { icon: 'outlined-flag', label: t('dashboard.goals'), route: '/(modal)/manage-goals', color: Colors.light.backgroundElement, ink: Colors.light.textSecondary },
-            { icon: 'event-repeat', label: t('dashboard.recurringShortcut'), route: '/(modal)/manage-recurring', color: Colors.light.backgroundElement, ink: Colors.light.textSecondary },
-          ] as const).map((action) => (
-            <TouchableOpacity key={action.route} accessibilityRole="button" style={styles.shortcut} onPress={() => router.push(action.route as any)} activeOpacity={0.75}>
-              <View style={[styles.shortcutIcon, compact && styles.compactShortcutIcon, { backgroundColor: action.color }]}>
-                <MaterialIcons name={action.icon} size={24} color={action.ink} />
-              </View>
-              <Text style={styles.shortcutLabel}>{action.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        <DashboardQuickActions styles={styles} compact={compact} theme={theme} t={t} />
 
         {pendingOccurrences.length > 0 && (
           <View style={styles.section}>
@@ -441,13 +339,14 @@ export default function DashboardScreen() {
               ] as const).map((metric) => (
                 <Card key={metric.label} style={[styles.flowCard, compact && styles.compactFlowCard]}>
                   <View style={styles.flowHeading}>
-                    <View style={styles.flowIcon}><MaterialIcons name={metric.icon} size={18} color={Colors.light.textSecondary} /></View>
+                    <View style={styles.flowIcon}><MaterialIcons name={metric.icon} size={18} color={theme.textSecondary} /></View>
                     <Text style={styles.flowLabel}>{metric.label}</Text>
                   </View>
                   <Text style={[styles.flowAmount, compact && styles.compactFlowAmount, { color: metric.color }]}>{metric.sign}{formatMoney(metric.amount, snapshot.currency)}</Text>
                 </Card>
               ))}
             </View>
+
             <TouchableOpacity
               activeOpacity={0.9}
               onPress={() => router.push('/(main)/budgets')}
@@ -585,7 +484,7 @@ export default function DashboardScreen() {
                     <View
                       style={[
                         styles.goalDashIcon,
-                        { backgroundColor: Colors.light.backgroundElement },
+                        { backgroundColor: theme.backgroundElement },
                       ]}
                     >
                       <MaterialIcons name={(goal.icon as any) || 'flag'} size={16} color={goal.color || Colors.primaryDark} />
@@ -669,7 +568,7 @@ export default function DashboardScreen() {
                             : 'swap-horiz'
                       }
                       size={20}
-                      color={Colors.light.textSecondary}
+                      color={theme.textSecondary}
                     />
                   </View>
                   <View style={styles.txInfo}>
@@ -700,473 +599,3 @@ export default function DashboardScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.light.background,
-  },
-  scrollContent: {
-    padding: 20,
-    paddingBottom: 40,
-    gap: 24,
-    width: '100%',
-    maxWidth: MaxContentWidth,
-    alignSelf: 'center',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  greeting: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: Colors.light.text,
-  },
-  headerSubtitle: {
-    fontSize: 12,
-    lineHeight: 18,
-    color: Colors.light.textSecondary,
-    fontWeight: '500',
-  },
-  profileBadge: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: Colors.light.surface,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-    marginLeft: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  balanceCard: {
-    position: 'relative',
-    padding: 22,
-    gap: 16,
-    borderRadius: 28,
-    overflow: 'hidden',
-    backgroundColor: Colors.primaryLight,
-    borderWidth: 0,
-  },
-  balanceLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.primaryStrong,
-  },
-  balanceAmount: {
-    fontSize: 34,
-    fontWeight: '800',
-    letterSpacing: -1.2,
-    fontVariant: ['tabular-nums'],
-    color: Colors.light.text,
-  },
-  section: {
-    gap: 10,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 12,
-  },
-  pendingHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  sectionTitle: {
-    fontSize: 17,
-    fontWeight: '800',
-    color: Colors.light.text,
-  },
-  seeAll: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.primaryDark,
-  },
-  plannedBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-    backgroundColor: Colors.light.backgroundElement,
-  },
-  plannedBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: Colors.light.textSecondary,
-  },
-  pendingCard: {
-    padding: 14,
-    gap: 12,
-    marginBottom: 8,
-  },
-  pendingTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  pendingDetails: {
-    flex: 1,
-    gap: 2,
-  },
-  pendingRuleName: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: Colors.light.text,
-  },
-  pendingDate: {
-    fontSize: 12,
-    color: Colors.light.textSecondary,
-  },
-  pendingAmount: {
-    fontSize: 15,
-    fontWeight: '800',
-  },
-  pendingActions: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  pendingBtn: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    gap: 4,
-  },
-  skipBtn: {
-    backgroundColor: Colors.light.backgroundElement,
-  },
-  skipBtnText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.light.textSecondary,
-  },
-  confirmBtn: {
-    backgroundColor: Colors.primary,
-    flex: 1,
-  },
-  confirmBtnText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: Colors.primaryStrong,
-  },
-  budgetCard: {
-    padding: 14,
-    gap: 10,
-    backgroundColor: Colors.light.surface,
-  },
-  budgetRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  budgetName: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.light.text,
-  },
-  budgetPct: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  progressBarTrack: {
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.light.backgroundElement,
-    overflow: 'hidden',
-  },
-  progressBarFill: {
-    height: '100%',
-    borderRadius: 4,
-  },
-  forecastCard: {
-    padding: 12,
-  },
-  forecastItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 8,
-  },
-  forecastBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.light.backgroundElement,
-  },
-  forecastDateBox: {
-    alignItems: 'center',
-    width: 44,
-  },
-  forecastDate: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: Colors.light.textSecondary,
-  },
-  forecastDetails: {
-    flex: 1,
-    gap: 2,
-  },
-  forecastName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.light.text,
-  },
-  forecastAmount: {
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  txList: {
-    paddingHorizontal: 16,
-    paddingVertical: 4,
-  },
-  txItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 14,
-  },
-  txIconBadge: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: Colors.light.backgroundElement,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  txInfo: {
-    flex: 1,
-    gap: 2,
-  },
-  txNote: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.light.text,
-  },
-  txDate: {
-    fontSize: 12,
-    color: Colors.light.textSecondary,
-  },
-  txAmount: {
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  incomeText: {
-    color: Colors.income,
-  },
-  expenseText: {
-    color: Colors.expense,
-  },
-  transferText: {
-    color: Colors.transfer,
-  },
-  overLimitBadgeSmall: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: Colors.expenseLight,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  overLimitBadgeSmallText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: Colors.expense,
-  },
-  goalDashCard: {
-    padding: 16,
-    gap: 14,
-  },
-  goalDashRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  goalDashIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  goalDashInfo: {
-    flex: 1,
-    gap: 2,
-  },
-  goalDashName: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.light.text,
-  },
-  goalDashAmounts: {
-    fontSize: 12,
-    color: Colors.light.textSecondary,
-  },
-  goalDashPct: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: Colors.primaryDark,
-  }, // idk what tf is ts
-  brandInfo: { flex: 1 },
-  compactBalanceAmount: { fontSize: 28 },
-  compactFlowAmount: { fontSize: 16 },
-  compactFlowCards: { flexDirection: 'column' },
-  compactFlowCard: { flex: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' },
-  balanceTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  balanceHeading: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 },
-  balanceCurrencyBlock: { gap: 8 },
-  balanceChangeRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  balanceChangeText: { flexShrink: 1, fontSize: 13, lineHeight: 20, fontWeight: '600', color: Colors.primaryStrong },
-  balanceComparisonFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginTop: 8 },
-  balanceComparisonLabel: { flexShrink: 1, fontSize: 12, lineHeight: 18, color: Colors.primaryStrong },
-  balanceSwitch: { marginLeft: 'auto', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 44, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 14, backgroundColor: '#FFFFFF80' },
-  balanceSwitchText: { fontSize: 12, fontWeight: '700', color: Colors.primaryStrong },
-  shortcuts: { flexDirection: 'row', gap: 8 },
-  shortcut: { flex: 1, alignItems: 'center', gap: 8 },
-  shortcutIcon: { width: 52, height: 52, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
-  compactShortcutIcon: { width: 44, height: 44, borderRadius: 16 },
-  shortcutLabel: { fontSize: 12, fontWeight: '600', color: Colors.light.text, textAlign: 'center' },
-  sectionHeading: { gap: 3, flex: 1 },
-  sectionSubtitle: { fontSize: 12, color: Colors.light.textSecondary, textTransform: 'capitalize' },
-  flowCards: { flexDirection: 'row', gap: 12, flexWrap: 'wrap' },
-  flowCard: { flex: 1, minWidth: 110, padding: 12, gap: 14 },
-  flowHeading: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  flowIcon: { width: 30, height: 30, borderRadius: 11, backgroundColor: Colors.light.backgroundElement, alignItems: 'center', justifyContent: 'center' },
-  flowLabel: { fontSize: 12, fontWeight: '600', color: Colors.light.textSecondary, flexShrink: 1 },
-  flowAmount: { fontSize: 19, fontWeight: '800', fontVariant: ['tabular-nums'], letterSpacing: -0.5 },
-  goalPrompt: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 18, backgroundColor: Colors.light.surface, borderWidth: 1, borderColor: Colors.light.border },
-  goalPromptIcon: { width: 50, height: 50, borderRadius: 18, backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
-  goalPromptTitle: { fontSize: 15, fontWeight: '700', color: Colors.light.text },
-  goalPromptDescription: { fontSize: 12, lineHeight: 18, color: Colors.light.textSecondary, marginTop: 3 },
-  balanceSplitRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF99',
-    borderRadius: 14,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    marginTop: 6,
-  },
-  balanceSplitItem: {
-    flex: 1,
-    gap: 3,
-  },
-  splitIconRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  balanceSplitLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: Colors.primaryStrong,
-  },
-  balanceSplitValue: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: Colors.light.text,
-  },
-  balanceSplitDivider: {
-    width: 1,
-    height: 24,
-    backgroundColor: Colors.light.border,
-    marginHorizontal: 8,
-  },
-  fundsScroll: {
-    gap: 12,
-    paddingVertical: 4,
-  },
-  dashFundCard: {
-    width: 160,
-    padding: 14,
-    borderRadius: 14,
-    gap: 8,
-  },
-  dashFundTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  dashFundIconBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dashFundName: {
-    flex: 1,
-    fontSize: 13,
-    fontWeight: '700',
-    color: Colors.light.text,
-  },
-  dashFundBalance: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: Colors.light.text,
-  },
-  dashFundProgress: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  dashFundBarBg: {
-    flex: 1,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: Colors.light.backgroundElement,
-    overflow: 'hidden',
-  },
-  dashFundBarFill: {
-    height: '100%',
-    borderRadius: 3,
-  },
-  dashFundPct: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: Colors.light.textSecondary,
-  },
-  dashFundNoTarget: {
-    fontSize: 11,
-    color: Colors.light.textSecondary,
-  },
-  fundPrompt: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    padding: 18,
-    backgroundColor: Colors.light.surface,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-  },
-  fundPromptIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 18,
-    backgroundColor: Colors.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  fundDashInfo: {
-    flex: 1,
-    gap: 2,
-  },
-  fundPromptTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: Colors.light.text,
-  },
-  fundPromptDescription: {
-    fontSize: 12,
-    lineHeight: 18,
-    color: Colors.light.textSecondary,
-    marginTop: 3,
-  },
-});

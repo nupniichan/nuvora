@@ -1,3 +1,5 @@
+import { useTheme } from '@/hooks/use-theme';
+import { createAddTransactionStyles } from './add-transaction.styles';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -6,7 +8,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
@@ -40,6 +41,8 @@ import { extractDatePart, parseISODate } from '@/shared/date-utils';
 import { formatMoney } from '@/shared/money';
 
 export default function AddTransactionModal() {
+  const theme = useTheme();
+  const styles = createAddTransactionStyles(theme);
   const { t, i18n } = useTranslation();
   const locale = i18n.resolvedLanguage === 'en' ? 'en-US' : 'vi-VN';
   const router = useRouter();
@@ -447,187 +450,3 @@ export default function AddTransactionModal() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.light.background,
-  },
-  keyboardAvoid: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.light.border,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: Colors.light.text,
-  },
-  closeBtn: {
-    padding: 6,
-  },
-  content: {
-    padding: 20,
-    gap: 16,
-    paddingBottom: 30,
-  },
-  segmentRow: {
-    flexDirection: 'row',
-    backgroundColor: Colors.light.backgroundElement,
-    borderRadius: 12,
-    padding: 4,
-    gap: 4,
-  },
-  segmentBtn: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: 'center',
-    borderRadius: 10,
-  },
-  segmentText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.light.textSecondary,
-  },
-  activeExpense: {
-    backgroundColor: '#FFEBEE',
-  },
-  activeIncome: {
-    backgroundColor: '#E8F5E9',
-  },
-  activeText: {
-    color: Colors.light.text,
-    fontWeight: '700',
-  },
-  sourcesScrollRow: {
-    gap: 8,
-    paddingVertical: 4,
-  },
-  sourceCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-    backgroundColor: Colors.light.backgroundElement,
-  },
-  sourceCardActive: {
-    borderColor: Colors.primaryStrong,
-    backgroundColor: '#FFFFFF',
-  },
-  sourceIconBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 7,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sourceTextGroup: {
-    gap: 2,
-  },
-  sourceName: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: Colors.light.text,
-  },
-  sourceNameActive: {
-    color: Colors.primaryStrong,
-  },
-  sourceBalance: {
-    fontSize: 11,
-    color: Colors.light.textSecondary,
-  },
-  warningBanner: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-    padding: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-  },
-  dangerBanner: {
-    backgroundColor: '#FFEBEE',
-    borderColor: '#FFCDD2',
-  },
-  amberBanner: {
-    backgroundColor: '#FFF8E1',
-    borderColor: '#FFE082',
-  },
-  warningTextContainer: {
-    flex: 1,
-    gap: 2,
-  },
-  warningTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  warningSub: {
-    fontSize: 12,
-    color: Colors.light.textSecondary,
-  },
-  fieldCard: {
-    padding: 14,
-    gap: 10,
-  },
-  fieldLabel: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: Colors.light.textSecondary,
-    textTransform: 'uppercase',
-  },
-  datePresetRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  datePresetBtn: {
-    flex: 1,
-    paddingVertical: 8,
-    borderRadius: 8,
-    alignItems: 'center',
-    backgroundColor: Colors.light.backgroundElement,
-  },
-  activeDatePreset: {
-    backgroundColor: Colors.primary,
-  },
-  datePresetText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.light.textSecondary,
-  },
-  activeDatePresetText: {
-    color: '#1A1C2E',
-    fontWeight: '700',
-  },
-  noteInput: {
-    backgroundColor: Colors.light.backgroundElement,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
-    color: Colors.light.text,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-  },
-  errorText: {
-    fontSize: 13,
-    color: '#C62828',
-    textAlign: 'center',
-  },
-  footer: {
-    padding: 20,
-    borderTopWidth: 1,
-    borderTopColor: Colors.light.border,
-    backgroundColor: Colors.light.background,
-  },
-});

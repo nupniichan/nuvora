@@ -1,11 +1,11 @@
+import { useTheme } from '@/hooks/use-theme';
+import { createManageRecurringStyles } from './manage-recurring.styles';
 import { MaterialIcons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   KeyboardAvoidingView,
-  Platform,
   ScrollView,
-  StyleSheet,
   Text,
   TouchableOpacity,
   View,
@@ -25,6 +25,8 @@ import { useSafeBack } from '@/hooks/use-safe-back';
 import { formatDateISO } from '@/shared/date-utils';
 
 export default function ManageRecurringModal() {
+  const theme = useTheme();
+  const styles = createManageRecurringStyles(theme);
   const { t } = useTranslation();
   const closeModal = useSafeBack('/(main)/more');
 
@@ -234,169 +236,3 @@ export default function ManageRecurringModal() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.light.background,
-  },
-  keyboardAvoid: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.light.border,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: Colors.light.text,
-  },
-  closeBtn: {
-    padding: 6,
-  },
-  content: {
-    padding: 20,
-    gap: 16,
-  },
-  errorCard: {
-    backgroundColor: '#FFEBEE',
-  },
-  errorText: {
-    color: '#C62828',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  segmentRow: {
-    flexDirection: 'row',
-    backgroundColor: Colors.light.backgroundElement,
-    borderRadius: 12,
-    padding: 4,
-    gap: 4,
-  },
-  segmentBtn: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: 'center',
-    borderRadius: 10,
-  },
-  segmentText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.light.textSecondary,
-  },
-  activeExpense: {
-    backgroundColor: '#FFEBEE',
-  },
-  activeIncome: {
-    backgroundColor: '#E8F5E9',
-  },
-  activeText: {
-    color: Colors.light.text,
-    fontWeight: '700',
-  },
-  fieldCard: {
-    padding: 14,
-    gap: 10,
-  },
-  fieldLabel: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: Colors.light.textSecondary,
-    textTransform: 'uppercase',
-  },
-  freqRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  freqBtn: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 10,
-    alignItems: 'center',
-    backgroundColor: Colors.light.backgroundElement,
-  },
-  activeFreqBtn: {
-    backgroundColor: Colors.primary,
-  },
-  freqText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.light.textSecondary,
-  },
-  activeFreqText: {
-    color: '#1A1C2E',
-    fontWeight: '700',
-  },
-  dayPickerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 6,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: Colors.light.border,
-  },
-  dayLabel: {
-    fontSize: 14,
-    color: Colors.light.text,
-  },
-  daySelector: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  dayStepBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: Colors.light.backgroundElement,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dayValue: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.light.text,
-    minWidth: 64,
-    textAlign: 'center',
-  },
-  behaviorRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  behaviorBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 12,
-    borderRadius: 10,
-    backgroundColor: Colors.light.backgroundElement,
-  },
-  activeBehaviorBtn: {
-    backgroundColor: Colors.primary,
-  },
-  behaviorText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.light.textSecondary,
-  },
-  activeBehaviorText: {
-    color: '#1A1C2E',
-    fontWeight: '700',
-  },
-  saveBtn: {
-    marginTop: 10,
-    marginBottom: 30,
-  },
-});
-
-

@@ -1,19 +1,18 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import React, { useCallback, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   KeyboardAvoidingView,
   Modal,
   Platform,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -35,13 +34,17 @@ import {
   withdrawFromFund,
 } from '@/features/funds/fund-queries';
 import { useSafeBack } from '@/hooks/use-safe-back';
-import { alertMessage, confirmAction } from '@/shared/dialog';
+import { useTheme } from '@/hooks/use-theme';
 import { formatDateDisplay } from '@/shared/date-utils';
+import { alertMessage, confirmAction } from '@/shared/dialog';
 import { formatMoney } from '@/shared/money';
+import { createManageFundsStyles } from './manage-funds.styles';
 
 export default function ManageFundsModal() {
   const closeModal = useSafeBack('/(main)');
   const { t, i18n } = useTranslation();
+  const theme = useTheme();
+  const styles = createManageFundsStyles(theme);
   const locale = i18n.resolvedLanguage === 'en' ? 'en-US' : 'vi-VN';
 
   const [funds, setFunds] = useState<FundRow[]>([]);
@@ -674,8 +677,8 @@ export default function ManageFundsModal() {
               {transferType === 'deposit'
                 ? t('funds.depositTitle')
                 : transferType === 'withdraw'
-                ? t('funds.withdrawTitle')
-                : t('funds.transferTitle')}
+                  ? t('funds.withdrawTitle')
+                  : t('funds.transferTitle')}
             </Text>
             <TouchableOpacity onPress={() => setTransferModalVisible(false)} style={styles.closeBtn}>
               <MaterialIcons name="close" size={22} color={Colors.light.text} />
@@ -924,12 +927,12 @@ export default function ManageFundsModal() {
                 const typeLabel = isDeposit
                   ? t('transactions.fund_deposit')
                   : isWithdrawal
-                  ? t('transactions.fund_withdrawal')
-                  : isTransfer
-                  ? t('transactions.fund_transfer')
-                  : isIncome
-                  ? t('transactions.income')
-                  : t('transactions.expense');
+                    ? t('transactions.fund_withdrawal')
+                    : isTransfer
+                      ? t('transactions.fund_transfer')
+                      : isIncome
+                        ? t('transactions.income')
+                        : t('transactions.expense');
 
                 return (
                   <Card key={tx.id} style={styles.historyCard}>
@@ -941,8 +944,8 @@ export default function ManageFundsModal() {
                             backgroundColor: isCredit
                               ? '#E8F5E9'
                               : isDebit
-                              ? '#FFEBEE'
-                              : Colors.light.backgroundElement,
+                                ? '#FFEBEE'
+                                : Colors.light.backgroundElement,
                           },
                         ]}
                       >
@@ -951,8 +954,8 @@ export default function ManageFundsModal() {
                             isCredit
                               ? 'arrow-downward'
                               : isDebit
-                              ? 'arrow-upward'
-                              : 'swap-horiz'
+                                ? 'arrow-upward'
+                                : 'swap-horiz'
                           }
                           size={18}
                           color={isCredit ? Colors.income : Colors.expense}
@@ -986,470 +989,3 @@ export default function ManageFundsModal() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.light.background,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.light.border,
-  },
-  headerTitleContainer: {
-    gap: 2,
-  },
-  eyebrow: {
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1.5,
-    color: Colors.primaryStrong,
-    textTransform: 'uppercase',
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: Colors.light.text,
-  },
-  closeBtn: {
-    padding: 6,
-  },
-  scrollContent: {
-    padding: 20,
-    gap: 16,
-    paddingBottom: 40,
-  },
-  summaryCard: {
-    padding: 16,
-    borderRadius: 16,
-    backgroundColor: Colors.light.backgroundElement,
-    gap: 14,
-  },
-  summaryTop: {
-    alignItems: 'center',
-    gap: 4,
-  },
-  summaryBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  summaryBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: Colors.primaryStrong,
-    textTransform: 'uppercase',
-  },
-  totalAssetsAmount: {
-    fontSize: 28,
-    fontWeight: '900',
-    color: Colors.light.text,
-  },
-  summarySplit: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: Colors.light.border,
-    paddingTop: 12,
-  },
-  splitItem: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 2,
-  },
-  splitIconRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  splitLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: Colors.light.textSecondary,
-  },
-  splitValue: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: Colors.light.text,
-  },
-  splitDivider: {
-    width: 1,
-    height: 28,
-    backgroundColor: Colors.light.border,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  sectionTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: Colors.light.text,
-  },
-  createBtnHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-    backgroundColor: Colors.light.backgroundElement,
-  },
-  createBtnHeaderText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: Colors.primaryStrong,
-  },
-  emptyCard: {
-    padding: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-  },
-  emptyTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Colors.light.text,
-  },
-  emptyDesc: {
-    fontSize: 13,
-    lineHeight: 18,
-    color: Colors.light.textSecondary,
-    textAlign: 'center',
-  },
-  emptyActionBtn: {
-    marginTop: 8,
-  },
-  fundCard: {
-    padding: 16,
-    borderRadius: 16,
-    gap: 12,
-  },
-  fundCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  fundIconBadge: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  fundHeaderInfo: {
-    flex: 1,
-    gap: 2,
-  },
-  fundName: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: Colors.light.text,
-  },
-  fundDesc: {
-    fontSize: 12,
-    color: Colors.light.textSecondary,
-  },
-  reorderGroup: {
-    flexDirection: 'row',
-    gap: 4,
-  },
-  reorderBtn: {
-    padding: 6,
-    borderRadius: 6,
-    backgroundColor: Colors.light.backgroundElement,
-  },
-  progressSection: {
-    gap: 6,
-  },
-  progressContainer: {
-    height: 8,
-    backgroundColor: Colors.light.backgroundElement,
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  progressBar: {
-    height: '100%',
-    borderRadius: 4,
-  },
-  targetRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  targetLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: Colors.light.textSecondary,
-  },
-  targetValue: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: Colors.light.textSecondary,
-  },
-  balanceRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'baseline',
-    borderTopWidth: 1,
-    borderTopColor: Colors.light.backgroundElement,
-    paddingTop: 10,
-  },
-  balanceLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: Colors.light.textSecondary,
-  },
-  balanceValue: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: Colors.light.text,
-  },
-  actionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    gap: 8,
-    borderTopWidth: 1,
-    borderTopColor: Colors.light.backgroundElement,
-    paddingTop: 10,
-  },
-  actionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-    backgroundColor: Colors.light.backgroundElement,
-  },
-  actionBtnText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: Colors.light.text,
-  },
-  iconOnlyBtn: {
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: Colors.light.backgroundElement,
-  },
-  modalRoot: {
-    flex: 1,
-    backgroundColor: Colors.light.background,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.light.border,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: Colors.light.text,
-  },
-  modalSubtitle: {
-    fontSize: 12,
-    color: Colors.light.textSecondary,
-  },
-  keyboardAvoid: {
-    flex: 1,
-  },
-  modalContent: {
-    padding: 20,
-    gap: 16,
-    paddingBottom: 40,
-  },
-  formGroup: {
-    gap: 8,
-  },
-  formLabel: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: Colors.light.textSecondary,
-    textTransform: 'uppercase',
-  },
-  textInput: {
-    backgroundColor: Colors.light.backgroundElement,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 15,
-    color: Colors.light.text,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-  },
-  targetToggleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  checkboxBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  checkboxActive: {},
-  checkboxLabel: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.light.text,
-  },
-  modalFooter: {
-    padding: 20,
-    borderTopWidth: 1,
-    borderTopColor: Colors.light.border,
-    backgroundColor: Colors.light.background,
-  },
-  contextBanner: {
-    padding: 14,
-    backgroundColor: Colors.light.backgroundElement,
-    borderRadius: 12,
-    gap: 6,
-  },
-  contextLabel: {
-    fontSize: 13,
-    color: Colors.light.textSecondary,
-  },
-  contextValue: {
-    fontWeight: '700',
-    color: Colors.light.text,
-  },
-  targetFundsList: {
-    gap: 8,
-  },
-  fundSelectOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-    backgroundColor: Colors.light.background,
-  },
-  fundSelectOptionActive: {
-    borderColor: Colors.primaryStrong,
-    backgroundColor: Colors.light.backgroundElement,
-  },
-  fundOptionBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  fundOptionDetails: {
-    flex: 1,
-    gap: 2,
-  },
-  fundOptionName: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.light.text,
-  },
-  fundOptionNameActive: {
-    color: Colors.primaryStrong,
-  },
-  fundOptionBalance: {
-    fontSize: 12,
-    color: Colors.light.textSecondary,
-  },
-  warningBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    padding: 14,
-    borderRadius: 12,
-    backgroundColor: '#FFEBEE',
-  },
-  warningBoxText: {
-    flex: 1,
-    fontSize: 13,
-    lineHeight: 18,
-    fontWeight: '600',
-    color: '#C62828',
-  },
-  deleteOptionCard: {
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-    backgroundColor: Colors.light.background,
-    gap: 10,
-  },
-  deleteOptionCardActive: {
-    borderColor: Colors.primaryStrong,
-    backgroundColor: Colors.light.backgroundElement,
-  },
-  radioRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  deleteOptionTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.light.text,
-  },
-  deleteOptionDesc: {
-    fontSize: 12,
-    color: Colors.light.textSecondary,
-    marginLeft: 28,
-  },
-  historyCard: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 14,
-    borderRadius: 12,
-  },
-  historyLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    flex: 1,
-  },
-  historyIconBadge: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  historyDetails: {
-    flex: 1,
-    gap: 2,
-  },
-  historyType: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: Colors.light.text,
-  },
-  historyNote: {
-    fontSize: 12,
-    color: Colors.light.textSecondary,
-  },
-  historyDate: {
-    fontSize: 11,
-    color: Colors.light.textSecondary,
-  },
-  historyAmount: {
-    fontSize: 15,
-    fontWeight: '800',
-  },
-});
-

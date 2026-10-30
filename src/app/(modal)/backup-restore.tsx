@@ -6,8 +6,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  StyleSheet,
-  Switch,
+    Switch,
   Text,
   TextInput,
   TouchableOpacity,
@@ -20,6 +19,8 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Colors } from '@/constants/theme';
 import { useSafeBack } from '@/hooks/use-safe-back';
+import { useTheme } from '@/hooks/use-theme';
+import { createBackupRestoreStyles } from './backup-restore.styles';
 import {
   BackupReminderFrequency,
   getBackupReminderConfig,
@@ -42,6 +43,8 @@ import { confirmAction } from '@/shared/dialog';
 
 export default function BackupRestoreModal() {
   const { t, i18n } = useTranslation();
+  const theme = useTheme();
+  const styles = createBackupRestoreStyles(theme);
   const closeModal = useSafeBack('/(main)/more');
 
   const [activeTab, setActiveTab] = useState<'backup' | 'restore'>('backup');
@@ -101,7 +104,21 @@ export default function BackupRestoreModal() {
   };
 
   useEffect(() => {
-    loadReminderConfig();
+    let active = true;
+    void getBackupReminderConfig().then((cfg) => {
+      if (!active) return;
+      setReminderEnabled(cfg.enabled);
+      setReminderFrequency(cfg.frequency);
+      if (cfg.customDays) {
+        setCustomDays(cfg.customDays);
+        setCustomDaysInput(String(cfg.customDays));
+      }
+      setLastBackupAt(cfg.lastBackupAt);
+      setTargetFolderName(cfg.targetFolderName || null);
+      setTargetUri(cfg.targetUri || null);
+      setAutoSaveToFolder(!!cfg.autoSaveToFolder);
+    }).catch(() => {});
+    return () => { active = false; };
   }, []);
 
   const handleToggleReminder = async (val: boolean) => {
@@ -609,358 +626,3 @@ export default function BackupRestoreModal() {
     </SafeAreaView>
   );
 }
-// Gotta refactor it soon
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.light.background,
-  },
-  keyboardAvoid: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.light.border,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: Colors.light.text,
-  },
-  closeBtn: {
-    padding: 6,
-  },
-  tabContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 20,
-    paddingTop: 14,
-    gap: 10,
-  },
-  tabBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 10,
-    borderRadius: 12,
-    backgroundColor: Colors.light.backgroundElement,
-  },
-  activeTabBtn: {
-    backgroundColor: Colors.primary,
-  },
-  tabText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.light.textSecondary,
-  },
-  activeTabText: {
-    color: '#1A1C2E',
-    fontWeight: '700',
-  },
-  content: {
-    padding: 20,
-    gap: 16,
-  },
-  errorCard: {
-    backgroundColor: '#FFEBEE',
-  },
-  errorText: {
-    color: '#C62828',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  successCard: {
-    backgroundColor: '#E8F5E9',
-  },
-  successText: {
-    color: '#2E7D32',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  infoBox: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-    padding: 14,
-    backgroundColor: Colors.light.backgroundElement,
-  },
-  infoText: {
-    flex: 1,
-    fontSize: 13,
-    color: Colors.light.textSecondary,
-    lineHeight: 18,
-  },
-  outputSection: {
-    gap: 8,
-    marginTop: 8,
-  },
-  outputHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  outputLabel: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: Colors.light.text,
-  },
-  codeBox: {
-    height: 140,
-    backgroundColor: Colors.light.backgroundElement,
-    borderRadius: 12,
-    padding: 12,
-    fontSize: 11,
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-    color: Colors.light.text,
-    textAlignVertical: 'top',
-  },
-  inputGroup: {
-    gap: 6,
-  },
-  fieldLabel: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.light.text,
-  },
-  inputCodeBox: {
-    height: 120,
-  },
-  restoreBtn: {
-    marginTop: 6,
-  },
-  statsCard: {
-    padding: 14,
-    gap: 6,
-    backgroundColor: '#F1F8E9',
-  },
-  statsTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#2E7D32',
-  },
-  statLine: {
-    fontSize: 13,
-    color: Colors.light.text,
-  },
-  reminderCard: {
-    padding: 16,
-    gap: 12,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-    borderRadius: 16,
-  },
-  reminderHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  reminderHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  reminderTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: Colors.light.text,
-  },
-  reminderDesc: {
-    fontSize: 13,
-    color: Colors.light.textSecondary,
-    lineHeight: 18,
-  },
-  frequencyGroup: {
-    gap: 8,
-    marginTop: 4,
-  },
-  frequencyLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.light.text,
-  },
-  frequencyPills: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  freqPill: {
-    flex: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 4,
-    borderRadius: 10,
-    backgroundColor: Colors.light.backgroundElement,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'transparent',
-  },
-  freqPillActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primaryStrong,
-  },
-  freqPillText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: Colors.light.textSecondary,
-    textAlign: 'center',
-  },
-  freqPillTextActive: {
-    color: '#1A1C2E',
-    fontWeight: '700',
-  },
-  lastBackupRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: Colors.light.border,
-  },
-  lastBackupLabel: {
-    fontSize: 13,
-    color: Colors.light.textSecondary,
-  },
-  lastBackupValue: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.light.text,
-  },
-  customDaysContainer: {
-    gap: 6,
-    marginTop: 6,
-  },
-  customDaysLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.light.text,
-  },
-  customDaysInput: {
-    height: 42,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    fontSize: 14,
-    color: Colors.light.text,
-    backgroundColor: '#FFFFFF',
-  },
-  folderCard: {
-    backgroundColor: Colors.light.backgroundElement,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-    borderRadius: 16,
-    padding: 14,
-    gap: 10,
-  },
-  folderHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  folderHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    flex: 1,
-  },
-  folderTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.light.text,
-    flex: 1,
-  },
-  folderDesc: {
-    fontSize: 12,
-    color: Colors.light.textSecondary,
-    lineHeight: 17,
-  },
-  changeFolderBtn: {
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-    backgroundColor: Colors.primaryLight,
-  },
-  changeFolderText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: Colors.primaryDark,
-  },
-  autoSaveRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: Colors.light.border,
-  },
-  autoSaveText: {
-    fontSize: 13,
-    color: Colors.light.text,
-    flex: 1,
-    paddingRight: 8,
-  },
-  passwordContainer: {
-    gap: 6,
-  },
-  passwordHint: {
-    fontSize: 12,
-    color: Colors.light.textSecondary,
-    lineHeight: 16,
-    marginTop: -2,
-  },
-  savedNoticeCard: {
-    backgroundColor: '#E8F5E9',
-    borderColor: '#A5D6A7',
-    borderWidth: 1,
-    padding: 12,
-    gap: 6,
-    borderRadius: 12,
-  },
-  savedNoticeHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  savedNoticeTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#2E7D32',
-  },
-  savedNoticeText: {
-    fontSize: 12,
-    color: '#1B5E20',
-    lineHeight: 17,
-  },
-  selectedFileBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#E8F5E9',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#A5D6A7',
-  },
-  selectedFileText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#2E7D32',
-    flex: 1,
-  },
-  toggleManualJsonBtn: {
-    alignSelf: 'flex-start',
-    paddingVertical: 4,
-  },
-  toggleManualJsonText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.primaryDark,
-  },
-});

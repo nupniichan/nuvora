@@ -1,3 +1,5 @@
+import { useTheme } from '@/hooks/use-theme';
+import { createManageBudgetStyles } from './manage-budget.styles';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -5,9 +7,7 @@ import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
-  Platform,
   ScrollView,
-  StyleSheet,
   Switch,
   Text,
   TouchableOpacity,
@@ -43,6 +43,8 @@ interface CategoryLimitDraft {
 }
 
 export default function ManageBudgetModal() {
+  const theme = useTheme();
+  const styles = createManageBudgetStyles(theme);
   const { t, i18n } = useTranslation();
   const locale = i18n.resolvedLanguage === 'en' ? 'en-US' : 'vi-VN';
   const closeModal = useSafeBack('/(main)/budgets');
@@ -345,139 +347,3 @@ export default function ManageBudgetModal() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.light.background,
-  },
-  keyboardAvoid: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.light.border,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: Colors.light.text,
-  },
-  closeBtn: {
-    padding: 6,
-  },
-  content: {
-    padding: 20,
-    gap: 16,
-  },
-  sectionCard: {
-    padding: 16,
-    gap: 14,
-  },
-  toggleRow: {
-    flexDirection: 'row',
-    gap: 10,
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  toggleTextInfo: {
-    flex: 1,
-    paddingRight: 10,
-    gap: 2,
-  },
-  toggleTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: Colors.light.text,
-  },
-  toggleDesc: {
-    fontSize: 12,
-    color: Colors.light.textSecondary,
-    lineHeight: 16,
-  },
-  totalInputBox: {
-    marginTop: 4,
-  },
-  listSection: {
-    gap: 10,
-  },
-  listHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  listTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: Colors.light.text,
-  },
-  totalLimitsBadge: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: Colors.primaryDark,
-  },
-  warningBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#FFF3E0',
-    borderColor: '#FFE0B2',
-    borderWidth: 1,
-    padding: 10,
-    borderRadius: 10,
-  },
-  warningText: {
-    flex: 1,
-    fontSize: 12,
-    color: '#E65100',
-    lineHeight: 16,
-  },
-  catCard: {
-    padding: 14,
-    gap: 10,
-  },
-  catCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  catIconBadge: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  catNameContainer: {
-    flex: 1,
-  },
-  catName: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: Colors.light.text,
-  },
-  catGroup: {
-    fontSize: 11,
-    color: Colors.light.textSecondary,
-  },
-  catInputContainer: {
-    marginTop: 2,
-  },
-  unlimitedText: {
-    fontSize: 13,
-    color: Colors.light.textSecondary,
-    fontStyle: 'italic',
-    paddingLeft: 46,
-  },
-  saveBtn: {
-    marginTop: 10,
-    marginBottom: 30,
-  },
-});

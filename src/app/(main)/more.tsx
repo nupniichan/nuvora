@@ -1,8 +1,10 @@
+import { useTheme } from '@/hooks/use-theme';
+import { createMoreStyles } from './more.styles';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { CurrencySwitchCard } from '@/components/ui/currency-switch-card';
 import { TimezonePickerModal } from '@/components/ui/timezone-picker-modal';
-import { Colors, MaxContentWidth } from '@/constants/theme';
+import { Colors } from '@/constants/theme';
 import { getAppLanguage, setAppLanguage } from '@/i18n';
 import {
   BackupReminderConfig,
@@ -21,10 +23,12 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function MoreScreen() {
+  const theme = useTheme();
+  const styles = createMoreStyles(theme);
   const { t, i18n } = useTranslation();
   const router = useRouter();
   const currentLang = (i18n.language?.startsWith('en') || getAppLanguage() === 'en') ? 'en' : 'vi';
@@ -203,102 +207,3 @@ export default function MoreScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.light.background,
-  },
-  content: {
-    width: '100%',
-    maxWidth: MaxContentWidth,
-    alignSelf: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 18,
-    paddingBottom: 28,
-    gap: 14,
-  },
-  pageHeader: {
-    gap: 2,
-    marginBottom: 4,
-  },
-  eyebrow: {
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 1.8,
-    color: Colors.primaryDark,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: Colors.light.text,
-  },
-  sectionCard: {
-    gap: 13,
-  },
-  sectionHeader: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Colors.primaryStrong,
-    paddingBottom: 2,
-  },
-  sectionDesc: {
-    fontSize: 13,
-    color: Colors.light.textSecondary,
-    lineHeight: 18,
-  },
-  cardDivider: {
-    height: 1,
-    backgroundColor: Colors.light.border,
-    marginVertical: 4,
-  },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 6,
-    gap: 12,
-  },
-  rowLabel: {
-    fontSize: 14,
-    color: Colors.light.text,
-  },
-  rowValue: {
-    flexShrink: 1,
-    fontSize: 13,
-    fontWeight: '700',
-    color: Colors.primaryStrong,
-    textAlign: 'right',
-  },
-  langValueContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  lockBtn: {
-    marginTop: 6,
-  },
-  aboutCard: {
-    alignItems: 'center',
-    padding: 20,
-    gap: 6,
-    backgroundColor: Colors.primaryLight,
-  },
-  appTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: Colors.light.text,
-  },
-  appVersion: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: Colors.light.textSecondary,
-  },
-  appDesc: {
-    fontSize: 12,
-    color: Colors.light.textSecondary,
-    textAlign: 'center',
-    marginTop: 2,
-    lineHeight: 18,
-  },
-});
